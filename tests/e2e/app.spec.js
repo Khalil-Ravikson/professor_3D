@@ -31,7 +31,8 @@ async function abrir(page, { chave = '', armazenamento = {} } = {}) {
     for (const [c, v] of Object.entries(extra)) localStorage.setItem('prof3d_' + c, v);
   }, { k: chave, extra: armazenamento });
   await page.goto('/?debug');
-  await page.waitForFunction(() => window.__prof3d && window.__prof3d.avatar, null, { timeout: 60_000 });
+  await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar), null, { timeout: 60_000 });
+  await page.evaluate(() => window.__prof3d.irParaConversa());
   return erros;
 }
 

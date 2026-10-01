@@ -50,6 +50,8 @@ test('P4: cumprimento por toque, conversa, despedida pelo operador; e despedida 
 
   // 3. Conversa.
   await page.waitForFunction(() => window.__prof3d.estado === 'idle', null, { timeout: 30_000 });
+  // P5: depois do cumprimento vem o consentimento; aqui a pessoa prefere escrever.
+  await page.click('#passoAlt');
   await page.fill('#text', 'Quanto é 7 vezes 8?');
   await page.click('#form button[type=submit]');
   await page.waitForFunction(() => (window.__prof3d.historicos.get('luma') || []).length === 2, null, { timeout: 30_000 });

@@ -44,6 +44,7 @@ test('P3.2: marca inválida do LLM é ignorada; válida espera a fronteira da se
     status: 200, contentType: 'text/event-stream',
     body: sseDe(['[gesto:dancar-funk] O céu é azul porque a luz do sol se espalha no ar. ', 'A cor azul se espalha mais que as outras. [ges', 'to:comemora] Muito bem, ótima curiosidade!']),
   }));
+  await page.evaluate(() => window.__prof3d.irParaConversa());
   await page.fill('#text', 'Por que o céu é azul?');
   await page.click('#form button[type=submit]');
   await expect.poll(() => page.evaluate(() => window.__prof3d.registroGestos.map((r) => r.msg).join('|')), { timeout: 60_000 }).toMatch(/tocou "(sinal-paz|giro)" \(llm\)/);

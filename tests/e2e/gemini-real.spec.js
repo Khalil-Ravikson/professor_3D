@@ -40,7 +40,8 @@ test.describe('Gemini real', () => {
       localStorage.setItem('prof3d_motor', 'webspeech'); // sem esperar o Kokoro: o foco aqui é o cérebro
     }, CHAVE);
     await page.goto('/?debug');
-    await page.waitForFunction(() => window.__prof3d && window.__prof3d.avatar, null, { timeout: 60_000 });
+    await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar), null, { timeout: 60_000 });
+    await page.evaluate(() => window.__prof3d.irParaConversa());
 
     const relatorio = [];
     for (const p of PROBLEMAS) {

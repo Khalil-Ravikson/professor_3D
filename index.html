@@ -187,6 +187,34 @@
   .quadro-contas-bloco h3 { margin: 8px 0 2px; font: 700 .8rem "Baloo 2", system-ui, sans-serif; color: var(--tinta-suave); }
   .quadro-contas li { color: var(--tinta-suave); font-size: .85rem; }
   .quadro-contas li.erro { color: #b3261e; }
+  /* Fluxo de sessão (P5): atração, cumprimento, consentimento, conversa, despedida.
+     Em cada etapa só um próximo passo fica à vista; o resto do painel sai do caminho. */
+  .passo {
+    display: grid; gap: 6px; padding: 18px 20px; border-radius: 18px;
+    background: var(--cartao); color: var(--tinta);
+  }
+  .passo[hidden] { display: none; }
+  .passo h2 { margin: 0; font-size: 1.55rem; font-weight: 800; line-height: 1.15; }
+  .passo p { margin: 0; font-size: 1.05rem; line-height: 1.4; color: var(--tinta-suave); max-width: 42ch; }
+  .passo-acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+  .passo-acoes .btn { min-height: 60px; padding: 0 26px; font-size: 1.15rem; background: var(--acao); color: #fff; box-shadow: 0 5px 0 var(--acao-sombra); }
+  .passo-acoes .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--acao-sombra); }
+  .passo-acoes .alt {
+    font: inherit; font-weight: 700; font-size: 1rem; color: var(--tinta); background: none; border: 0;
+    min-height: var(--alvo); padding: 0 8px; cursor: pointer; text-decoration: underline; text-underline-offset: 4px;
+  }
+  .passo { animation: entra .22s ease-out both; }
+  @keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+  @media (prefers-reduced-motion: reduce) { .passo { animation: none; } }
+  [data-etapa="atracao"] .panel > :not(.passo),
+  [data-etapa="consentimento"] .panel > :not(.passo) { display: none; }
+  [data-etapa="cumprimento"] .panel > :is(.chips, .typed),
+  [data-etapa="despedida"] .panel > :is(.chips, .typed),
+  [data-etapa="cumprimento"] :is(.mic, .stop), [data-etapa="despedida"] :is(.mic, .stop) { display: none; }
+  [data-microfone="nao"] .mic { display: none; }
+  .usar-voz { font: inherit; font-weight: 700; background: var(--cartao); color: var(--tinta); border: 0; border-radius: 12px; min-height: var(--alvo); padding: 0 14px; cursor: pointer; }
+  .usar-voz[hidden] { display: none; }
+
 
   dialog {
     border: 0; border-radius: 16px; padding: 18px; width: min(92vw, 480px); max-height: 90vh; overflow-y: auto;
@@ -268,7 +296,7 @@
 <script type="module" src="src/ui.js"></script>
 </head>
 <body>
-<main class="kiosk" id="app" data-state="idle">
+<main class="kiosk" id="app" data-state="idle" data-etapa="atracao">
   <nav class="elenco" id="elencoNav" aria-label="Personagens" hidden>
     <div class="elenco-lista" id="elenco"></div>
   </nav>
@@ -299,6 +327,15 @@
   </section>
 
   <section class="panel" id="painel">
+    <div class="passo" id="passo" role="region" aria-labelledby="passoTitulo" hidden>
+      <h2 id="passoTitulo"></h2>
+      <p id="passoTexto"></p>
+      <p id="passoNota"></p>
+      <div class="passo-acoes">
+        <button class="btn" id="passoAcao" type="button"></button>
+        <button class="alt" id="passoAlt" type="button" hidden></button>
+      </div>
+    </div>
     <div class="bubble" aria-live="polite">
       <p class="heard" id="heard"></p>
       <p class="answer" id="answer"></p>
@@ -306,6 +343,7 @@
     <div class="row">
       <p class="status" id="status">Preparando...</p>
       <button class="stop" id="stop" type="button" hidden>Parar</button>
+      <button class="usar-voz" id="usarVoz" type="button" hidden></button>
       <button class="mic" id="mic" type="button" aria-label="Falar" disabled>
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm7-4a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.08A7 7 0 0 0 19 11z"/></svg>
       </button>

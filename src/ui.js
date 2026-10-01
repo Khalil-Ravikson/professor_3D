@@ -17,6 +17,7 @@ import { URL_PADRAO } from './tts/kokoro-server.js';
 import { criarDivisor, limparParaFala } from './tts/frases.js';
 import { criarOuvido } from './ouvido.js';
 import { ler, gravar, lerJSON, gravarJSON } from './storage.js';
+import { T } from './strings.pt-BR.js';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
@@ -183,6 +184,7 @@ async function trocarPersonagem(p) {
   document.title = `${p.nome} 3D`;
   micBtn.setAttribute('aria-label', `Falar com ${p.nome}`);
   marcarCardAtivo(p.id);
+  if (etapa === 'atracao') definirEtapa('atracao'); // o convite usa o nome do personagem
   renderizarAtalhos(p.atalhos);
   voz.resolverMotor(p.voz);
   const hist = historicoDe(p.id);
@@ -259,7 +261,7 @@ function renderizarAtalhos(atalhos) {
 const voz = criarVoz({
   config,
   aoComecarFala: () => { falando = true; definirEstado('speaking'); },
-  aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); },
+  aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); avancarDepoisDaFala(); },
   aoFimFrase: () => liberarGesto(),
   // Gesto marcado pelo LLM numa sentença: pedido no instante em que essa sentença começa a tocar.
   aoInicioFrase: (gestos) => { for (const g of gestos) pedirGesto(g, 'llm', { naFronteira: true }); },
@@ -333,6 +335,71 @@ function liberarGesto() {
   if (c) executarGesto(c, 'fronteira');
 }
 
+/* ---------- Fluxo de sessão (P5) ---------- */
+// atracao -> cumprimento -> consentimento -> conversa -> despedida -> (limpeza) -> atracao.
+// Cada etapa mostra um único próximo passo. O microfone começa desligado e só existe se a pessoa aceitar.
+const elPasso = { caixa: $('passo'), titulo: $('passoTitulo'), texto: $('passoTexto'), nota: $('passoNota'), acao: $('passoAcao'), alt: $('passoAlt') };
+const usarVozBtn = $('usarVoz');
+let etapa = 'atracao', microfone = null, timerEtapa = null; // microfone: null (não perguntado), 'sim', 'nao'
+
+function definirEtapa(e) {
+  etapa = e;
+  app.dataset.etapa = e;
+  clearTimeout(timerEtapa);
+  app.dataset.microfone = microfone === 'sim' ? 'sim' : 'nao';
+  usarVozBtn.hidden = !(e === 'conversa' && microfone === 'nao');
+  usarVozBtn.textContent = T.etapas.conversa.mudarParaVoz;
+  const p = personagem ? personagem.nome : '';
+  if (e === 'atracao') {
+    mostrarPasso(T.etapas.atracao.titulo(p), T.etapas.atracao.texto, '', T.etapas.atracao.acao, null);
+  } else if (e === 'consentimento') {
+    const c = T.etapas.consentimento;
+    mostrarPasso(c.titulo, c.texto, camera.ligada ? c.camLigada : c.camDesligada, c.acao, c.alternativa);
+  } else {
+    elPasso.caixa.hidden = true;
+  }
+  // Etapas que esperam o fim de uma fala têm um limite, para nunca travarem sem voz.
+  if (e === 'cumprimento') timerEtapa = setTimeout(() => { if (etapa === 'cumprimento') definirEtapa(microfone ? 'conversa' : 'consentimento'); }, 8000);
+  if (e === 'despedida') timerEtapa = setTimeout(() => { if (etapa === 'despedida') voltarParaAtracao(); }, 8000);
+}
+
+function mostrarPasso(titulo, texto, nota, acao, alt) {
+  elPasso.titulo.textContent = titulo;
+  elPasso.texto.textContent = texto;
+  elPasso.nota.textContent = nota;
+  elPasso.nota.hidden = !nota;
+  elPasso.acao.textContent = acao;
+  elPasso.alt.textContent = alt || '';
+  elPasso.alt.hidden = !alt;
+  elPasso.caixa.hidden = false;
+}
+
+// Chamado quando uma fala termina (aoTerminarFala).
+function avancarDepoisDaFala() {
+  if (etapa === 'cumprimento') definirEtapa(microfone ? 'conversa' : 'consentimento');
+  else if (etapa === 'despedida') voltarParaAtracao();
+}
+
+function voltarParaAtracao() {
+  microfone = null; // a próxima pessoa responde de novo
+  elHeard.textContent = '';
+  elAnswer.textContent = '';
+  definirEtapa('atracao');
+}
+
+elPasso.acao.addEventListener('click', () => {
+  voz.preparar();
+  if (etapa === 'atracao') iniciarSessao('toque');
+  else if (etapa === 'consentimento') { microfone = 'sim'; definirEtapa('conversa'); micBtn.focus(); }
+});
+elPasso.alt.addEventListener('click', () => {
+  if (etapa !== 'consentimento') return;
+  microfone = 'nao';
+  definirEtapa('conversa');
+  input.focus();
+});
+usarVozBtn.addEventListener('click', () => { microfone = 'sim'; definirEtapa('conversa'); micBtn.focus(); });
+
 /* ---------- Sessão: cumprimento e despedida ---------- */
 // Começa com rosto detectado após ausência, toque na tela ou botão do operador.
 // Termina pelo operador ou por inatividade: aceno, frase curta e limpeza do histórico.
@@ -372,6 +439,7 @@ function iniciarSessao(origem) {
   if (sessaoAtiva || !personagem || ocupado) return false;
   sessaoAtiva = true;
   app.dataset.sessao = 'ativa';
+  definirEtapa('cumprimento');
   acenarEFalar('cumprimento', origem, efetivo(personagem).oiPresenca);
   tocarInatividade();
   return true;
@@ -384,6 +452,7 @@ function encerrarSessao(origem) {
   clearTimeout(timerInatividade);
   if (abortCtl) abortCtl.abort();
   silenciar();
+  definirEtapa('despedida');
   acenarEFalar('despedida', origem, efetivo(personagem).despedida);
   // Limpeza: nenhuma conversa fica para a próxima pessoa.
   for (const h of historicos.values()) h.length = 0;
@@ -403,6 +472,7 @@ async function perguntarAoPersonagem(q) {
   q = (q || '').trim();
   if (!q || ocupado || !personagem) return;
   if (!sessaoAtiva) { sessaoAtiva = true; app.dataset.sessao = 'ativa'; }
+  if (etapa !== 'conversa') definirEtapa('conversa');
   tocarInatividade();
   if (!apiKey) { definirEstado('idle', 'Um adulto precisa colocar a chave do Gemini na engrenagem.'); dlg.showModal(); return; }
   const quem = personagem;
@@ -860,6 +930,9 @@ if (new URLSearchParams(location.search).has('debug')) {
     get catalogo() { return catalogo; },
     get diretor() { return diretor; },
     registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao,
+    get etapa() { return etapa; },
+    // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
+    irParaConversa(mic = 'sim') { sessaoAtiva = true; microfone = mic; definirEtapa('conversa'); },
     get sessaoAtiva() { return sessaoAtiva; },
   };
 }
@@ -883,6 +956,7 @@ if (!disponiveis.length) {
   // Depois da carga do .vrm: o parse ocupa a thread principal e estouraria o tempo limite.
   await voz.verificarServidor();
   if (personagem) prepararFrasesFixas(personagem); // agora o motor (Kokoro ou sistema) já é conhecido
+  if (etapa === 'atracao') definirEtapa('atracao'); // um teste pode já ter pulado para a conversa
   prepararMiniaturas();
   await ouvido.preparar();
   estadoOcioso();
