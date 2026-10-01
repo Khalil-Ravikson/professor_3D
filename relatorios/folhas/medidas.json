@@ -1,0 +1,82 @@
+{
+  "assets/animations/idle.vrma": {
+    "duracao": 10.38,
+    "quadrilDeslocMaxM": 0.017,
+    "quadrilDescidaMaxM": 0.001,
+    "quadrilGiroTotalGraus": 0,
+    "quadrilFimVsInicioM": 0,
+    "maiorDifAnguloInicioFimGraus": 0,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  },
+  "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_01.vrma": {
+    "duracao": 11.8,
+    "quadrilDeslocMaxM": 0.278,
+    "quadrilDescidaMaxM": 0.02,
+    "quadrilGiroTotalGraus": -360,
+    "quadrilFimVsInicioM": 0.085,
+    "maiorDifAnguloInicioFimGraus": 7.7,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  },
+  "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_02.vrma": {
+    "duracao": 7.27,
+    "quadrilDeslocMaxM": 0.68,
+    "quadrilDescidaMaxM": 0.005,
+    "quadrilGiroTotalGraus": 0,
+    "quadrilFimVsInicioM": 0.639,
+    "maiorDifAnguloInicioFimGraus": 124.5,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  },
+  "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_03.vrma": {
+    "duracao": 11.68,
+    "quadrilDeslocMaxM": 0.065,
+    "quadrilDescidaMaxM": 0.02,
+    "quadrilGiroTotalGraus": 0,
+    "quadrilFimVsInicioM": 0.015,
+    "maiorDifAnguloInicioFimGraus": 11.4,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  },
+  "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_04.vrma": {
+    "duracao": 9.6,
+    "quadrilDeslocMaxM": 0.093,
+    "quadrilDescidaMaxM": 0.011,
+    "quadrilGiroTotalGraus": 0,
+    "quadrilFimVsInicioM": 0.026,
+    "maiorDifAnguloInicioFimGraus": 13.9,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  },
+  "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_05.vrma": {
+    "duracao": 9.32,
+    "quadrilDeslocMaxM": 0.152,
+    "quadrilDescidaMaxM": 0.054,
+    "quadrilGiroTotalGraus": -360,
+    "quadrilFimVsInicioM": 0.14,
+    "maiorDifAnguloInicioFimGraus": 11.2,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  },
+  "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_06.vrma": {
+    "duracao": 7.52,
+    "quadrilDeslocMaxM": 0.172,
+    "quadrilDescidaMaxM": 0.011,
+    "quadrilGiroTotalGraus": 0,
+    "quadrilFimVsInicioM": 0.036,
+    "maiorDifAnguloInicioFimGraus": 14.9,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  },
+  "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_07.vrma": {
+    "duracao": 11.52,
+    "quadrilDeslocMaxM": 0.231,
+    "quadrilDescidaMaxM": 0.227,
+    "quadrilGiroTotalGraus": 0,
+    "quadrilFimVsInicioM": 0.016,
+    "maiorDifAnguloInicioFimGraus": 6.7,
+    "trilhasExpressao": [],
+    "trilhaOlhar": false
+  }
+}

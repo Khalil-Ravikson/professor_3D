@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparar lip sync</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --tinta: #1f2a44; --suave: #51607e; --fundo: #eef3f7; --cartao: #fff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.4 system-ui, sans-serif; color: var(--tinta); background: var(--fundo); padding: 12px; }
+  h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 10px; }
+  .palco h2 { font-size: 1rem; }
+  .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  button, select { font: inherit; min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #c9d3df; background: var(--cartao); color: var(--tinta); cursor: pointer; }
+  button:focus-visible, select:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
+  .palcos { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .palco { background: var(--cartao); border-radius: 12px; overflow: hidden; }
+  .palco h2 { font-size: .95rem; margin: 0; padding: 8px 12px; }
+  .palco .tela { height: 340px; position: relative; }
+  .palco canvas { display: block; width: 100%; height: 100%; }
+  #grafico { width: 100%; height: 150px; background: var(--cartao); border-radius: 12px; margin-top: 10px; display: block; }
+  table { border-collapse: collapse; margin-top: 10px; background: var(--cartao); border-radius: 12px; overflow: hidden; }
+  th, td { padding: 6px 12px; text-align: right; border-bottom: 1px solid #e3e8ef; font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  #estado { color: var(--suave); }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js",
+    "@pixiv/three-vrm-animation": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm-animation@3.5.5/lib/three-vrm-animation.module.min.js",
+    "wlipsync": "https://cdn.jsdelivr.net/npm/wlipsync@1.3.1/dist/wlipsync-single.js"
+  }
+}
+</script>
+</head>
+<body>
+<h1>Lip sync lado a lado: mesmo áudio, dois métodos</h1>
+<div class="barra">
+  <select id="quem" aria-label="Personagem"></select>
+  <button id="f1" type="button">Frase curta</button>
+  <button id="f2" type="button">Frase com vogais variadas</button>
+  <button id="f3" type="button">Frase com m, b, p</button>
+  <button id="parar" type="button">Parar</button>
+  <span id="estado" role="status">Carregando...</span>
+</div>
+<div class="palcos">
+  <section class="palco"><h2>RMS → aa</h2><div class="tela" id="telaRms"></div></section>
+  <section class="palco"><h2>wLipSync (vogais)</h2><div class="tela" id="telaWlip"></div></section>
+  <section class="palco"><h2>Híbrido: vogais do wLipSync, abertura do RMS</h2><div class="tela" id="telaHib"></div></section>
+</div>
+<canvas id="grafico" width="1200" height="150" aria-label="Gráfico da abertura da boca nos dois métodos"></canvas>
+<table aria-label="Métricas da última frase">
+  <thead><tr><th>Métrica</th><th>RMS</th><th>wLipSync</th><th>Híbrido</th></tr></thead>
+  <tbody id="metricas"></tbody>
+</table>
+
+<script type="module">
+import { criarCena } from './src/scene.js';
+import { carregarVrm, carregarClipes, montarAvatar } from './src/avatar.js';
+import { PERSONAGENS } from './src/characters.js';
+import { criarLipSyncRMS, criarLipSyncWLipSync, criarLipSyncHibrido, VISEMAS } from './src/lipsync.js';
+import { criarKokoroServidor, URL_PADRAO } from './src/tts/kokoro-server.js';
+import { dividirFrases } from './src/tts/frases.js';
+
+const FRASES = {
+  f1: 'Oi! Tudo bem com você?',
+  f2: 'A casa, o livro, a uva, o elefante e a ilha ficam perto do rio.',
+  f3: 'Mamãe bebeu um pouco de mel, e o papai pediu pipoca.',
+};
+const $ = (id) => document.getElementById(id);
+
+const ctx = new AudioContext();
+const saida = ctx.createGain();
+const analisador = ctx.createAnalyser();
+analisador.fftSize = 1024;
+saida.connect(analisador);
+analisador.connect(ctx.destination);
+
+const rms = criarLipSyncRMS(analisador);
+let wlip = null;
+try { wlip = await criarLipSyncWLipSync(ctx, saida); }
+catch (e) { console.error('[comparar] wLipSync falhou:', e); $('estado').textContent = 'wLipSync falhou: ' + e.message; }
+
+const hib = wlip ? criarLipSyncHibrido(criarLipSyncRMS(analisador), wlip) : null;
+const kokoro = criarKokoroServidor({ obterUrl: () => localStorage.getItem('prof3d_url_kokoro') || URL_PADRAO });
+const cenas = { rms: criarCena($('telaRms')), wlip: criarCena($('telaWlip')), hib: criarCena($('telaHib')) };
+const avatares = { rms: null, wlip: null, hib: null };
+const valores = { rms: null, wlip: null, hib: null };
+const historico = []; // [t, abertura rms, abertura wlip, vogal dominante wlip]
+let medindo = null;
+
+function abertura(v) { return v ? Math.max(...VISEMAS.map((k) => v[k])) : 0; }
+function dominante(v) {
+  if (!v) return '-';
+  const k = VISEMAS.reduce((a, b) => (v[b] > v[a] ? b : a));
+  return v[k] > 0.05 ? k : '-';
+}
+
+cenas.rms.aoAtualizar((dt, t) => {
+  const t0 = performance.now();
+  valores.rms = rms.ler(dt);
+  const custoRms = performance.now() - t0;
+  const t1 = performance.now();
+  valores.wlip = wlip ? wlip.ler(dt) : null;
+  const custoWlip = performance.now() - t1;
+  const t2 = performance.now();
+  valores.hib = hib ? hib.ler(dt) : null;
+  const custoHib = performance.now() - t2;
+  if (avatares.rms) avatares.rms.atualizar(dt, t, { visemas: valores.rms });
+  const a = abertura(valores.rms), b = abertura(valores.wlip), c = abertura(valores.hib), silencio = rms.rms <= 0.012;
+  historico.push([t, a, b, dominante(valores.wlip), c]);
+  if (historico.length > 300) historico.shift();
+  if (medindo) {
+    const m = medindo;
+    m.quadros++;
+    m.custo.rms += custoRms; m.custo.wlip += custoWlip; m.custo.hib += custoHib;
+    for (const [nome, v] of [['rms', a], ['wlip', b], ['hib', c]]) {
+      const s = m[nome];
+      if (silencio) { s.silencioSoma += v; s.silencioN++; } else { s.falaSoma += v; s.falaN++; }
+      if (s.anterior !== null) s.tremor += Math.abs(v - s.anterior);
+      s.anterior = v;
+    }
+    const d = dominante(valores.wlip);
+    if (!silencio && d !== '-') m.vogais[d] = (m.vogais[d] || 0) + 1;
+  }
+});
+cenas.wlip.aoAtualizar((dt, t) => { if (avatares.wlip) avatares.wlip.atualizar(dt, t, { visemas: valores.wlip }); });
+cenas.hib.aoAtualizar((dt, t) => { if (avatares.hib) avatares.hib.atualizar(dt, t, { visemas: valores.hib }); });
+cenas.rms.iniciar();
+cenas.wlip.iniciar();
+cenas.hib.iniciar();
+
+async function carregarPersonagem(p) {
+  $('estado').textContent = `Carregando ${p.nome}...`;
+  for (const lado of ['rms', 'wlip', 'hib']) {
+    if (avatares[lado]) avatares[lado].descartar();
+    const { vrm } = await carregarVrm(p.arquivoVrm);
+    const clipes = await carregarClipes(p.animacoes, vrm);
+    avatares[lado] = montarAvatar(vrm, cenas[lado], { clipes, tetoBoca: p.tetoBoca });
+    // Close no rosto: a boca é o que interessa aqui.
+    cenas[lado].definirFoco(avatares[lado].posicaoCabeca, { distancia: p.enquadramento.distancia * 0.55, altura: p.enquadramento.altura });
+  }
+  $('estado').textContent = `${p.nome} pronto. Kokoro em ${kokoro.id}.`;
+}
+
+let fonteAtual = null, ctlAtual = null;
+async function tocar(texto) {
+  await ctx.resume();
+  parar();
+  const p = PERSONAGENS.find((x) => x.id === $('quem').value);
+  ctlAtual = new AbortController();
+  const ctl = ctlAtual;
+  const zero = () => ({ silencioSoma: 0, silencioN: 0, falaSoma: 0, falaN: 0, tremor: 0, anterior: null });
+  medindo = { quadros: 0, custo: { rms: 0, wlip: 0, hib: 0 }, vogais: {}, rms: zero(), wlip: zero(), hib: zero() };
+  $('estado').textContent = 'Sintetizando...';
+  for (const frase of dividirFrases(texto)) {
+    const buffer = await kokoro.sintetizar(frase, p.voz, { signal: ctl.signal, ctx });
+    if (ctl.signal.aborted) return;
+    $('estado').textContent = 'Tocando: ' + frase;
+    await new Promise((ok) => {
+      const f = ctx.createBufferSource();
+      f.buffer = buffer; f.connect(saida); fonteAtual = f;
+      f.onended = () => { fonteAtual = null; ok(); };
+      f.start();
+    });
+  }
+  await new Promise((ok) => setTimeout(ok, 400)); // mede o fechamento depois do fim
+  mostrarMetricas();
+  $('estado').textContent = 'Pronto.';
+}
+function parar() {
+  if (ctlAtual) ctlAtual.abort();
+  if (fonteAtual) { fonteAtual.onended = null; fonteAtual.stop(); fonteAtual = null; }
+}
+
+function mostrarMetricas() {
+  const m = medindo; medindo = null;
+  if (!m) return;
+  const r = (x) => (Number.isFinite(x) ? x.toFixed(3) : '-');
+  const linha = (nome, f) => `<tr><td>${nome}</td><td>${f('rms')}</td><td>${f('wlip')}</td><td>${f('hib')}</td></tr>`;
+  const totalVogais = Object.values(m.vogais).reduce((a, b) => a + b, 0) || 1;
+  const vogais = VISEMAS.map((k) => `${k} ${Math.round(100 * (m.vogais[k] || 0) / totalVogais)}%`).join(' · ');
+  $('metricas').innerHTML =
+    linha('Abertura média na fala', (l) => r(m[l].falaSoma / m[l].falaN)) +
+    linha('Abertura média no silêncio (ideal 0)', (l) => r(m[l].silencioSoma / m[l].silencioN)) +
+    linha('Tremor (média de |Δ| por quadro)', (l) => r(m[l].tremor / m.quadros)) +
+    linha('Custo por quadro (ms)', (l) => r(m.custo[l] / m.quadros)) +
+    `<tr><td>Vogal dominante na fala</td><td>só aa</td><td colspan="2">${vogais}</td></tr>`;
+  window.__comparacao = { quadros: m.quadros, rms: m.rms, wlip: m.wlip, hib: m.hib, vogais: m.vogais, custo: m.custo };
+}
+
+// Gráfico: azul = RMS, laranja = wLipSync, verde = híbrido (abertura máxima entre as vogais).
+const g = $('grafico'), gc = g.getContext('2d');
+(function desenhar() {
+  gc.clearRect(0, 0, g.width, g.height);
+  const n = historico.length, h = g.height - 10;
+  for (const [idx, cor] of [[1, '#2f6e8f'], [2, '#d9731a'], [4, '#2e7d5b']]) {
+    gc.strokeStyle = cor; gc.lineWidth = 2; gc.beginPath();
+    historico.forEach((p, i) => { const x = (i / 300) * g.width, y = 5 + h - p[idx] * h; i ? gc.lineTo(x, y) : gc.moveTo(x, y); });
+    gc.stroke();
+  }
+  requestAnimationFrame(desenhar);
+})();
+
+$('quem').replaceChildren(...PERSONAGENS.map((p) => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.nome; return o; }));
+$('quem').addEventListener('change', () => carregarPersonagem(PERSONAGENS.find((x) => x.id === $('quem').value)));
+for (const id of Object.keys(FRASES)) $(id).addEventListener('click', () => tocar(FRASES[id]).catch((e) => { if (e.name !== 'AbortError') { console.error(e); $('estado').textContent = 'Erro: ' + e.message; } }));
+$('parar').addEventListener('click', parar);
+window.__tocar = (id) => tocar(FRASES[id]);
+await carregarPersonagem(PERSONAGENS[0]);
+</script>
+</body>
+</html>

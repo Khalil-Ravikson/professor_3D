@@ -1,0 +1,26 @@
+{
+  "rotulo": "base",
+  "data": "2026-10-01T18:16:40.014Z",
+  "viewport": "1280x720",
+  "gpu": "d3d11",
+  "cargaInicialMs": 2719,
+  "fpsRepouso": 57.8,
+  "fpsFalando": null,
+  "primeiraFalaMs": [
+    4363,
+    3226,
+    3528
+  ],
+  "primeiraFalaMedianaMs": 3528,
+  "memInicio": {
+    "heapMB": 27.4,
+    "geometrias": 7,
+    "texturas": 17
+  },
+  "memDepois10Trocas": {
+    "heapMB": 58.6,
+    "geometrias": 7,
+    "texturas": 17
+  },
+  "erros": []
+}

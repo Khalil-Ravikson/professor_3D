@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Luma 3D</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Valores padrão; a paleta do personagem sobrescreve em :root (ui.js). */
+  :root {
+    --fundo-1: #f7fbfd; --fundo-2: #dfeef6;
+    --tinta: #1f2a44; --tinta-suave: #51607e; --cartao: #ffffff;
+    --acao: #d9473a; --acao-sombra: #9e2f25;
+    --realce: #ffc93c; --realce-tinta: #1f2a44;
+    --ok: #2f8a54;
+    --alvo: 44px;
+    --fonte: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  /* Totem 1080×1920 lido de ~1 m: a base do texto cresce com a tela (16 px no celular, ~22 px no totem). */
+  html { font-size: clamp(16px, calc(10px + 1.1vmin), 24px); }
+  body {
+    font-family: var(--fonte);
+    color: var(--tinta);
+    background: var(--fundo-2);
+    display: flex; justify-content: center;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  }
+  /* Tela vertical, como um totem */
+  .kiosk {
+    position: relative; width: 100%; max-width: 1080px; height: 100%;
+    display: flex; flex-direction: column;
+    background: linear-gradient(var(--fundo-1), var(--fundo-2));
+    overflow: hidden;
+  }
+  /* O palco nunca some: com o quadro aberto, quem rola é o quadro. */
+  #stage { position: relative; flex: 1 1 auto; min-height: 32vh; }
+  #stage canvas { display: block; width: 100%; height: 100%; transition: opacity .16s ease-out; }
+  #stage.trocando canvas { opacity: 0; }
+
+  /* Seletor de personagem: cada cartão usa a paleta do próprio personagem. */
+  .elenco { flex: 0 0 auto; background: var(--fundo-1); }
+  .elenco[hidden] { display: none; }
+  .elenco-lista {
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px, 1fr);
+    gap: 8px; overflow-x: auto; padding: 8px 12px;
+    scroll-snap-type: x proximity; scrollbar-width: thin;
+  }
+  .card {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+    min-width: 0; min-height: 64px; padding: 6px 12px 6px 6px;
+    font: inherit; text-align: left; cursor: pointer; scroll-snap-align: start;
+    border: 2px solid transparent; border-radius: 14px;
+    background: var(--card-fundo); color: var(--card-tinta);
+  }
+  .card[aria-pressed="true"] { border-color: var(--card-tinta); }
+  .card-foto {
+    flex: 0 0 48px; width: 48px; height: 48px; border-radius: 10px; overflow: hidden;
+    display: grid; place-items: center; font-weight: 800; font-size: 1.3rem;
+    background: rgba(255,255,255,.35);
+  }
+  .card-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+  .card-nome { font-weight: 800; font-size: 1.05rem; }
+  .card-papel {
+    font-size: .8rem; color: var(--card-suave);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .loading {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-weight: 700; color: var(--tinta-suave); pointer-events: none;
+  }
+  .loading[hidden], .erro-avatar[hidden], .panel[hidden] { display: none; }
+  .erro-avatar {
+    position: absolute; inset: 0; z-index: 1; display: grid; align-content: center; gap: 8px;
+    padding: 24px; text-align: center;
+  }
+  .erro-avatar p { margin: 0; }
+  .erro-titulo { font-size: 1.25rem; font-weight: 800; }
+  .erro-detalhe { color: var(--tinta-suave); }
+  .erro-avatar code {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .95em;
+    background: var(--cartao); padding: 2px 6px; border-radius: 6px; word-break: break-all;
+  }
+  .gear {
+    position: absolute; top: 12px; right: 12px; z-index: 2;
+    width: var(--alvo); height: var(--alvo); border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--cartao); color: var(--tinta); display: grid; place-items: center;
+  }
+  .gear svg { width: 24px; height: 24px; }
+  .dot {
+    position: absolute; left: 14px; bottom: 14px; z-index: 2;
+    width: 18px; height: 18px; border-radius: 50%; background: var(--ok);
+  }
+  .cam {
+    position: absolute; top: 12px; right: 64px; z-index: 2;
+    width: var(--alvo); height: var(--alvo); border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--cartao); color: var(--tinta); display: grid; place-items: center;
+  }
+  .cam svg { width: 22px; height: 22px; }
+  .cam[aria-pressed="true"] { background: #b3261e; color: #fff; }
+  .cam-aviso {
+    position: absolute; right: 12px; top: 64px; z-index: 2; margin: 0;
+    font-size: .8rem; font-weight: 800; padding: 4px 10px 4px 22px; border-radius: 999px;
+    background: #b3261e; color: #fff;
+  }
+  .cam-aviso::before { content: ""; position: absolute; left: 9px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: #fff; }
+  .cam-aviso[hidden] { display: none; }
+  .selo-voz {
+    position: absolute; left: 12px; top: 12px; z-index: 2; margin: 0;
+    font-size: .8rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    background: var(--cartao); color: var(--tinta-suave);
+  }
+  .selo-voz[data-alerta="sim"] { color: #7a2e00; background: #ffe1c7; }
+  dialog input[type=text], dialog input[type=url] {
+    width: 100%; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px;
+    border: 2px solid #cfd8e6; background: #fff; color: #1f2a44;
+  }
+  [data-state="listening"] .dot { background: var(--acao); animation: pulse 1s infinite; }
+  [data-state="thinking"] .dot { background: var(--realce); }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  .panel {
+    flex: 0 0 auto; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px;
+    background: var(--fundo-2);
+  }
+  .bubble {
+    background: var(--cartao); border-radius: 16px; padding: 10px 16px;
+    max-height: 22vh; min-height: 64px; overflow-y: auto;
+  }
+  .heard { font-size: .9rem; color: var(--tinta-suave); margin: 0 0 2px; }
+  .answer { font-size: 1.2rem; line-height: 1.4; margin: 0; white-space: pre-wrap; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .status { flex: 1; font-weight: 700; margin: 0; }
+  .mic {
+    flex: 0 0 auto; width: 84px; height: 84px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--acao); color: #fff; display: grid; place-items: center;
+    box-shadow: 0 7px 0 var(--acao-sombra); transition: transform .1s, box-shadow .1s;
+  }
+  .mic:active { transform: translateY(4px); box-shadow: 0 3px 0 var(--acao-sombra); }
+  .mic:disabled { opacity: .5; cursor: wait; }
+  .mic svg { width: 40px; height: 40px; }
+  .stop {
+    font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 0 16px; cursor: pointer;
+    min-height: var(--alvo); background: var(--cartao); color: var(--tinta);
+  }
+  .stop[hidden] { display: none; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+  .chip {
+    flex: 0 0 auto; font: inherit; font-weight: 700; font-size: .95rem; color: var(--tinta);
+    background: var(--cartao); border: 0; border-radius: 999px; padding: 0 16px; cursor: pointer;
+    min-height: var(--alvo);
+  }
+  form.typed { display: flex; gap: 8px; }
+  .typed input {
+    flex: 1; min-width: 0; min-height: var(--alvo); font: inherit; font-size: 1rem; color: var(--tinta);
+    background: var(--cartao); border: 2px solid transparent; border-radius: 12px; padding: 0 12px;
+  }
+  .typed button, .btn {
+    font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 0 16px; cursor: pointer;
+    min-height: var(--alvo); background: var(--realce); color: var(--realce-tinta);
+  }
+  .btn.ghost { background: #eef2f8; color: #1f2a44; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
+
+  /* Quadro de resolução (Teo, Rafa). JetBrains Mono: 0 com ponto, 1/l/I distintos. */
+  .quadro {
+    flex: 0 1 auto; max-height: 30vh; min-height: 0; overflow-y: auto; margin: 0 14px; padding: 10px 14px;
+    border-radius: 12px; background: var(--cartao); color: var(--tinta);
+    font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: .95rem; line-height: 1.45;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  .quadro[hidden] { display: none; }
+  .quadro[data-vazio="sim"] .quadro-contas-bloco { display: none; }
+  .quadro[data-vazio="sim"]::before { content: "Os passos e as contas aparecem aqui."; color: var(--tinta-suave); font-family: "Baloo 2", system-ui, sans-serif; }
+  .quadro-linhas, .quadro-contas { list-style: none; margin: 0; padding: 0; }
+  .quadro-linhas li { padding: 2px 0; }
+  .quadro-rotulo { font-weight: 600; color: var(--tinta-suave); margin-right: .6ch; }
+  .quadro-linhas li.resposta { font-weight: 600; font-size: 1.08rem; margin-top: 4px; }
+  .quadro-linhas li.resposta .quadro-rotulo { color: var(--tinta); }
+  .quadro-linhas li.suposicao .quadro-rotulo::after { content: " (suposição)"; font-weight: 400; }
+  .nao-conferido { display: inline-block; min-width: 1.4ch; text-align: center; border-radius: 4px; background: #ffe1c7; color: #7a2e00; font-weight: 600; }
+  .quadro-contas-bloco h3 { margin: 8px 0 2px; font: 700 .8rem "Baloo 2", system-ui, sans-serif; color: var(--tinta-suave); }
+  .quadro-contas li { color: var(--tinta-suave); font-size: .85rem; }
+  .quadro-contas li.erro { color: #b3261e; }
+
+  dialog {
+    border: 0; border-radius: 16px; padding: 18px; width: min(92vw, 480px); max-height: 90vh; overflow-y: auto;
+    color: #1f2a44; background: #fff; font: inherit;
+  }
+  dialog fieldset { border: 0; border-top: 1px solid #e3e8ef; margin: 14px 0 0; padding: 6px 0 0; }
+  dialog legend { font-weight: 800; font-size: 1.05rem; padding: 0; }
+  dialog textarea {
+    width: 100%; font: .9rem/1.4 ui-monospace, Consolas, monospace; padding: 8px 10px; border-radius: 10px;
+    border: 2px solid #cfd8e6; background: #fff; color: #1f2a44; resize: vertical;
+  }
+  dialog input[type=number] { width: 8em; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px; border: 2px solid #cfd8e6; }
+  dialog input[type=range] { width: 100%; min-height: var(--alvo); }
+  dialog label.check { display: flex; gap: 8px; align-items: center; font-weight: 600; min-height: var(--alvo); }
+  dialog label.check input { width: 22px; height: 22px; }
+  dialog::backdrop { background: rgba(16,24,43,.5); }
+  dialog h2 { margin: 0 0 8px; font-size: 1.3rem; }
+  dialog label { display: block; font-weight: 700; margin: 12px 0 4px; }
+  dialog input[type=password], dialog select {
+    width: 100%; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px;
+    border: 2px solid #cfd8e6; background: #fff; color: #1f2a44;
+  }
+  dialog .hint { font-size: .85rem; color: #51607e; margin: 4px 0 0; }
+  dialog .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  dialog .close { margin-top: 16px; width: 100%; }
+  /* Galeria de animações. Durante a prévia o painel encosta à direita e o fundo fica livre para ver o personagem. */
+  dialog.espiando { margin: 2vh 2vw 2vh auto; width: min(92vw, 400px); max-height: 96vh; }
+  dialog.espiando::backdrop { background: transparent; }
+  @media (orientation: portrait) { dialog.espiando { margin: auto 2vw 2vh; width: 96vw; max-height: 45vh; } }
+  .galeria { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+  .galeria li { border: 1px solid #e3e8ef; border-radius: 12px; padding: 10px 12px; }
+  .galeria li[data-status=desligado] { background: #f6f7f9; }
+  .galeria .g-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .galeria .g-nome { font-weight: 800; }
+  .galeria .g-meta { font-size: .8rem; color: #51607e; }
+  .galeria .g-desc { font-size: .85rem; margin: 4px 0 6px; }
+  .galeria .g-ctrl { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  .galeria .g-ctrl button { min-width: var(--alvo); min-height: var(--alvo); padding: 0 12px; }
+  .galeria .g-ctrl label { margin: 0; font-weight: 600; }
+  .galeria .g-ctrl select { width: auto; }
+  .galeria-lacunas { font-size: .85rem; color: #51607e; margin: 10px 0 0; }
+  dialog button:focus-visible, dialog input:focus-visible, dialog select:focus-visible, dialog textarea:focus-visible { outline: 3px solid #1f2a44; outline-offset: 2px; }
+
+  /* Celular: só foto e nome no seletor. */
+  @media (max-width: 520px) {
+    .elenco-lista { grid-auto-columns: minmax(104px, 1fr); }
+    .card-papel { display: none; }
+  }
+  /* Totem em retrato: uma coluna. Tela larga: avatar à esquerda; quadro e conversa à direita. */
+  .lado { display: contents; }
+  @media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+    .kiosk {
+      max-width: none; display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(380px, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas: "elenco elenco" "palco lado";
+    }
+    .elenco { grid-area: elenco; }
+    #stage { grid-area: palco; min-height: 0; }
+    .lado { grid-area: lado; display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; background: var(--fundo-2); }
+    .lado .quadro { max-height: none; flex: 1 1 auto; margin: 12px 14px 0; }
+    .lado .bubble { max-height: 30vh; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js",
+    "@pixiv/three-vrm-animation": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm-animation@3.5.5/lib/three-vrm-animation.module.min.js",
+    "wlipsync": "https://cdn.jsdelivr.net/npm/wlipsync@1.3.1/dist/wlipsync-single.js",
+    "mathjs": "https://cdn.jsdelivr.net/npm/mathjs@15.2.0/+esm"
+  }
+}
+</script>
+<script type="module" src="src/ui.js"></script>
+</head>
+<body>
+<main class="kiosk" id="app" data-state="idle">
+  <nav class="elenco" id="elencoNav" aria-label="Personagens" hidden>
+    <div class="elenco-lista" id="elenco"></div>
+  </nav>
+  <div id="stage">
+    <div class="loading" id="loading">Carregando...</div>
+    <div class="erro-avatar" id="erroAvatar" role="alert" hidden>
+      <p class="erro-titulo" id="erroTitulo"></p>
+      <p class="erro-detalhe">Coloque o arquivo em <code id="erroCaminho"></code> e recarregue a página.</p>
+    </div>
+    <button class="gear" id="gear" type="button" aria-label="Configurações">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.3 7.3 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+    </button>
+    <button class="cam" id="camBtn" type="button" aria-pressed="false" aria-label="Ligar a câmera">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 8.5V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1.5l4.3 3a1 1 0 0 0 1.7-.8V6.3a1 1 0 0 0-1.7-.8z"/></svg>
+    </button>
+    <p class="cam-aviso" id="camAviso" role="status" hidden>Câmera ligada</p>
+    <span class="dot" aria-hidden="true"></span>
+    <p class="selo-voz" id="seloVoz" role="status" data-alerta="nao">Voz: verificando</p>
+  </div>
+
+  <div class="lado">
+  <section class="quadro" id="quadro" aria-label="Quadro de resolução" data-vazio="sim" hidden>
+    <ol class="quadro-linhas" aria-live="polite"></ol>
+    <div class="quadro-contas-bloco">
+      <h3>Contas feitas pela calculadora</h3>
+      <ol class="quadro-contas"></ol>
+    </div>
+  </section>
+
+  <section class="panel" id="painel">
+    <div class="bubble" aria-live="polite">
+      <p class="heard" id="heard"></p>
+      <p class="answer" id="answer"></p>
+    </div>
+    <div class="row">
+      <p class="status" id="status">Preparando...</p>
+      <button class="stop" id="stop" type="button" hidden>Parar</button>
+      <button class="mic" id="mic" type="button" aria-label="Falar" disabled>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm7-4a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.08A7 7 0 0 0 19 11z"/></svg>
+      </button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <form class="typed" id="form" autocomplete="off">
+      <input id="text" type="text" placeholder="Ou escreva aqui..." aria-label="Escreva sua pergunta" maxlength="300">
+      <button type="submit">Enviar</button>
+    </form>
+  </section>
+  </div>
+</main>
+
+<dialog id="settings">
+  <h2>Configurações</h2>
+
+  <fieldset>
+    <legend>Gemini</legend>
+    <form id="keyform" autocomplete="off">
+      <label for="key">Chave da API</label>
+      <input id="key" type="password" placeholder="AIza...">
+      <p class="hint">Fica guardada só neste navegador.</p>
+      <label for="modelo">Modelo</label>
+      <input id="modelo" type="text" spellcheck="false" autocapitalize="off">
+    </form>
+  </fieldset>
+
+  <fieldset>
+    <legend>Voz</legend>
+    <label for="motorSel">Motor de voz</label>
+    <select id="motorSel">
+      <option value="auto">Automático: vozes Natural do Edge se houver, senão Kokoro</option>
+      <option value="kokoro-server">Kokoro no servidor local</option>
+      <option value="kokoro-browser">Kokoro no navegador (só inglês)</option>
+      <option value="webspeech">Voz do sistema</option>
+    </select>
+    <label for="urlKokoro">Endereço do servidor Kokoro</label>
+    <input id="urlKokoro" type="url" spellcheck="false" autocapitalize="off">
+    <p class="hint" id="statusVoz" role="status">Verificando o servidor...</p>
+    <div class="actions">
+      <button class="btn ghost" id="verificarVoz" type="button">Verificar</button>
+      <button class="btn ghost" id="testVoice" type="button">Testar voz</button>
+    </div>
+    <label for="voiceSel">Voz do sistema</label>
+    <select id="voiceSel"></select>
+    <p class="hint">No Microsoft Edge aparecem vozes Natural em português (Francisca, Antonio). Grátis, mas precisam de internet.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Personagem</legend>
+    <label for="ajPersonagem">Ajustar</label>
+    <select id="ajPersonagem"></select>
+    <label for="ajPersona">Instruções do personagem</label>
+    <textarea id="ajPersona" rows="7" spellcheck="false"></textarea>
+    <label for="ajLimite">Limite de palavras faladas por resposta</label>
+    <input id="ajLimite" type="number" min="20" max="400" step="10">
+    <label class="check"><input type="checkbox" id="ajTempPadrao"> Temperatura padrão do modelo (recomendado)</label>
+    <label for="ajTemp">Temperatura: <output id="ajTempValor" for="ajTemp"></output></label>
+    <input id="ajTemp" type="range" min="0" max="2" step="0.1">
+    <p class="hint">Nos modelos Gemini 3 a Google recomenda 1,0. Valores menores podem piorar contas e causar repetição.</p>
+    <label for="ajVoz">Voz Kokoro</label>
+    <input id="ajVoz" type="text" list="vozesKokoro" spellcheck="false" autocapitalize="off">
+    <datalist id="vozesKokoro"></datalist>
+    <p class="hint">Aceita mistura, por exemplo pm_alex(1)+pm_santa(1).</p>
+    <label for="ajVel">Velocidade da fala: <output id="ajVelValor" for="ajVel"></output></label>
+    <input id="ajVel" type="range" min="0.7" max="1.3" step="0.05">
+    <div class="actions"><button class="btn ghost" id="ajRestaurar" type="button">Restaurar o padrão deste personagem</button></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Câmera</legend>
+    <p class="hint" id="camPrivacidade"><strong>A imagem da câmera nunca sai deste computador:</strong> nada é gravado, salvo ou enviado; só a posição do rosto e o sorriso viram números usados na hora. A câmera começa desligada.</p>
+    <label class="check"><input type="checkbox" id="camCumprimentar" checked> Cumprimentar quando alguém aparecer</label>
+    <label class="check"><input type="checkbox" id="camSorriso" checked> Sorrir de volta</label>
+    <label class="check"><input type="checkbox" id="camEspelho"> Modo espelho (o avatar imita o rosto)</label>
+    <p class="hint" id="camEstado" role="status">Câmera desligada.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Boca</legend>
+    <label for="bocaSel">Movimento da boca</label>
+    <select id="bocaSel">
+      <option value="hibrido">Vogais e volume (recomendado)</option>
+      <option value="rms">Só volume</option>
+      <option value="wlipsync">Só vogais</option>
+    </select>
+    <p class="hint">Comparação lado a lado em <a href="comparar-lipsync.html">comparar-lipsync.html</a>.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Animações</legend>
+    <p class="hint">Toque um clipe para ver no personagem. Só os ligados entram na conversa. A escolha fica guardada neste navegador.</p>
+    <label class="check"><input type="checkbox" id="modoInfantil" checked> Modo infantil (esconde clipes não marcados como ok para criança)</label>
+    <label class="check"><input type="checkbox" id="modoCalmo"> Modo calmo (sem gestos amplos; também liga sozinho com "reduzir movimento" do sistema)</label>
+    <ul class="galeria" id="galeria"></ul>
+    <p class="galeria-lacunas" id="galeriaLacunas"></p>
+  </fieldset>
+
+  <button class="btn close" id="closeSettings" type="button">Salvar e fechar</button>
+</dialog>
+</body>
+</html>

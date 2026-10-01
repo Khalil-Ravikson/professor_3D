@@ -1,0 +1,18 @@
+node_modules/
+test-results/
+playwright-report/
+.env.local
+*.tmp.mjs
+# .vrm que não for CC0: liste aqui (ver assets/avatars/CREDITS.md)
+amostras/
+VRMA_MotionPack/
+# pacote VRoid: proibido redistribuir
+assets/animations/*.fbx
+assets/animations/aceno*.vrma
+# Mixamo: não redistribuir os arquivos soltos
+
+# segredos
+.env
+.env.*
+*.local
+.claude/

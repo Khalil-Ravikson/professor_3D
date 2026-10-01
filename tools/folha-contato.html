@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Folha de contato VRMA</title>
+<style>
+  body { margin: 0; background: #e9e6df; font: 14px system-ui, sans-serif; color: #222; }
+  #rotulos { display: grid; grid-template-columns: repeat(4, 320px); }
+  #rotulos div { padding: 4px 8px; }
+  h1 { font-size: 15px; margin: 0; padding: 8px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js",
+  "@pixiv/three-vrm-animation": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm-animation@3.5.5/lib/three-vrm-animation.module.min.js"
+} }
+</script>
+</head>
+<body>
+<h1 id="titulo"></h1>
+<canvas id="c" width="1280" height="480"></canvas>
+<div id="rotulos"></div>
+<script type="module">
+// Folha de contato: o mesmo clipe em 4 instantes (0, 1/3, 2/3 e fim), corpo inteiro.
+// Uso: tools/folha-contato.html?vrm=<caminho>&vrma=<caminho>
+// Serve para identificar o clipe pelo que se vê, nunca pelo número do arquivo.
+import * as THREE from 'three';
+import { carregarVrm } from '../src/avatar.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
+
+const q = new URLSearchParams(location.search);
+const raiz = (s) => (s.startsWith('/') ? s : '/' + s);
+const vrmUrl = raiz(q.get('vrm')), vrmaUrl = raiz(q.get('vrma'));
+document.getElementById('titulo').textContent = vrmaUrl + ' em ' + vrmUrl;
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setScissorTest(true);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#e9e6df');
+scene.add(new THREE.HemisphereLight(0xffffff, 0x888877, 2.2));
+const sol = new THREE.DirectionalLight(0xffffff, 1.6); sol.position.set(1, 2, 2); scene.add(sol);
+const chao = new THREE.GridHelper(4, 8, 0x999999, 0xbbbbbb); scene.add(chao);
+const cam = new THREE.PerspectiveCamera(30, 320 / 480, 0.1, 50);
+cam.position.set(0, 1.0, 4.6); cam.lookAt(0, 0.85, 0);
+
+const { vrm } = await carregarVrm(vrmUrl);
+scene.add(vrm.scene);
+const lv = new GLTFLoader(); lv.register((p) => new VRMAnimationLoaderPlugin(p));
+const anim = (await lv.loadAsync(vrmaUrl)).userData.vrmAnimations[0];
+const clip = createVRMAnimationClip(anim, vrm);
+const mixer = new THREE.AnimationMixer(vrm.scene);
+const acao = mixer.clipAction(clip); acao.play();
+
+const hips = vrm.humanoid.getNormalizedBoneNode('hips');
+const ossos = ['hips', 'spine', 'chest', 'head', 'leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm', 'leftUpperLeg', 'rightUpperLeg'];
+function amostra(t) {
+  mixer.setTime(t); vrm.update(0); vrm.scene.updateMatrixWorld(true);
+  const p = new THREE.Vector3(); hips.getWorldPosition(p);
+  const qs = ossos.map((n) => { const o = vrm.humanoid.getNormalizedBoneNode(n); return o ? o.quaternion.clone() : null; });
+  return { p, qs };
+}
+
+const D = clip.duration;
+const instantes = [0, D / 3, (2 * D) / 3, D - 1e-3];
+const rot = document.getElementById('rotulos');
+instantes.forEach((t, i) => {
+  amostra(t);
+  renderer.setViewport(i * 320, 0, 320, 480); renderer.setScissor(i * 320, 0, 320, 480);
+  renderer.render(scene, cam);
+  const d = document.createElement('div'); d.textContent = `t = ${t.toFixed(2)} s`; rot.appendChild(d);
+});
+
+// Medidas: deslocamento máximo do quadril e diferença entre o primeiro e o último quadro (laço?).
+const ini = amostra(0), fim = amostra(D - 1e-3);
+let maxDesloc = 0, quedaMax = 0, giro = 0, yawAnt = null;
+const eul = new THREE.Euler(0, 0, 0, 'YXZ');
+for (let k = 0; k <= 120; k++) {
+  const a = amostra((D * k) / 120);
+  maxDesloc = Math.max(maxDesloc, a.p.distanceTo(ini.p));
+  quedaMax = Math.max(quedaMax, ini.p.y - a.p.y);
+  // Giro acumulado do quadril em torno do eixo vertical (detecta "Spin").
+  const yaw = eul.setFromQuaternion(a.qs[0]).y;
+  if (yawAnt !== null) { let d = yaw - yawAnt; d = Math.atan2(Math.sin(d), Math.cos(d)); giro += d; }
+  yawAnt = yaw;
+}
+const difAng = Math.max(...ini.qs.map((a, i) => (a && fim.qs[i] ? a.angleTo(fim.qs[i]) : 0)));
+window.__resultado = {
+  duracao: +D.toFixed(2),
+  quadrilDeslocMaxM: +maxDesloc.toFixed(3),
+  quadrilDescidaMaxM: +quedaMax.toFixed(3),
+  quadrilGiroTotalGraus: +THREE.MathUtils.radToDeg(giro).toFixed(0),
+  quadrilFimVsInicioM: +fim.p.distanceTo(ini.p).toFixed(3),
+  maiorDifAnguloInicioFimGraus: +THREE.MathUtils.radToDeg(difAng).toFixed(1),
+  trilhasExpressao: anim.expressionTracks ? [...(anim.expressionTracks.preset?.keys?.() || []), ...(anim.expressionTracks.custom?.keys?.() || [])] : [],
+  trilhaOlhar: !!anim.lookAtTrack,
+};
+document.body.dataset.pronto = '1';
+</script>
+</body>
+</html>

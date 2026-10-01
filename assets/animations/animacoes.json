@@ -1,0 +1,245 @@
+{
+  "_leia": "Catálogo de clipes. Descrições feitas olhando a folha de contato (relatorios/folhas) e as medidas (relatorios/folhas/medidas.json), não pelo número do arquivo. status: ativo | desligado | lacuna | procedural. A galeria do painel grava ligado/desligado e 'ok para criança' por cima deste arquivo (localStorage prof3d_animacoes).",
+  "clipes": [
+    {
+      "id": "idle",
+      "arquivo": "assets/animations/idle.vrma",
+      "descricao": "Em pé, peso troca de leve entre as pernas, braços soltos. Primeiro e último quadro iguais.",
+      "casoDeUso": [
+        "repouso",
+        "falando",
+        "ouvindo",
+        "pensando"
+      ],
+      "loop": true,
+      "duracao": 10.38,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "github.com/pixiv/ChatVRM, public/idle_loop.vrma",
+      "licenca": "MIT, (c) 2023 pixiv Inc.",
+      "status": "ativo"
+    },
+    {
+      "id": "aceno",
+      "arquivo": "assets/animations/aceno2.vrma",
+      "descricao": "Levanta o braço direito até a altura do rosto, acena com a mão aberta e baixa o braço. Corpo parado (quadril 2 cm). Começa e termina na pose neutra.",
+      "casoDeUso": [
+        "cumprimento",
+        "despedida"
+      ],
+      "loop": false,
+      "duracao": 4.71,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "Mixamo (Adobe), convertido com fbx2vrma-converter (aceno2.fbx)",
+      "licenca": "Termos da Adobe/Mixamo: uso livre em projetos; proibido distribuir o arquivo solto",
+      "status": "ativo"
+    },
+    {
+      "id": "aceno-ciclo",
+      "arquivo": "assets/animations/aceno.vrma",
+      "descricao": "Um único balanço da mão com o braço já levantado (0,33 s). Não sobe nem desce o braço.",
+      "casoDeUso": [],
+      "loop": true,
+      "duracao": 0.33,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "Mixamo (Adobe), convertido com fbx2vrma-converter (aceno.fbx)",
+      "licenca": "Termos da Adobe/Mixamo: uso livre em projetos; proibido distribuir o arquivo solto",
+      "status": "desligado"
+    },
+    {
+      "id": "mostrar-corpo",
+      "arquivo": "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_01.vrma",
+      "descricao": "Abre os braços para os lados e dá uma volta completa no lugar (giro de 360 graus no quadril), voltando de frente. Fecha perto da pose inicial.",
+      "casoDeUso": [
+        "apresentar"
+      ],
+      "loop": false,
+      "duracao": 11.8,
+      "intensidade": 2,
+      "infantilOk": true,
+      "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Show full body",
+      "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
+      "status": "ativo"
+    },
+    {
+      "id": "cumprimento-agachado",
+      "arquivo": "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_02.vrma",
+      "descricao": "Começa agachada, levanta acenando com as duas mãos e termina acenando com uma mão, corpo inclinado. Não começa nem termina em pose neutra (diferença de 124 graus entre início e fim; quadril desloca 0,68 m). É aceno, mas grande demais para cumprimento simples.",
+      "casoDeUso": [
+        "atração",
+        "comemorar"
+      ],
+      "loop": false,
+      "duracao": 7.27,
+      "intensidade": 3,
+      "infantilOk": true,
+      "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Greeting",
+      "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
+      "status": "desligado"
+    },
+    {
+      "id": "sinal-paz",
+      "arquivo": "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_03.vrma",
+      "descricao": "Leva a mão direita perto do rosto fazendo sinal com os dedos, com uma perna cruzada à frente. Volta à pose inicial.",
+      "casoDeUso": [
+        "comemorar"
+      ],
+      "loop": false,
+      "duracao": 11.68,
+      "intensidade": 2,
+      "infantilOk": true,
+      "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Peace sign",
+      "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
+      "status": "ativo"
+    },
+    {
+      "id": "dedo-arma",
+      "arquivo": "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_04.vrma",
+      "descricao": "Ergue a mão direita junto à cabeça com o indicador estendido e depois aponta para frente. Nas 4 capturas não dá para afirmar o gesto de 'atirar'; conferir rodando na galeria.",
+      "casoDeUso": [],
+      "loop": false,
+      "duracao": 9.6,
+      "intensidade": 2,
+      "infantilOk": false,
+      "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Shoot",
+      "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
+      "status": "desligado"
+    },
+    {
+      "id": "giro",
+      "arquivo": "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_05.vrma",
+      "descricao": "Abre os braços, gira 360 graus no lugar e termina com um braço estendido para o lado. Quadril desce 5 cm e termina 14 cm fora do ponto inicial.",
+      "casoDeUso": [
+        "comemorar",
+        "atração"
+      ],
+      "loop": false,
+      "duracao": 9.32,
+      "intensidade": 3,
+      "infantilOk": true,
+      "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Spin",
+      "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
+      "status": "ativo"
+    },
+    {
+      "id": "pose-modelo",
+      "arquivo": "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_06.vrma",
+      "descricao": "Vira o corpo de lado, mão na cintura, troca o peso entre as pernas e volta de frente.",
+      "casoDeUso": [
+        "atração"
+      ],
+      "loop": false,
+      "duracao": 7.52,
+      "intensidade": 2,
+      "infantilOk": true,
+      "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Model pose",
+      "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
+      "status": "ativo"
+    },
+    {
+      "id": "agachar",
+      "arquivo": "VRMA_MotionPack/VRMA_MotionPack/vrma/VRMA_07.vrma",
+      "descricao": "Abre os braços, agacha (quadril desce 23 cm) com as mãos juntas à frente e levanta. Volta à pose inicial.",
+      "casoDeUso": [],
+      "loop": false,
+      "duracao": 11.52,
+      "intensidade": 3,
+      "infantilOk": true,
+      "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Squat",
+      "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
+      "status": "desligado"
+    }
+  ],
+  "lacunas": [
+    {
+      "id": "falando",
+      "casoDeUso": [
+        "falando"
+      ],
+      "prioridade": "alta",
+      "status": "lacuna"
+    },
+    {
+      "id": "pensando",
+      "casoDeUso": [
+        "pensando"
+      ],
+      "prioridade": "média",
+      "status": "lacuna"
+    },
+    {
+      "id": "ouvindo",
+      "casoDeUso": [
+        "ouvindo"
+      ],
+      "prioridade": "média",
+      "status": "lacuna"
+    },
+    {
+      "id": "nao-sei",
+      "casoDeUso": [
+        "não sei"
+      ],
+      "prioridade": "média",
+      "status": "lacuna"
+    },
+    {
+      "id": "aplaude",
+      "casoDeUso": [
+        "aplaudir"
+      ],
+      "prioridade": "baixa",
+      "status": "lacuna"
+    },
+    {
+      "id": "aponta-quadro",
+      "casoDeUso": [
+        "apontar"
+      ],
+      "prioridade": "baixa",
+      "status": "lacuna"
+    },
+    {
+      "id": "desculpa",
+      "casoDeUso": [
+        "desculpa"
+      ],
+      "prioridade": "baixa",
+      "status": "lacuna"
+    },
+    {
+      "id": "agradece",
+      "casoDeUso": [
+        "agradecer"
+      ],
+      "prioridade": "baixa",
+      "status": "lacuna"
+    }
+  ],
+  "estados": {
+    "_leia": "estado ou gesto -> id de clipe (ou lista; o diretor alterna). null = lacuna, cai para o idle (estado) ou é ignorado (gesto).",
+    "idle": "idle",
+    "listening": null,
+    "thinking": null,
+    "talking": null,
+    "aceno": "aceno",
+    "despedida": "aceno",
+    "apresenta": "mostrar-corpo",
+    "comemora": [
+      "sinal-paz",
+      "giro"
+    ],
+    "atracao": [
+      "pose-modelo",
+      "giro"
+    ],
+    "nao-sei": null,
+    "aplaude": null,
+    "aponta-quadro": null,
+    "desculpa": null,
+    "agradece": null
+  },
+  "intervaloMinS": 8
+}

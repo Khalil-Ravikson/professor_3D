@@ -1,0 +1,26 @@
+{
+  "rotulo": "p3",
+  "data": "2026-10-01T18:38:34.028Z",
+  "viewport": "1280x720",
+  "gpu": "d3d11",
+  "cargaInicialMs": 2545,
+  "fpsRepouso": 60.4,
+  "fpsFalando": null,
+  "primeiraFalaMs": [
+    5113,
+    3193,
+    3396
+  ],
+  "primeiraFalaMedianaMs": 3396,
+  "memInicio": {
+    "heapMB": 32.3,
+    "geometrias": 7,
+    "texturas": 17
+  },
+  "memDepois10Trocas": {
+    "heapMB": 34.2,
+    "geometrias": 7,
+    "texturas": 17
+  },
+  "erros": []
+}
