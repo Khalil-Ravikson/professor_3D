@@ -30,6 +30,11 @@ export const T = {
     baixando: (nome) => `Chamando ${nome}`,
     movimentos: 'Preparando os movimentos',
   },
+  licenca: {
+    bloqueado: (nome) => `A licença do avatar de ${nome} não permite este uso.`,
+    nenhum: 'Nenhum avatar carregado ainda.',
+    decisao: { permitido: 'permitido', conferir: 'permitido, conferir', bloqueado: 'bloqueado' },
+  },
   creditos: {
     titulo: 'Créditos',
     fechar: 'Fechar',

@@ -202,7 +202,8 @@
   }
   .passo[hidden] { display: none; }
   /* Enquanto o personagem carrega não há o que começar. */
-  .kiosk:has(.loading:not([hidden])) .passo { display: none; }
+  .kiosk:has(.loading:not([hidden])) .passo,
+  .kiosk:has(.erro-avatar:not([hidden])) .passo { display: none; }
   .passo h2 { margin: 0; font-size: 1.55rem; font-weight: 800; line-height: 1.15; }
   .passo p { margin: 0; font-size: 1.05rem; line-height: 1.4; color: var(--tinta-suave); max-width: 42ch; }
   .passo-acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
@@ -249,6 +250,9 @@
   dialog .hint { font-size: .85rem; color: #51607e; margin: 4px 0 0; }
   dialog .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   dialog .close { margin-top: 16px; width: 100%; }
+  .licencas { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; font-size: .9rem; }
+  .licencas li[data-decisao=bloqueado] { color: #b3261e; }
+  .licencas li[data-decisao=conferir] strong::after { content: ' (conferir)'; color: #7a2e00; }
   #creditos h3 { margin: 16px 0 6px; font-size: 1.05rem; }
   #creditos .frase-credito { font-weight: 800; margin: 6px 0 0; }
   #creditos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -322,7 +326,8 @@
     </div>
     <div class="erro-avatar" id="erroAvatar" role="alert" hidden>
       <p class="erro-titulo" id="erroTitulo"></p>
-      <p class="erro-detalhe">Coloque o arquivo em <code id="erroCaminho"></code> e recarregue a página.</p>
+      <p class="erro-detalhe" id="erroArquivo">Coloque o arquivo em <code id="erroCaminho"></code> e recarregue a página.</p>
+      <p class="erro-detalhe" id="erroMotivo" hidden></p>
     </div>
     <button class="gear" id="gear" type="button" aria-label="Configurações">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.3 7.3 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
@@ -483,6 +488,12 @@
     <select id="envUso"></select>
     <div class="actions"><button class="btn" id="envEnviar" type="button">Enviar e testar</button></div>
     <p class="hint" id="envSaida" role="status"></p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Licenças</legend>
+    <p class="hint">Lidas dos metadados de cada avatar ao carregar. "Conferir" carrega, mas leia o motivo.</p>
+    <ul class="licencas" id="listaLicencas"></ul>
   </fieldset>
 
   <div class="actions"><button class="btn ghost" id="abrirCreditos" type="button">Créditos</button></div>

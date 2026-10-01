@@ -18,6 +18,7 @@ import { criarDivisor, limparParaFala } from './tts/frases.js';
 import { criarOuvido } from './ouvido.js';
 import { ler, gravar, lerJSON, gravarJSON } from './storage.js';
 import { T } from './strings.pt-BR.js';
+import { avaliarLicenca } from './licenca.js';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
@@ -50,6 +51,7 @@ let versoes = new Map();     // id -> "tamanho|data" do .vrm (chave do cache da 
 let personagem = null;
 let avatar = null;
 let diretor = null;          // gestos.js: qual clipe e quando; recriado ao trocar de personagem ou mudar a galeria
+const licencas = new Map();     // id do personagem -> resultado de avaliarLicenca (painel e testes)
 const registroGestos = [];   // últimos pedidos ignorados ou tocados, para o painel e para os testes
 let carga = 0;               // sobe a cada troca; carga antiga que termina depois é descartada
 let apiKey = ler('gemini_key');
@@ -101,9 +103,15 @@ function aplicarPaleta(p) {
   for (const [k, v] of Object.entries(MAPA_PALETA)) if (p[k]) raiz.setProperty(v, p[k]);
 }
 
-function mostrarErroAvatar(titulo, caminho) {
+// motivo: texto próprio (ex.: licença); sem motivo, a mensagem padrão de arquivo ausente com o caminho.
+const maiuscula = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
+function mostrarErroAvatar(titulo, caminho, motivo = '') {
   $('erroTitulo').textContent = titulo;
   $('erroCaminho').textContent = caminho;
+  $('erroArquivo').hidden = !!motivo;
+  $('erroMotivo').hidden = !motivo;
+  $('erroMotivo').textContent = motivo;
   $('erroAvatar').hidden = false;
 }
 
@@ -212,6 +220,16 @@ async function trocarPersonagem(p) {
   try {
     const { vrm, bytes } = await carregarVrm(p.arquivoVrm, { aoProgresso: (f) => { if (minha === carga) mostrarCarga(T.carga.baixando(p.nome), f * 0.85); } });
     if (minha === carga) mostrarCarga(T.carga.movimentos, 0.9);
+    // Licença lida dos metadados do próprio arquivo. Bloqueado: não aparece para o público.
+    const lic = avaliarLicenca(vrm.meta);
+    licencas.set(p.id, lic);
+    console.info(`[licença] ${p.nome} (${p.arquivoVrm}): ${lic.decisao} | ${lic.titulo} | ${lic.autor} | ${lic.licenca}` +
+      (lic.bloqueio.length || lic.conferir.length ? ' | ' + [...lic.bloqueio, ...lic.conferir].join('; ') : ''));
+    if (lic.decisao === 'bloqueado') {
+      descartarVrm(vrm);
+      if (minha === carga) mostrarErroAvatar(T.licenca.bloqueado(p.nome), p.arquivoVrm, maiuscula(lic.bloqueio.join('; ')) + '.');
+      return;
+    }
     if (minha !== carga) { descartarVrm(vrm); return; }
     diretor = novoDiretor(p);
     const bases = {};
@@ -818,7 +836,21 @@ dlg.addEventListener('close', () => {
 const elCalmo = $('modoCalmo');
 elCalmo.checked = ler('modo_calmo', 'nao') === 'sim';
 elCalmo.addEventListener('change', () => gravar('modo_calmo', elCalmo.checked ? 'sim' : 'nao'));
-dlg.addEventListener('toggle', () => { if (dlg.open) { preencherUsos(); renderizarGaleria(); } });
+function renderizarLicencas() {
+  const ul = $('listaLicencas');
+  if (!licencas.size) { ul.textContent = T.licenca.nenhum; return; }
+  ul.replaceChildren(...[...licencas].map(([id, l]) => {
+    const p = buscarPersonagem(id);
+    const li = document.createElement('li');
+    li.dataset.decisao = l.decisao;
+    const nome = document.createElement('strong');
+    nome.textContent = `${p ? p.nome : id}: ${T.licenca.decisao[l.decisao]}`;
+    li.append(nome, document.createElement('br'), `${l.titulo} | ${l.autor} | VRM ${l.versao} | ${l.licenca}`);
+    for (const m of [...l.bloqueio, ...l.conferir]) li.append(document.createElement('br'), m);
+    return li;
+  }));
+}
+dlg.addEventListener('toggle', () => { if (dlg.open) { preencherUsos(); renderizarGaleria(); renderizarLicencas(); } });
 
 /* ---------- Enviar movimento (.fbx do Mixamo ou .vrma) ---------- */
 // O arquivo fica só neste navegador (IndexedDB). Antes de entrar na galeria, toca no personagem e mostra as medidas.
@@ -992,6 +1024,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get estado() { return app.dataset.state; },
     get catalogo() { return catalogo; },
     get diretor() { return diretor; },
+    licencas,
     registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao,
     get etapa() { return etapa; },
     // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
