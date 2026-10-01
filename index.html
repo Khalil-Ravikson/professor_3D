@@ -71,9 +71,16 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .loading {
-    position: absolute; inset: 0; display: grid; place-items: center;
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px;
     font-weight: 700; color: var(--tinta-suave); pointer-events: none;
   }
+  .loading p { margin: 0; }
+  .carga-texto { font-size: 1.25rem; color: var(--tinta); }
+  /* Barra só com transform: scaleX acompanha os bytes recebidos do .vrm. */
+  .carga-trilho { width: min(60vw, 280px); height: 8px; border-radius: 999px; background: var(--cartao); overflow: hidden; }
+  .carga-barra { height: 100%; background: var(--acao); transform: scaleX(0); transform-origin: left; transition: transform .2s linear; }
+  .carga-pct { font-size: .9rem; font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { .carga-barra { transition: none; } }
   .loading[hidden], .erro-avatar[hidden], .panel[hidden] { display: none; }
   .erro-avatar {
     position: absolute; inset: 0; z-index: 1; display: grid; align-content: center; gap: 8px;
@@ -139,7 +146,7 @@
   .mic {
     flex: 0 0 auto; width: 84px; height: 84px; border-radius: 50%; border: 0; cursor: pointer;
     background: var(--acao); color: #fff; display: grid; place-items: center;
-    box-shadow: 0 7px 0 var(--acao-sombra); transition: transform .1s, box-shadow .1s;
+    box-shadow: 0 7px 0 var(--acao-sombra); transition: transform .1s;
   }
   .mic:active { transform: translateY(4px); box-shadow: 0 3px 0 var(--acao-sombra); }
   .mic:disabled { opacity: .5; cursor: wait; }
@@ -194,6 +201,8 @@
     background: var(--cartao); color: var(--tinta);
   }
   .passo[hidden] { display: none; }
+  /* Enquanto o personagem carrega não há o que começar. */
+  .kiosk:has(.loading:not([hidden])) .passo { display: none; }
   .passo h2 { margin: 0; font-size: 1.55rem; font-weight: 800; line-height: 1.15; }
   .passo p { margin: 0; font-size: 1.05rem; line-height: 1.4; color: var(--tinta-suave); max-width: 42ch; }
   .passo-acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
@@ -240,6 +249,11 @@
   dialog .hint { font-size: .85rem; color: #51607e; margin: 4px 0 0; }
   dialog .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   dialog .close { margin-top: 16px; width: 100%; }
+  #creditos h3 { margin: 16px 0 6px; font-size: 1.05rem; }
+  #creditos .frase-credito { font-weight: 800; margin: 6px 0 0; }
+  #creditos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  #creditos li { font-size: .9rem; line-height: 1.35; }
+  #creditos li span { color: #51607e; }
   /* Galeria de animações. Durante a prévia o painel encosta à direita e o fundo fica livre para ver o personagem. */
   dialog.espiando { margin: 2vh 2vw 2vh auto; width: min(92vw, 400px); max-height: 96vh; }
   dialog.espiando::backdrop { background: transparent; }
@@ -301,7 +315,11 @@
     <div class="elenco-lista" id="elenco"></div>
   </nav>
   <div id="stage">
-    <div class="loading" id="loading">Carregando...</div>
+    <div class="loading" id="loading" role="status" aria-live="polite">
+      <p class="carga-texto" id="cargaTexto">Carregando</p>
+      <div class="carga-trilho" aria-hidden="true"><div class="carga-barra" id="cargaBarra"></div></div>
+      <p class="carga-pct" id="cargaPct"></p>
+    </div>
     <div class="erro-avatar" id="erroAvatar" role="alert" hidden>
       <p class="erro-titulo" id="erroTitulo"></p>
       <p class="erro-detalhe">Coloque o arquivo em <code id="erroCaminho"></code> e recarregue a página.</p>
@@ -467,7 +485,15 @@
     <p class="hint" id="envSaida" role="status"></p>
   </fieldset>
 
+  <div class="actions"><button class="btn ghost" id="abrirCreditos" type="button">Créditos</button></div>
+
   <button class="btn close" id="closeSettings" type="button">Salvar e fechar</button>
+</dialog>
+
+<dialog id="creditos" aria-labelledby="creditosTitulo">
+  <h2 id="creditosTitulo">Créditos</h2>
+  <div id="creditosCorpo"></div>
+  <button class="btn close" id="fecharCreditos" type="button">Fechar</button>
 </dialog>
 </body>
 </html>

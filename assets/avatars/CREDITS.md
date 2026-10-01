@@ -20,6 +20,6 @@ Atribuição não é obrigatória em CC0; fica registrada por boa prática.
 
 | Arquivo | Personagem | Título (meta) | Autor (meta) | Licença (meta, VRM 0.x) | SHA-256 |
 |---|---|---|---|---|---|
-| 8590256991748008892.vrm | Luma | AvatarSample_A | VRoid Project | `licenseName: Other`, `otherLicenseUrl`: licença do VRoid Hub com uso por todos, uso comercial pessoal e corporativo permitido, crédito desnecessário, modificação e redistribuição permitidas | 2a0ccd84880b03d7b65503d8b6287f7a97f3bb4fab70a5fd0a47b433c97827f5 |
+| 8590256991748008892.vrm | Luma | AvatarSample_A | VRoid Project | Licença do VRoid Hub: uso por todos, comercial permitido, crédito desnecessário, modificação e redistribuição permitidas (meta: `licenseName: Other` + `otherLicenseUrl`) | 2a0ccd84880b03d7b65503d8b6287f7a97f3bb4fab70a5fd0a47b433c97827f5 |
 
 Lido dos metadados do arquivo (extensão `VRM`, versão 0.x). Nome original mantido. Nada na interface pode sugerir que a pixiv ou o VRoid apoia ou recomenda o evento.

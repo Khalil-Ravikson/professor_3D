@@ -173,6 +173,13 @@ function cancelarTudo() {
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Progresso real: 85% são os bytes do .vrm; o resto, montar os movimentos.
+function mostrarCarga(texto, fracao) {
+  $('cargaTexto').textContent = texto;
+  $('cargaBarra').style.transform = `scaleX(${Math.max(0, Math.min(1, fracao))})`;
+  $('cargaPct').textContent = `${Math.round(fracao * 100)}%`;
+}
+
 async function trocarPersonagem(p) {
   if (personagem === p && avatar) return;
   const minha = ++carga;
@@ -199,11 +206,12 @@ async function trocarPersonagem(p) {
   if (minha !== carga) return;
   if (avatar) { avatar.descartar(); avatar = null; }
   $('erroAvatar').hidden = true;
-  $('loading').textContent = `Carregando ${p.nome}...`;
+  mostrarCarga(T.carga.baixando(p.nome), 0);
   $('loading').hidden = false;
 
   try {
-    const { vrm, bytes } = await carregarVrm(p.arquivoVrm);
+    const { vrm, bytes } = await carregarVrm(p.arquivoVrm, { aoProgresso: (f) => { if (minha === carga) mostrarCarga(T.carga.baixando(p.nome), f * 0.85); } });
+    if (minha === carga) mostrarCarga(T.carga.movimentos, 0.9);
     if (minha !== carga) { descartarVrm(vrm); return; }
     diretor = novoDiretor(p);
     const bases = {};
@@ -436,7 +444,7 @@ function prepararFrasesFixas(p) {
 }
 
 function iniciarSessao(origem) {
-  if (sessaoAtiva || !personagem || ocupado) return false;
+  if (sessaoAtiva || !personagem || !avatar || ocupado) return false;
   sessaoAtiva = true;
   app.dataset.sessao = 'ativa';
   definirEtapa('cumprimento');
@@ -915,6 +923,61 @@ elInativ.addEventListener('change', () => { const v = Math.max(15, Math.min(600,
 const elFixar = $('fixarLugar');
 elFixar.checked = fixarNoLugar();
 elFixar.addEventListener('change', () => gravar('fixar_lugar', elFixar.checked ? 'sim' : 'nao'));
+
+/* ---------- Créditos (gerados dos CREDITS.md) ---------- */
+// Lê as tabelas dos dois CREDITS.md e mostra arquivo, autor ou origem, e licença.
+// A frase de crédito do pacote VRoid aparece em destaque, como o readme exige para uso comercial.
+const FONTES_CREDITO = [
+  ['Personagens', 'assets/avatars/CREDITS.md'],
+  ['Animações e lip sync', 'assets/animations/CREDITS.md'],
+];
+function tabelasMarkdown(md) {
+  const linhas = md.split(/\r?\n/).filter((l) => /^\|.*\|\s*$/.test(l));
+  const tabelas = [];
+  let atual = null;
+  for (const l of linhas) {
+    const cel = l.trim().slice(1, -1).split('|').map((c) => c.trim().replace(/`/g, ''));
+    if (cel.every((c) => /^:?-+:?$/.test(c))) continue;
+    if (!atual || cel.length !== atual.cab.length) { atual = { cab: cel, linhas: [] }; tabelas.push(atual); continue; }
+    atual.linhas.push(Object.fromEntries(atual.cab.map((c, i) => [c, cel[i]])));
+  }
+  return tabelas;
+}
+async function montarCreditos() {
+  const corpo = $('creditosCorpo');
+  corpo.replaceChildren();
+  try {
+    for (const [titulo, url] of FONTES_CREDITO) {
+      const md = await (await fetch(url)).text();
+      const h = document.createElement('h3'); h.textContent = titulo; corpo.appendChild(h);
+      const frase = md.match(/"(Animation credits to [^"]+)"/);
+      if (frase) { const p = document.createElement('p'); p.className = 'frase-credito'; p.textContent = frase[1]; corpo.appendChild(p); }
+      const ul = document.createElement('ul');
+      for (const t of tabelasMarkdown(md)) for (const r of t.linhas) {
+        const nome = r['Arquivo'] || '';
+        const quem = r['Autor (meta)'] || r['Autor (meta do VRM)'] || r['Origem'] || r['Nome no readme'] || '';
+        const lic = r['Licença'] || r['Licença (meta, VRM 0.x)'] || '';
+        if (!nome) continue;
+        const li = document.createElement('li');
+        li.textContent = nome + ' ';
+        const s = document.createElement('span');
+        // Notas para quem mantém o projeto (gitignore, commit) não vão para a tela.
+        const limpar = (t) => t.replace(/\.?\s*No \.gitignore\.?/gi, '').replace(/\(ver meta\)/g, '').trim();
+        s.textContent = [limpar(quem), limpar(lic)].filter(Boolean).join(' | ');
+        li.appendChild(s);
+        ul.appendChild(li);
+      }
+      corpo.appendChild(ul);
+    }
+    const h = document.createElement('h3'); h.textContent = 'Código de terceiros'; corpo.appendChild(h);
+    const p = document.createElement('p'); p.textContent = 'three.js (MIT), @pixiv/three-vrm e o exemplo de Mixamo do three-vrm (MIT, pixiv Inc.), MediaPipe (Apache 2.0), Kokoro (Apache 2.0).'; corpo.appendChild(p);
+  } catch (e) {
+    console.error('[creditos]', e);
+    corpo.textContent = T.creditos.erro;
+  }
+}
+$('abrirCreditos').addEventListener('click', async () => { await montarCreditos(); $('creditos').showModal(); });
+$('fecharCreditos').addEventListener('click', () => $('creditos').close());
 
 // Gancho para testes automatizados e inspeção no console; só existe com ?debug na URL.
 if (new URLSearchParams(location.search).has('debug')) {

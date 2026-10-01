@@ -26,4 +26,13 @@ export const T = {
       apagando: 'Apagando a conversa...',
     },
   },
+  carga: {
+    baixando: (nome) => `Chamando ${nome}`,
+    movimentos: 'Preparando os movimentos',
+  },
+  creditos: {
+    titulo: 'Créditos',
+    fechar: 'Fechar',
+    erro: 'Não consegui ler os arquivos de créditos.',
+  },
 };

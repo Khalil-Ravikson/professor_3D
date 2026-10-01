@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Folha de contato VRMA</title>
 <style>
-  body { margin: 0; background: #e9e6df; font: 14px system-ui, sans-serif; color: #222; }
+  body { margin: 0; background: #e6e8eb; font: 14px system-ui, sans-serif; color: #222; }
   #rotulos { display: grid; grid-template-columns: repeat(4, 320px); }
   #rotulos div { padding: 4px 8px; }
   h1 { font-size: 15px; margin: 0; padding: 8px; }
@@ -40,7 +40,7 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
 renderer.setScissorTest(true);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#e9e6df');
+scene.background = new THREE.Color('#e6e8eb');
 scene.add(new THREE.HemisphereLight(0xffffff, 0x888877, 2.2));
 const sol = new THREE.DirectionalLight(0xffffff, 1.6); sol.position.set(1, 2, 2); scene.add(sol);
 const chao = new THREE.GridHelper(4, 8, 0x999999, 0xbbbbbb); scene.add(chao);

@@ -30,10 +30,10 @@ export class AvatarInvalidoError extends Error {
 }
 
 // Só aceita .vrm. Não existe avatar reserva: quem chama mostra a tela de erro.
-export async function carregarVrm(caminho, { signal } = {}) {
+export async function carregarVrm(caminho, { signal, aoProgresso = null } = {}) {
   const resp = await fetch(caminho, { signal });
   if (!resp.ok) throw new AvatarAusenteError(caminho, resp.status);
-  const buf = await resp.arrayBuffer();
+  const buf = await lerComProgresso(resp, aoProgresso);
 
   let gltf;
   try {
@@ -53,6 +53,28 @@ export async function carregarVrm(caminho, { signal } = {}) {
   vrm.scene.traverse((o) => { o.frustumCulled = false; });
 
   return { vrm, bytes: buf.byteLength };
+}
+
+// Lê a resposta em pedaços para informar o progresso real (bytes recebidos / Content-Length).
+// Sem Content-Length ou sem stream, lê de uma vez e informa só o fim.
+async function lerComProgresso(resp, aoProgresso) {
+  const total = Number(resp.headers.get('Content-Length')) || 0;
+  if (!aoProgresso || !total || !resp.body) {
+    const b = await resp.arrayBuffer();
+    if (aoProgresso) aoProgresso(1);
+    return b;
+  }
+  const saida = new Uint8Array(total);
+  const leitor = resp.body.getReader();
+  let recebido = 0;
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    saida.set(value, recebido);
+    recebido += value.length;
+    aoProgresso(Math.min(1, recebido / total));
+  }
+  return saida.buffer.slice(0, recebido);
 }
 
 export function descartarVrm(vrm) {
