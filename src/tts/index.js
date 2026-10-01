@@ -48,6 +48,10 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
   let motorAtual = null, avisoAtual = null;
   let turno = null, seq = 0;
   const registro = []; // eventos com tempo, para testes e diagnóstico (últimos 300)
+  // Frases fixas (cumprimento, despedida) já sintetizadas: tocam sem esperar o motor.
+  // Chave: motor|voz|velocidade|texto. Limite pequeno: são poucas frases por personagem.
+  const preSintetizadas = new Map();
+  const chaveFrase = (motor, voz, texto) => `${motor.id}|${voz && voz.id}|${voz && voz.speed}|${texto}`;
 
   function anotar(tipo, dados = {}) {
     registro.push({ t: Math.round(performance.now()), tipo, ...dados });
@@ -112,6 +116,8 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
       const i = n++;
       const motor = resolverMotor(t.voz);
       if (motor.direto) { t.audios.enviar({ i, texto, motor, gestos }); continue; }
+      const pronta = preSintetizadas.get(chaveFrase(motor, t.voz, texto));
+      if (pronta) { anotar('sintese-cache', { turno: t.id, i }); t.audios.enviar({ i, texto, buffer: pronta, gestos }); continue; }
       anotar('sintese-inicio', { turno: t.id, i, motor: motor.id });
       try {
         const buffer = await motor.sintetizar(texto, t.voz, { signal: t.ctl.signal, ctx });
@@ -178,6 +184,7 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
     analisador,
     registro,
     get falando() { return !!(turno && turno.comecou); },
+    get frasesProntas() { return preSintetizadas.size; },
     // Há um turno vivo (sintetizando ou tocando). Falso depois do fim ou de parar().
     get emTurno() { return !!turno; },
     get statusServidor() { return statusServidor; },
@@ -187,6 +194,26 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
     resolverMotor,
     novoTurno,
     parar,
+    // Sintetiza agora e guarda, para a frase tocar na hora quando for pedida.
+    // Só vale para motores que devolvem áudio (Kokoro); a voz do sistema já fala direto.
+    async preSintetizar(texto, voz) {
+      const motor = resolverMotor(voz);
+      if (motor.direto) return false;
+      let ok = true;
+      for (const f of dividirFrases(texto)) {
+        const limpo = normalizarParaFala(limparParaFala(f)).trim();
+        const chave = chaveFrase(motor, voz, limpo);
+        if (!limpo || preSintetizadas.has(chave)) continue;
+        try {
+          preSintetizadas.set(chave, await motor.sintetizar(limpo, voz, { ctx }));
+          if (preSintetizadas.size > 40) preSintetizadas.delete(preSintetizadas.keys().next().value);
+        } catch (e) {
+          console.warn('[voz] não consegui pré-sintetizar; a frase será sintetizada na hora:', e);
+          ok = false;
+        }
+      }
+      return ok;
+    },
     falarTexto(texto, voz) {
       const t = novoTurno(voz);
       for (const f of dividirFrases(texto)) t.adicionar(f);

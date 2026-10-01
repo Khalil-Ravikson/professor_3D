@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { criarLuzes, apontarCamera } from './scene.js';
+import { loadMixamoAnimation } from './vendor/mixamo/loadMixamoAnimation.js';
 
 const loader = new GLTFLoader();
 loader.register((parser) => new VRMLoaderPlugin(parser));
@@ -141,8 +142,8 @@ const cacheVrma = new Map();
 
 export function carregarVrma(nome) {
   if (!cacheVrma.has(nome)) {
-    // Nome curto (idle) vira assets/animations/idle.vrma; caminho com / ou .vrma é usado como está.
-    const url = /[/.]/.test(nome) ? nome : `assets/animations/${nome}.vrma`;
+    // Nome curto (idle) vira assets/animations/idle.vrma; caminho, .vrma ou blob: é usado como está.
+    const url = /[/.:]/.test(nome) ? nome : `assets/animations/${nome}.vrma`;
     cacheVrma.set(nome, loaderVrma.loadAsync(url)
       .then((gltf) => gltf.userData.vrmAnimations && gltf.userData.vrmAnimations[0])
       .catch((e) => {
@@ -164,15 +165,36 @@ export async function carregarClipes(animacoes, vrm) {
   return clipes;
 }
 
-// Um clipe a partir do caminho do .vrma, já ajustado a este vrm (null se não abrir).
+// Movimentos enviados pelo painel: "enviado:<id>" -> { url (blob:), tipo: 'fbx' | 'vrma' }.
+const enviados = new Map();
+export function registrarEnviado(id, url, tipo) { enviados.set('enviado:' + id, { url, tipo }); }
+export function esquecerEnviado(id) {
+  const e = enviados.get('enviado:' + id);
+  if (e) URL.revokeObjectURL(e.url);
+  enviados.delete('enviado:' + id);
+  cacheVrma.delete(e && e.url);
+}
+
+// Um clipe a partir do .vrma (caminho ou enviado) ou do .fbx do Mixamo enviado, já ajustado a este vrm.
+// null se não abrir; o motivo vai para o console.
 const clipesPorVrm = new WeakMap();
+async function criarClipe(arquivo, vrm) {
+  const env = enviados.get(arquivo);
+  if (env && env.tipo === 'fbx') {
+    try {
+      return await loadMixamoAnimation(env.url, vrm);
+    } catch (e) {
+      console.warn(`[mixamo] não consegui converter ${arquivo}:`, e);
+      return null;
+    }
+  }
+  const anim = await carregarVrma(env ? env.url : arquivo);
+  return anim ? createVRMAnimationClip(anim, vrm) : null;
+}
 export async function clipeDoArquivo(arquivo, vrm) {
   if (!clipesPorVrm.has(vrm)) clipesPorVrm.set(vrm, new Map());
   const cache = clipesPorVrm.get(vrm);
-  if (!cache.has(arquivo)) {
-    const anim = await carregarVrma(arquivo);
-    cache.set(arquivo, anim ? createVRMAnimationClip(anim, vrm) : null);
-  }
+  if (!cache.has(arquivo)) cache.set(arquivo, criarClipe(arquivo, vrm));
   return cache.get(arquivo);
 }
 
@@ -185,12 +207,19 @@ const FADE_S = 0.3;
 // sem idle, o modelo fica na pose de descanso do arquivo). Gestos chegam por tocarGesto(clipe), decididos em gestos.js.
 // Rosto: piscada, olhar (vrm.lookAt) e boca (pesos vindos de lipsync.js). Nenhum clipe do catálogo tem trilha
 // de olhar nem de expressão, então o olhar é sempre do vrm.lookAt e a boca é sempre do lip sync.
-export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {} } = {}) {
+export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLugar = () => true } = {}) {
   cena.scene.add(vrm.scene);
   const em = vrm.expressionManager;
   const hum = vrm.humanoid;
 
   const mixer = new THREE.AnimationMixer(vrm.scene);
+  // Fixar no lugar: depois do mixer, o quadril volta ao X/Z de descanso. A altura fica com o clipe
+  // (agachar continua agachando) e a rotação também (o giro continua girando, só que no mesmo ponto).
+  const quadrilNorm = hum.getNormalizedBoneNode('hips');
+  // O ponto fixo é onde o primeiro quadro do idle deixa o quadril (preenchido logo abaixo, antes de medir
+  // a cabeça para a câmera). A pose de descanso do arquivo não serve: o idle tira o quadril dela
+  // e a câmera, apontada com o idle aplicado, deixava o rosto fora do lugar (achado no teste M6.2).
+  const quadrilDescanso = new THREE.Vector3();
   const acoesBase = {};
   for (const [estado, clipe] of Object.entries(bases)) if (clipe) acoesBase[estado] = mixer.clipAction(clipe);
   let acaoAtual = null, estadoBase = null, gesto = null, aoFimGesto = null;
@@ -229,6 +258,7 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {} } = {}) {
 
   // Aplica o primeiro quadro antes de medir a cabeça (o idle muda a postura).
   mixer.update(0);
+  if (quadrilNorm) quadrilDescanso.copy(quadrilNorm.position);
   vrm.update(0);
   vrm.scene.updateMatrixWorld(true);
   const posicaoCabeca = new THREE.Vector3();
@@ -270,6 +300,7 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {} } = {}) {
     else estadoBase = BASE_DO_ESTADO[estado] || 'idle';
     if (cabecaNorm) cabecaNorm.quaternion.multiply(qDesfazer.copy(qAplicada).invert());
     mixer.update(dt);
+    if (quadrilNorm && fixarNoLugar()) { quadrilNorm.position.x = quadrilDescanso.x; quadrilNorm.position.z = quadrilDescanso.z; }
     qAplicada.identity();
     if (cabecaNorm && espelho && espelho.angulos) {
       // Espelho: o usuário vira para a esquerda dele, o avatar vira para a direita dele.

@@ -7,6 +7,7 @@
 //                altura = deslocamento vertical do foco a partir do osso head.
 // voz: { motor, id (voz Kokoro; aceita mistura "pm_alex(1)+pm_santa(1)"), speed,
 //        genero ('f' | 'm', escolhe a voz do sistema: Francisca/Antonio no Edge) }.
+// oiPresenca / despedida: frases curtas do cumprimento e da despedida (P4); a fala começa ~300 ms depois do aceno.
 // temperatura: null usa o padrão do modelo. limitePalavras: teto da parte falada.
 // quadro: mostra o quadro de resolução. ferramentas: nomes de funções do Gemini (ver calcular.js).
 // O usuário pode sobrescrever persona, voz, temperatura e limite nas configurações
@@ -53,6 +54,7 @@ export const PERSONAGENS = [
     creditosVrm: '',
     saudacao: 'Oi! Eu sou a professora Luma. Aperte o botão vermelho e me pergunte o que quiser!',
     oiPresenca: 'Oi! Que bom te ver. Quer me perguntar alguma coisa?',
+    despedida: 'Tchau! Foi muito bom conversar com você.',
     persona: RULES_LUMA,
     regrasDeSeguranca: 'infantil',
     voz: { motor: 'kokoro-server', id: 'pf_dora', speed: 0.95, genero: 'f' },
@@ -86,6 +88,7 @@ export const PERSONAGENS = [
     creditosVrm: '',
     saudacao: 'Sou o Teo. Me passe um problema de matemática e a gente resolve junto, conferindo no final.',
     oiPresenca: 'Oi. Tem um problema de matemática para mim?',
+    despedida: 'Até a próxima. Bons estudos.',
     persona:
       "Você é Teo, professor de matemática de quem tem 10 anos ou mais. " + FALA_BASE + " " + FORMATO_QUADRO + " " +
       "Método, nesta ordem: " +
@@ -128,6 +131,7 @@ export const PERSONAGENS = [
     creditosVrm: '',
     saudacao: 'Aqui é o Rafa. Me diga o que você quer construir ou decidir, e eu faço uma estimativa antes de detalhar.',
     oiPresenca: 'E aí. O que vamos projetar hoje?',
+    despedida: 'Valeu. Quando tiver outro projeto, volta aqui.',
     persona:
       "Você é Rafa, engenheiro, falando com quem tem 12 anos ou mais. " + FALA_BASE + " " + FORMATO_QUADRO + " " +
       "Método, nesta ordem: " +
@@ -167,6 +171,7 @@ export const PERSONAGENS = [
     creditosVrm: '',
     saudacao: 'Eu sou a Nina. Pergunte por que alguma coisa acontece, e eu te mostro um jeito seguro de testar em casa.',
     oiPresenca: 'Oi! Quer descobrir por que alguma coisa acontece?',
+    despedida: 'Tchau! Continue fazendo perguntas.',
     persona:
       "Você é Nina, cientista, falando com quem tem 8 anos ou mais. " + FALA_BASE + " " +
       "Explique o fenômeno com uma causa clara e um exemplo do dia a dia, em no máximo 5 frases. " +

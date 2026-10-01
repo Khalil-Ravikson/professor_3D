@@ -1,0 +1,32 @@
+{
+  "cumprimento": {
+    "origem": "toque",
+    "gatilhoAteGestoMs": 1,
+    "gestoAteFalaMs": 309
+  },
+  "despedidaOperador": {
+    "gatilhoAteGestoMs": 0
+  },
+  "medidasSessao": [
+    {
+      "tipo": "cumprimento",
+      "origem": "toque",
+      "gatilhoAteGestoMs": 1
+    },
+    {
+      "tipo": "despedida",
+      "origem": "operador",
+      "gatilhoAteGestoMs": 0
+    },
+    {
+      "tipo": "cumprimento",
+      "origem": "operador",
+      "gatilhoAteGestoMs": 0
+    },
+    {
+      "tipo": "despedida",
+      "origem": "inatividade",
+      "gatilhoAteGestoMs": 0
+    }
+  ]
+}

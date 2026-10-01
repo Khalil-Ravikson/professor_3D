@@ -16,7 +16,9 @@ async function abrir(page, extra = {}) {
     for (const [c, v] of Object.entries(x)) localStorage.setItem('prof3d_' + c, v);
   }, extra);
   await page.goto('/?debug');
-  await page.waitForFunction(() => window.__prof3d && window.__prof3d.avatar && window.__prof3d.diretor, null, { timeout: 60_000 });
+  await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar && window.__prof3d.diretor), null, { timeout: 60_000 });
+  // Desde o P4 o aceno é da sessão, não do carregamento.
+  await page.evaluate(() => window.__prof3d.iniciarSessao('operador'));
   return erros;
 }
 
@@ -64,8 +66,8 @@ test('P3.3: modo calmo bloqueia gesto amplo; retrato com aceno', async ({ page }
   await page.screenshot({ path: 'relatorios/p3-aceno-2-acena-retrato.png' });
   const r = await page.evaluate(() => window.__prof3d.pedirGesto('comemora', 'operador'));
   expect(r).toEqual({ ignorado: 'sem-clipe' });
-  await page.waitForFunction(() => window.__prof3d.avatar.gestoAtivo === null, null, { timeout: 15_000 });
-  await page.evaluate(() => window.__prof3d.diretor);
+  // Espera o aceno e a fala do cumprimento acabarem (durante a fala o gesto esperaria a fronteira).
+  await page.waitForFunction(() => window.__prof3d.avatar.gestoAtivo === null && !window.__prof3d.voz.falando, null, { timeout: 30_000 });
   // Sem modo calmo, o operador consegue (passa por cima do intervalo).
   await page.evaluate(() => localStorage.setItem('prof3d_modo_calmo', 'nao'));
   expect(await page.evaluate(() => !!window.__prof3d.pedirGesto('comemora', 'operador').clipe)).toBe(true);

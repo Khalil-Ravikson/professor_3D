@@ -1,8 +1,9 @@
 import { criarCena } from './scene.js';
 import {
   carregarVrm, checarVrm, registrarChecklist, montarAvatar, descartarVrm,
-  verificarArquivo, gerarMiniatura, carregarClipes, clipeDoArquivo, AvatarAusenteError,
+  verificarArquivo, gerarMiniatura, carregarClipes, clipeDoArquivo, registrarEnviado, esquecerEnviado, AvatarAusenteError,
 } from './avatar.js';
+import { listarMovimentos, salvarMovimento, apagarMovimento, idDoNome, medirClipe, avisosDasMedidas } from './movimentos.js';
 import { carregarCatalogo, aplicarEscolhas, gravarEscolha } from './animacoes.js';
 import { criarDiretor, removerMarcas, instrucaoGestos, ESTADOS_BASE } from './gestos.js';
 import { criarBoca } from './lipsync.js';
@@ -207,12 +208,14 @@ async function trocarPersonagem(p) {
     for (const e of ESTADOS_BASE) { const c = diretor.clipeBase(e); if (c) bases[e] = await clipeDoArquivo(c.arquivo, vrm); }
     if (minha !== carga) { descartarVrm(vrm); return; }
     registrarChecklist(p.nome, checarVrm(vrm, bytes));
-    avatar = montarAvatar(vrm, cena, { bases, tetoBoca: p.tetoBoca });
+    avatar = montarAvatar(vrm, cena, { bases, tetoBoca: p.tetoBoca, fixarNoLugar });
     cena.definirFoco(avatar.posicaoCabeca, p.enquadramento);
     // Gestos ativos já ficam prontos, para o primeiro aceno não esperar o download.
     await Promise.all(diretor.gestosValidos().flatMap((g) => diretor.clipesDe(g)).map((c) => clipeDoArquivo(c.arquivo, vrm)));
     if (minha !== carga) return;
-    pedirGesto('aceno', 'fluxo');
+    if (sessaoAtiva) pedirGesto('aceno', 'fluxo');
+    // Cumprimento e despedida já sintetizados: a fala sai ~300 ms depois do aceno, sem esperar o Kokoro.
+    prepararFrasesFixas(p);
   } catch (e) {
     if (minha !== carga) return;
     console.error(`[avatar] ${p.nome}:`, e);
@@ -256,7 +259,7 @@ function renderizarAtalhos(atalhos) {
 const voz = criarVoz({
   config,
   aoComecarFala: () => { falando = true; definirEstado('speaking'); },
-  aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); },
+  aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); },
   aoFimFrase: () => liberarGesto(),
   // Gesto marcado pelo LLM numa sentença: pedido no instante em que essa sentença começa a tocar.
   aoInicioFrase: (gestos) => { for (const g of gestos) pedirGesto(g, 'llm', { naFronteira: true }); },
@@ -289,6 +292,9 @@ function mostrarStatusVoz({ motor, aviso, servidor }) {
 
 /* ---------- Gestos ---------- */
 const modoCalmo = () => reduzirMovimento.matches || ler('modo_calmo', 'nao') === 'sim';
+const fixarNoLugar = () => ler('fixar_lugar', 'sim') === 'sim';
+// O operador pode apontar um gesto para um movimento enviado ("usar como aceno"); vale por cima do catálogo.
+const mapaEfetivo = () => ({ ...catalogo.estados, ...lerJSON('estados_extra', {}) });
 function anotarGesto(msg) {
   registroGestos.push({ t: Math.round(performance.now()), msg });
   if (registroGestos.length > 50) registroGestos.shift();
@@ -297,25 +303,28 @@ function anotarGesto(msg) {
 function novoDiretor(p) {
   if (!catalogo) return criarDiretor({ clipes: [], mapa: {}, registrar: anotarGesto });
   return criarDiretor({
-    clipes: aplicarEscolhas(catalogo), mapa: catalogo.estados, inventario: p.gestos || null,
+    clipes: aplicarEscolhas(catalogo), mapa: mapaEfetivo(), inventario: p.gestos || null,
     intervaloMinS: Number(ler('intervalo_gestos', String(catalogo.intervaloMinS ?? 8))), calmo: modoCalmo,
     infantil: () => ler('modo_infantil', 'sim') === 'sim', registrar: anotarGesto,
   });
 }
-async function executarGesto(c, origem) {
+async function executarGesto(c, origem, aoComecar = null) {
   if (!avatar) return;
   const alvo = avatar;
   const clipe = await clipeDoArquivo(c.arquivo, alvo.vrm);
   if (!clipe || alvo !== avatar) { anotarGesto(`não tocou "${c.id}": arquivo não abriu`); return; }
   const d = diretor;
-  if (alvo.tocarGesto(clipe, () => d.terminou())) anotarGesto(`tocou "${c.id}" (${origem})`);
+  if (alvo.tocarGesto(clipe, () => d.terminou())) {
+    anotarGesto(`tocou "${c.id}" (${origem})`);
+    if (aoComecar) aoComecar(performance.now());
+  }
   else d.terminou();
 }
 // origem: 'fluxo', 'llm', 'evento', 'operador'. Durante a fala, o diretor segura até a fronteira da sentença.
-function pedirGesto(nome, origem = 'evento', { naFronteira = false } = {}) {
+function pedirGesto(nome, origem = 'evento', { naFronteira = false, aoComecar = null } = {}) {
   if (!diretor || !avatar) return null;
   const r = diretor.pedir(nome, { origem, falando: !naFronteira && voz.falando });
-  if (r.clipe) executarGesto(r.clipe, origem);
+  if (r.clipe) executarGesto(r.clipe, origem, aoComecar);
   else if (r.esperando) anotarGesto(`"${nome}" espera o fim da sentença`);
   return r;
 }
@@ -324,10 +333,77 @@ function liberarGesto() {
   if (c) executarGesto(c, 'fronteira');
 }
 
+/* ---------- Sessão: cumprimento e despedida ---------- */
+// Começa com rosto detectado após ausência, toque na tela ou botão do operador.
+// Termina pelo operador ou por inatividade: aceno, frase curta e limpeza do histórico.
+const ATRASO_FALA_MS = 300;
+const inatividadeS = () => Number(ler('inatividade_s', '90'));
+let sessaoAtiva = false, timerInatividade = null;
+const medidasSessao = []; // { tipo, origem, gatilho, gesto } em ms (performance.now), para o painel e os testes
+
+function tocarInatividade() {
+  clearTimeout(timerInatividade);
+  if (sessaoAtiva) timerInatividade = setTimeout(() => encerrarSessao('inatividade'), inatividadeS() * 1000);
+}
+
+function acenarEFalar(tipo, origem, frase) {
+  const gatilho = performance.now();
+  const m = { tipo, origem, gatilho, gesto: null };
+  medidasSessao.push(m);
+  if (medidasSessao.length > 50) medidasSessao.shift();
+  const r = pedirGesto(tipo === 'despedida' ? 'despedida' : 'aceno', 'fluxo', { aoComecar: (t) => { m.gesto = t; } });
+  if (!frase) return;
+  const ef = efetivo(personagem);
+  // A fala vem logo depois do braço começar a subir, não antes.
+  setTimeout(() => {
+    if (!personagem) return;
+    elHeard.textContent = '';
+    elAnswer.textContent = frase;
+    voz.falarTexto(frase, ef.voz);
+  }, r && r.clipe ? ATRASO_FALA_MS : 0);
+}
+
+function prepararFrasesFixas(p) {
+  const ef = efetivo(p);
+  for (const f of [ef.oiPresenca, ef.despedida]) if (f) voz.preSintetizar(f, ef.voz);
+}
+
+function iniciarSessao(origem) {
+  if (sessaoAtiva || !personagem || ocupado) return false;
+  sessaoAtiva = true;
+  app.dataset.sessao = 'ativa';
+  acenarEFalar('cumprimento', origem, efetivo(personagem).oiPresenca);
+  tocarInatividade();
+  return true;
+}
+
+function encerrarSessao(origem) {
+  if (!sessaoAtiva || !personagem) return false;
+  sessaoAtiva = false;
+  app.dataset.sessao = 'encerrada';
+  clearTimeout(timerInatividade);
+  if (abortCtl) abortCtl.abort();
+  silenciar();
+  acenarEFalar('despedida', origem, efetivo(personagem).despedida);
+  // Limpeza: nenhuma conversa fica para a próxima pessoa.
+  for (const h of historicos.values()) h.length = 0;
+  quadro.limpar('');
+  if (personagem.quadro) mostrarQuadroDe(personagem, historicoDe(personagem.id));
+  return true;
+}
+
+stage.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('button, input, select, textarea, form, a, .quadro')) return;
+  voz.preparar();
+  iniciarSessao('toque');
+});
+
 /* ---------- Pergunta ---------- */
 async function perguntarAoPersonagem(q) {
   q = (q || '').trim();
   if (!q || ocupado || !personagem) return;
+  if (!sessaoAtiva) { sessaoAtiva = true; app.dataset.sessao = 'ativa'; }
+  tocarInatividade();
   if (!apiKey) { definirEstado('idle', 'Um adulto precisa colocar a chave do Gemini na engrenagem.'); dlg.showModal(); return; }
   const quem = personagem;
   const ef = efetivo(quem);
@@ -490,12 +566,7 @@ const filtros = { x: new FiltroOneEuro({ beta: 0.3 }), y: new FiltroOneEuro({ be
 
 function cumprimentarQuemChegou() {
   if (!personagem || ocupado || app.dataset.state !== 'idle') return;
-  const ef = efetivo(personagem);
-  pedirGesto('aceno', 'fluxo');
-  if (!ef.oiPresenca) return;
-  elHeard.textContent = '';
-  elAnswer.textContent = ef.oiPresenca;
-  voz.falarTexto(ef.oiPresenca, ef.voz);
+  iniciarSessao('rosto');
 }
 
 const camera = criarCamera({
@@ -625,6 +696,7 @@ function renderizarGaleria() {
         <label>Velocidade <select class="g-vel"><option>0.5</option><option>0.75</option><option selected>1</option><option>1.5</option></select></label>
         <label class="check"><input type="checkbox" class="g-ligado"> Ligado</label>
         <label class="check"><input type="checkbox" class="g-crianca"> Ok para criança</label>
+        ${c.enviado ? '<button class="btn ghost g-apagar" type="button">Apagar</button>' : ''}
       </div>`;
     li.querySelector('.g-nome').textContent = c.id;
     li.querySelector('.g-meta').textContent = `${fmtDur(c.duracao)} | ${c.loop ? 'laço' : 'uma vez'} | intensidade ${c.intensidade}`;
@@ -650,6 +722,8 @@ function renderizarGaleria() {
       pausar.setAttribute('aria-pressed', String(p)); pausar.textContent = p ? 'Continuar' : 'Pausar';
     });
     vel.addEventListener('change', () => avatar && avatar.previa.velocidade(Number(vel.value)));
+    const apagar = li.querySelector('.g-apagar');
+    if (apagar) apagar.addEventListener('click', () => apagarEnviado(c.id));
     return li;
   }));
   const ocultos = catalogo.clipes.length - clipes.length;
@@ -666,7 +740,111 @@ dlg.addEventListener('close', () => {
 const elCalmo = $('modoCalmo');
 elCalmo.checked = ler('modo_calmo', 'nao') === 'sim';
 elCalmo.addEventListener('change', () => gravar('modo_calmo', elCalmo.checked ? 'sim' : 'nao'));
-dlg.addEventListener('toggle', () => { if (dlg.open) renderizarGaleria(); });
+dlg.addEventListener('toggle', () => { if (dlg.open) { preencherUsos(); renderizarGaleria(); } });
+
+/* ---------- Enviar movimento (.fbx do Mixamo ou .vrma) ---------- */
+// O arquivo fica só neste navegador (IndexedDB). Antes de entrar na galeria, toca no personagem e mostra as medidas.
+const elEnvio = { arquivo: $('envArquivo'), nome: $('envNome'), uso: $('envUso'), btn: $('envEnviar'), saida: $('envSaida') };
+
+function usosPossiveis() {
+  return catalogo ? Object.keys(catalogo.estados).filter((k) => !k.startsWith('_')) : [];
+}
+function preencherUsos() {
+  const atual = elEnvio.uso.value;
+  const nenhum = document.createElement('option'); nenhum.value = ''; nenhum.textContent = 'Só na galeria';
+  elEnvio.uso.replaceChildren(nenhum, ...usosPossiveis().map((u) => { const o = document.createElement('option'); o.value = u; o.textContent = u; return o; }));
+  elEnvio.uso.value = atual;
+}
+
+function registroDoEnviado(m) {
+  return {
+    id: m.id, arquivo: 'enviado:' + m.id, descricao: m.descricao, casoDeUso: m.uso ? [m.uso] : [],
+    loop: !!m.medidas.pareceLaco, duracao: m.medidas.duracao, intensidade: 1, infantilOk: true,
+    origem: `enviado pelo operador (${m.nomeArquivo})`,
+    licenca: m.tipo === 'fbx' ? 'Mixamo (termos da Adobe); não redistribuir' : 'conferir a licença do arquivo enviado',
+    status: 'ativo', enviado: true,
+  };
+}
+function incluirNoCatalogo(m) {
+  registrarEnviado(m.id, URL.createObjectURL(m.blob), m.tipo);
+  catalogo.clipes = catalogo.clipes.filter((c) => c.id !== m.id).concat(registroDoEnviado(m));
+}
+
+async function carregarEnviados() {
+  try {
+    for (const m of await listarMovimentos()) incluirNoCatalogo(m);
+  } catch (e) {
+    console.error('[movimentos] não consegui ler os movimentos enviados:', e);
+  }
+}
+
+async function apagarEnviado(id) {
+  try {
+    await apagarMovimento(id);
+  } catch (e) {
+    console.error('[movimentos] não apagou:', e);
+    elEnvio.saida.textContent = 'Não consegui apagar. Veja o console.';
+    return;
+  }
+  esquecerEnviado(id);
+  catalogo.clipes = catalogo.clipes.filter((c) => c.id !== id);
+  const extra = lerJSON('estados_extra', {});
+  for (const [g, v] of Object.entries(extra)) if (v === id) delete extra[g];
+  gravarJSON('estados_extra', extra);
+  if (personagem) diretor = novoDiretor(personagem);
+  renderizarGaleria();
+}
+
+elEnvio.btn.addEventListener('click', async () => {
+  const f = elEnvio.arquivo.files[0];
+  const saida = (t) => { elEnvio.saida.textContent = t; };
+  if (!f) { saida('Escolha um arquivo .fbx (Mixamo) ou .vrma.'); return; }
+  const tipo = /\.fbx$/i.test(f.name) ? 'fbx' : /\.vrma$/i.test(f.name) ? 'vrma' : null;
+  if (!tipo) { saida('Só aceito .fbx do Mixamo ou .vrma.'); return; }
+  if (!avatar) { saida('Espere o personagem carregar.'); return; }
+  const nome = elEnvio.nome.value.trim() || f.name.replace(/\.[^.]+$/, '');
+  const id = idDoNome(nome);
+  saida('Convertendo...');
+  elEnvio.btn.disabled = true;
+  try {
+    const blob = new Blob([await f.arrayBuffer()], { type: 'application/octet-stream' });
+    registrarEnviado(id, URL.createObjectURL(blob), tipo);
+    const clipe = await clipeDoArquivo('enviado:' + id, avatar.vrm);
+    if (!clipe) {
+      esquecerEnviado(id);
+      saida(tipo === 'fbx' ? 'Não consegui ler esse FBX. Baixe do Mixamo em FBX, "Without Skin".' : 'Esse .vrma não abriu.');
+      return;
+    }
+    const medidas = medirClipe(clipe, avatar.vrm);
+    const m = { id, nome, nomeArquivo: f.name, tipo, blob, uso: elEnvio.uso.value || null, medidas, descricao: `${nome} (enviado)`, enviadoEm: new Date().toISOString() };
+    await salvarMovimento(m);
+    incluirNoCatalogo(m);
+    if (m.uso) gravarJSON('estados_extra', { ...lerJSON('estados_extra', {}), [m.uso]: id });
+    diretor = novoDiretor(personagem);
+    const avisos = avisosDasMedidas(medidas);
+    saida(`Pronto: ${fmtDur(medidas.duracao)}${m.uso ? `, usado como "${m.uso}"` : ''}. ` +
+      (avisos.length ? 'Atenção: ' + avisos.join('; ') + '.' : 'Corpo parado e começo e fim parecidos.') + ' Olhe a prévia: a mão na frente do rosto só se vê tocando.');
+    renderizarGaleria();
+    dlg.classList.add('espiando');
+    avatar.previa.tocar(clipe, { laco: false });
+  } catch (e) {
+    console.error('[movimentos] envio falhou:', e);
+    esquecerEnviado(id);
+    saida(/quota/i.test(String(e)) ? 'Sem espaço no navegador para guardar o arquivo.' : 'O envio falhou. Veja o console.');
+  } finally {
+    elEnvio.btn.disabled = false;
+  }
+});
+
+$('opIniciar').addEventListener('click', () => { voz.preparar(); dlg.close(); iniciarSessao('operador'); });
+$('opEncerrar').addEventListener('click', () => { dlg.close(); encerrarSessao('operador'); });
+const elInativ = $('opInatividade');
+elInativ.value = inatividadeS();
+elInativ.addEventListener('change', () => { const v = Math.max(15, Math.min(600, Number(elInativ.value) || 90)); elInativ.value = v; gravar('inatividade_s', String(v)); tocarInatividade(); });
+
+const elFixar = $('fixarLugar');
+elFixar.checked = fixarNoLugar();
+elFixar.addEventListener('change', () => gravar('fixar_lugar', elFixar.checked ? 'sim' : 'nao'));
 
 // Gancho para testes automatizados e inspeção no console; só existe com ?debug na URL.
 if (new URLSearchParams(location.search).has('debug')) {
@@ -681,13 +859,14 @@ if (new URLSearchParams(location.search).has('debug')) {
     get estado() { return app.dataset.state; },
     get catalogo() { return catalogo; },
     get diretor() { return diretor; },
-    registroGestos, pedirGesto,
+    registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao,
+    get sessaoAtiva() { return sessaoAtiva; },
   };
 }
 
 /* ---------- Início ---------- */
 // Sem catálogo o corpo fica na pose do arquivo e não há gestos; o motivo vai para o console.
-try { catalogo = await carregarCatalogo(); } catch (e) { console.error('[animacoes] catálogo não carregou:', e); }
+try { catalogo = await carregarCatalogo(); await carregarEnviados(); } catch (e) { console.error('[animacoes] catálogo não carregou:', e); }
 const checagens = await Promise.all(PERSONAGENS.map(async (p) => [p, await verificarArquivo(p.arquivoVrm)]));
 for (const [p, versao] of checagens) if (versao) { disponiveis.push(p); versoes.set(p.id, versao); }
 renderizarElenco();
@@ -703,6 +882,7 @@ if (!disponiveis.length) {
   await trocarPersonagem(disponiveis.includes(salvo) ? salvo : disponiveis[0]);
   // Depois da carga do .vrm: o parse ocupa a thread principal e estouraria o tempo limite.
   await voz.verificarServidor();
+  if (personagem) prepararFrasesFixas(personagem); // agora o motor (Kokoro ou sistema) já é conhecido
   prepararMiniaturas();
   await ouvido.preparar();
   estadoOcioso();

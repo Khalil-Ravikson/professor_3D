@@ -205,7 +205,7 @@
   dialog::backdrop { background: rgba(16,24,43,.5); }
   dialog h2 { margin: 0 0 8px; font-size: 1.3rem; }
   dialog label { display: block; font-weight: 700; margin: 12px 0 4px; }
-  dialog input[type=password], dialog select {
+  dialog input[type=password], dialog input#envNome, dialog select {
     width: 100%; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px;
     border: 2px solid #cfd8e6; background: #fff; color: #1f2a44;
   }
@@ -396,12 +396,37 @@
   </fieldset>
 
   <fieldset>
+    <legend>Sessão</legend>
+    <p class="hint">Cumprimenta com aceno ao começar. Ao encerrar, acena, se despede e apaga a conversa.</p>
+    <div class="actions">
+      <button class="btn ghost" id="opIniciar" type="button">Iniciar sessão</button>
+      <button class="btn ghost" id="opEncerrar" type="button">Encerrar sessão</button>
+    </div>
+    <label for="opInatividade">Encerrar sozinho depois de quantos segundos parado</label>
+    <input id="opInatividade" type="number" min="15" max="600" step="15">
+  </fieldset>
+
+  <fieldset>
     <legend>Animações</legend>
     <p class="hint">Toque um clipe para ver no personagem. Só os ligados entram na conversa. A escolha fica guardada neste navegador.</p>
     <label class="check"><input type="checkbox" id="modoInfantil" checked> Modo infantil (esconde clipes não marcados como ok para criança)</label>
     <label class="check"><input type="checkbox" id="modoCalmo"> Modo calmo (sem gestos amplos; também liga sozinho com "reduzir movimento" do sistema)</label>
+    <label class="check"><input type="checkbox" id="fixarLugar" checked> Fixar no lugar (o corpo não sai do ponto durante os movimentos)</label>
     <ul class="galeria" id="galeria"></ul>
     <p class="galeria-lacunas" id="galeriaLacunas"></p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Enviar movimento</legend>
+    <p class="hint">Arquivo .fbx do Mixamo (baixe em FBX, "Without Skin") ou .vrma. Fica guardado só neste navegador e não vai para o repositório.</p>
+    <label for="envArquivo">Arquivo</label>
+    <input id="envArquivo" type="file" accept=".fbx,.vrma">
+    <label for="envNome">Nome</label>
+    <input id="envNome" type="text" maxlength="40" placeholder="Ex.: aceno com braço aberto">
+    <label for="envUso">Usar como</label>
+    <select id="envUso"></select>
+    <div class="actions"><button class="btn" id="envEnviar" type="button">Enviar e testar</button></div>
+    <p class="hint" id="envSaida" role="status"></p>
   </fieldset>
 
   <button class="btn close" id="closeSettings" type="button">Salvar e fechar</button>

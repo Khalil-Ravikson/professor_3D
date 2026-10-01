@@ -143,8 +143,6 @@ test('M3: fala com Kokoro frase a frase, com síntese adiantada e Parar', async 
 
 test('M4: corpo por VRMA idle, piscada e olhar ativos', async ({ page }) => {
   const erros = await abrir(page);
-  // O aceno de chegada mexe no braço direito; espera acabar antes de medir o idle.
-  await page.waitForFunction(() => window.__prof3d.registroGestos.length > 0 && window.__prof3d.avatar.gestoAtivo === null, null, { timeout: 20_000 });
   const r = await page.evaluate(async () => {
     const av = window.__prof3d.avatar;
     const braco = () => av.vrm.humanoid.getNormalizedBoneNode('leftUpperArm').quaternion.clone();
