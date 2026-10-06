@@ -10,6 +10,10 @@
 const CHAVE = 'prof3d_recargas';
 
 export function contarRecargas() {
+  // Sem sessionStorage (modo privado, cookies bloqueados) o vigia perde a memória das
+  // tentativas e volta a tratar cada travamento como o primeiro. É pior do que contar,
+  // e melhor do que deixar a tela congelada. O motivo não vai ao console porque esta
+  // função roda a cada rodada do vigia e a cada desenho do painel.
   try { return Number(sessionStorage.getItem(CHAVE) || 0); } catch { return 0; }
 }
 function anotarRecarga(n) {
