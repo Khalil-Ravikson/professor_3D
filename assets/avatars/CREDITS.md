@@ -23,3 +23,15 @@ Atribuição não é obrigatória em CC0; fica registrada por boa prática.
 | 8590256991748008892.vrm | Luma | AvatarSample_A | VRoid Project | Licença do VRoid Hub: uso por todos, comercial permitido, crédito desnecessário, modificação e redistribuição permitidas (meta: `licenseName: Other` + `otherLicenseUrl`) | 2a0ccd84880b03d7b65503d8b6287f7a97f3bb4fab70a5fd0a47b433c97827f5 |
 
 Lido dos metadados do arquivo (extensão `VRM`, versão 0.x). Nome original mantido. Nada na interface pode sugerir que a pixiv ou o VRoid apoia ou recomenda o evento.
+
+## Teo, novo modelo (06/10/2026)
+
+| Arquivo | Personagem | Título (meta) | Autor (meta) | Licença (meta, VRM 0.x) | SHA-256 |
+|---|---|---|---|---|---|
+| teo.vrm | Teo | AvatarSample_C | VRoid Project | Licença do VRoid Hub: uso por todos, comercial permitido, crédito desnecessário, modificação e redistribuição permitidas (meta: `licenseName: Other` + `otherLicenseUrl`) | 6ad4acb74c2ea91b46a2c6755243efd9da4e0857635b659acd55d0de5832330a |
+
+Substitui o Cyberpal CC0 (100Avatars, SHA-256 `2c6b9f8f417e2cfe...`), que não está mais em uso. Colocado pelo dono. Nada na interface pode sugerir que a pixiv ou o VRoid apoia ou recomenda o evento.
+
+## Arquivo recusado
+
+`teo3.vrm` ("Anime Boy", Kaosvs): `Redistribution_Prohibited`, `OnlyAuthor`, uso comercial `Disallow`. **Não usar e nunca commitar**; está no `.gitignore`.
