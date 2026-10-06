@@ -19,6 +19,10 @@ import { criarOuvido } from './ouvido.js';
 import { ler, gravar, lerJSON, gravarJSON } from './storage.js';
 import { T } from './strings.pt-BR.js';
 import { avaliarLicenca } from './licenca.js';
+import { criarVigia, contarRecargas, esquecerRecargas } from './vigia.js';
+import { criarDiagnostico } from './diagnostico.js';
+import { criarMedidorDeCusto, CAMBIO_PADRAO } from './custo.js';
+import { VERSAO, VERSAO_DATA, VERSAO_MARCO } from './versao.js';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
@@ -64,6 +68,7 @@ let carga = 0;               // sobe a cada troca; carga antiga que termina depo
 let apiKey = ler('gemini_key');
 let ocupado = false, abortCtl = null, falando = false;
 let mesa = null;              // mesa de som; só existe depois de criarVoz
+let marcaPergunta = null;     // tempos da pergunta em curso (diagnóstico)
 const historicos = new Map(); // id -> [{ role, content, contas? }]
 // Ajustes do usuário por personagem (persona, temperatura, limite, voz). characters.js fica como padrão.
 let ajustes = lerJSON('ajustes_personagens', {});
@@ -97,10 +102,45 @@ function estadoOcioso() {
 }
 
 /* ---------- Cena ---------- */
-const cena = criarCena(stage);
+let esperaContexto = null;
+const cena = criarCena(stage, {
+  aoPerderContexto: () => {
+    cancelarTudo();
+    mostrarAviso(T.quiosque.contextoPerdido);
+    // Se o navegador não devolver o contexto, o público fica olhando para um aviso parado.
+    clearTimeout(esperaContexto);
+    esperaContexto = setTimeout(() => {
+      if (!cena.contextoPerdido) return;
+      mostrarAviso(T.quiosque.contextoNaoVoltou, () => location.reload());
+    }, 8000);
+  },
+  aoRestaurarContexto: () => {
+    clearTimeout(esperaContexto);
+    esconderAviso();
+    // A GPU perdeu texturas e geometrias: o modelo volta do zero, sem recarregar a página.
+    recarregarAvatar();
+  },
+});
 cena.aoAtualizar((dt, t) => {
   const visemas = boca ? boca.ler(dt) : null;
   if (avatar) avatar.atualizar(dt, t, { estado: app.dataset.state, visemas });
+});
+
+/* ---------- Diagnóstico e gasto ---------- */
+const diagnostico = criarDiagnostico({ cena });
+const custo = criarMedidorDeCusto({
+  estadoInicial: lerJSON('custo', null),
+  cambio: Number(ler('cambio', String(CAMBIO_PADRAO))),
+  precos: lerJSON('precos', null),
+  aoMudar: () => { gravarJSON('custo', custo.estado); desenharDiagnostico(); },
+});
+
+// Vigia do laço de renderização. Num totem sem ninguém olhando, tela congelada só
+// sai do ar se o app se recarregar sozinho.
+const vigia = criarVigia({
+  ultimoQuadro: () => cena.ultimoQuadro,
+  aoTravar: () => mostrarAviso(T.quiosque.travou),
+  aoDesistir: () => mostrarAviso(T.quiosque.desistiu, () => { esquecerRecargas(); location.reload(); }),
 });
 
 const MAPA_PALETA = {
@@ -123,6 +163,24 @@ function mostrarErroAvatar(titulo, caminho, motivo = '') {
   $('erroMotivo').hidden = !motivo;
   $('erroMotivo').textContent = motivo;
   $('erroAvatar').hidden = false;
+}
+
+// Aviso que cobre a tela do público. Com acao, mostra um botão; sem acao, só espera.
+function mostrarAviso({ titulo, texto, acao }, aoClicar) {
+  $('avisoTitulo').textContent = titulo;
+  $('avisoTexto').textContent = texto;
+  const botao = $('avisoAcao');
+  botao.hidden = !aoClicar;
+  if (aoClicar) {
+    botao.textContent = acao || T.quiosque.erro.acao;
+    botao.onclick = aoClicar;
+  }
+  $('avisoQuiosque').hidden = false;
+}
+
+function esconderAviso() {
+  $('avisoQuiosque').hidden = true;
+  $('avisoAcao').onclick = null;
 }
 
 /* ---------- Seletor ---------- */
@@ -267,6 +325,15 @@ async function trocarPersonagem(p) {
   }
 }
 
+// Monta de novo o personagem que já está em cena (depois de perder o contexto WebGL).
+// Zerar `personagem` é o que faz a troca refazer tudo em vez de sair pela porta de entrada.
+function recarregarAvatar() {
+  const p = personagem;
+  if (!p) return Promise.resolve();
+  personagem = null;
+  return trocarPersonagem(p);
+}
+
 // Redesenha o quadro com a última resposta do personagem (linhas e contas guardadas no histórico).
 function mostrarQuadroDe(p, hist) {
   elQuadro.hidden = !p.quadro;
@@ -299,7 +366,7 @@ const voz = criarVoz({
   volumeInicial: config.volume,
   mudoInicial: config.mudo,
   aoMudarMesa: (m) => mostrarVolume(m),
-  aoComecarFala: () => { falando = true; definirEstado('speaking'); },
+  aoComecarFala: () => { falando = true; if (marcaPergunta) marcaPergunta.aoPrimeiraFala(); definirEstado('speaking'); },
   aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); avancarDepoisDaFala(); },
   aoFimFrase: () => liberarGesto(),
   // Gesto marcado pelo LLM numa sentença: pedido no instante em que essa sentença começa a tocar.
@@ -344,7 +411,9 @@ volMudo.addEventListener('click', () => {
 const boca = criarBoca({ ctx: voz.ctx, analisador: voz.analisador, saida: voz.saida, modo: config.lipsync });
 
 // Selo no palco + linha de estado nas configurações.
+let ultimoMotorVoz = null; // só para o painel de diagnóstico, que não pode ter efeito colateral
 function mostrarStatusVoz({ motor, aviso, servidor }) {
+  ultimoMotorVoz = motor;
   const s = servidor || {};
   const natural = motor && motor.id === 'webspeech' && motor.temNatural;
   let selo = motor ? (natural ? 'Voz: Edge Natural' : motor.id === 'webspeech' ? 'Voz do sistema' : motor.id === 'kokoro-browser' ? 'Voz: Kokoro no navegador' : 'Voz: Kokoro') : 'Voz: verificando';
@@ -539,6 +608,8 @@ async function perguntarAoPersonagem(q) {
   tocarInatividade();
   if (!apiKey) { definirEstado('idle', 'Um adulto precisa colocar a chave do Gemini na engrenagem.'); dlg.showModal(); return; }
   const quem = personagem;
+  const marca = diagnostico.marcarPergunta();
+  marcaPergunta = marca;
   const ef = efetivo(quem);
   const hist = historicoDe(quem.id);
   silenciar(); ocupado = true;
@@ -575,7 +646,8 @@ async function perguntarAoPersonagem(q) {
         contas.push(resultado);
         quadro.adicionarConta(resultado);
       },
-      aoTexto: (pedaco) => (leitor ? leitor.adicionar(pedaco) : falar(pedaco)),
+      aoTexto: (pedaco) => { marca.aoPrimeiroTexto(); return leitor ? leitor.adicionar(pedaco) : falar(pedaco); },
+      aoUso: (uso) => custo.somar(config.modelo, uso),
     });
     if (leitor) leitor.finalizar();
     for (const f of divisor.finalizar()) falaTurno.adicionar(f);
@@ -656,7 +728,84 @@ async function aplicarConfigVoz() {
   }
 }
 
-$('gear').addEventListener('click', () => dlg.showModal());
+/* ---------- Painel de diagnóstico (só o operador vê) ---------- */
+const elDiag = $('diag'), elDiagErros = $('diagErros'), elCambio = $('diagCambio');
+let timerDiag = null;
+
+const fmtSeg = (s) => (s < 60 ? `${s} s` : s < 3600 ? `${Math.floor(s / 60)} min` : `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`);
+
+// Estado de cada serviço, com o motivo quando está ruim.
+function estadoDosServicos() {
+  const sv = voz.statusServidor || {};
+  const lic = personagem ? licencas.get(personagem.id) : null;
+  return {
+    Gemini: apiKey ? `chave configurada, modelo ${config.modelo}` : 'sem chave',
+    Voz: (ultimoMotorVoz ? ultimoMotorVoz.nome : 'escolhendo') +
+      (sv.ok === true ? ' (servidor respondendo)' : sv.ok === false ? ` (servidor ${sv.detalhe})` : ''),
+    Ouvido: ouvido.gravando ? 'ouvindo agora' : 'pronto',
+    Câmera: camera && camera.ligada ? 'ligada' : 'desligada',
+    Avatar: avatar ? `${personagem.nome} carregado${lic ? `, licença ${T.licenca.decisao[lic.decisao] || lic.decisao}` : ''}` : 'sem avatar',
+  };
+}
+
+const RUIM = /sem chave|fora do ar|falhou|sem avatar|bloqueado/i;
+
+function desenharDiagnostico() {
+  if (!dlg.open) return;
+  const r = diagnostico.retrato(estadoDosServicos());
+  const g = custo.resumo();
+  const linhas = [
+    ['Versão', `${VERSAO} (${VERSAO_MARCO}, ${VERSAO_DATA})`, false],
+    ['Em pé há', fmtSeg(r.emPe), false],
+    ['Quadros por segundo', r.fps === null ? 'medindo' : String(r.fps), r.fps !== null && r.fps < 25],
+    ['Imagem', r.contextoPerdido ? 'contexto perdido' : 'normal', r.contextoPerdido],
+    ['Memória', r.memoria ? `${r.memoria.usadaMb} MB de ${r.memoria.limiteMb} MB` : 'o navegador não informa', false],
+    ['Na placa de vídeo', r.gpu ? `${r.gpu.geometrias} geometrias, ${r.gpu.texturas} texturas` : 'sem dados', false],
+    ['Resposta do Gemini', r.latencia.perguntaMs === null ? 'sem medida ainda' : `${r.latencia.perguntaMs} ms (mediana de ${r.latencia.amostras})`, false],
+    ['Até a primeira fala', r.latencia.falaMs === null ? 'sem medida ainda' : `${r.latencia.falaMs} ms`, false],
+    ['Respostas hoje', `${g.respostas} (${g.sessao.respostas} nesta sessão)`, false],
+    ['Tokens hoje', `${g.entrada.toLocaleString('pt-BR')} de entrada, ${(g.saida + g.pensamento).toLocaleString('pt-BR')} de saída`, false],
+    ['Gasto hoje', g.semPreco.length ? `US$ ${g.usd.toFixed(4)}, sem preço para ${g.semPreco.join(', ')}` : `R$ ${g.reais.toFixed(2)} (US$ ${g.usd.toFixed(4)})`, g.semPreco.length > 0],
+    ['Recargas automáticas', String(contarRecargas()), contarRecargas() > 0],
+    ['Erros', r.erros ? `${r.erros}, último às ${r.ultimoErro.t}` : 'nenhum', r.erros > 0],
+  ];
+  for (const [nome, valor] of Object.entries(r.servicos)) linhas.push([nome, valor, RUIM.test(valor)]);
+
+  elDiag.replaceChildren(...linhas.flatMap(([nome, valor, alerta]) => {
+    const dt = document.createElement('dt'); dt.textContent = nome;
+    const dd = document.createElement('dd'); dd.textContent = valor;
+    if (alerta) dd.dataset.alerta = 'sim';
+    return [dt, dd];
+  }));
+  $('diagFonte').textContent = `Preços: ${g.fonte}. Sem preço do modelo na tabela, o gasto aparece só em tokens.`;
+  elDiagErros.replaceChildren(...diagnostico.erros.slice(-5).reverse().map((e) => {
+    const li = document.createElement('li');
+    li.textContent = `${e.t} ${e.origem}: ${e.mensagem}`;
+    return li;
+  }));
+}
+
+elCambio.value = String(custo.resumo().cambio);
+elCambio.addEventListener('change', () => {
+  custo.definirCambio(elCambio.value);
+  gravar('cambio', String(custo.resumo().cambio));
+});
+$('diagZerar').addEventListener('click', () => { custo.zerarSessao(); desenharDiagnostico(); });
+$('diagContexto').addEventListener('click', () => {
+  if (!cena.perderContextoDeProposito()) {
+    $('diagFonte').textContent = 'Este navegador não deixa derrubar o contexto de propósito (falta WEBGL_lose_context).';
+    return;
+  }
+  dlg.close();
+});
+
+$('gear').addEventListener('click', () => {
+  dlg.showModal();
+  desenharDiagnostico();
+  clearInterval(timerDiag);
+  timerDiag = setInterval(desenharDiagnostico, 1000);
+});
+dlg.addEventListener('close', () => { clearInterval(timerDiag); timerDiag = null; });
 $('keyform').addEventListener('submit', (e) => e.preventDefault());
 voiceSel.addEventListener('change', () => voz.sistema.escolherVoz(voiceSel.value));
 bocaSel.value = config.lipsync;
@@ -1063,6 +1212,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get diretor() { return diretor; },
     licencas,
     registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao, definirEstado,
+    diagnostico, custo, vigia, recarregarAvatar, VERSAO,
     get etapa() { return etapa; },
     // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
     irParaConversa(mic = 'sim') { sessaoAtiva = true; microfone = mic; definirEtapa('conversa'); },
@@ -1077,6 +1227,7 @@ const checagens = await Promise.all(PERSONAGENS.map(async (p) => [p, await verif
 for (const [p, versao] of checagens) if (versao) { disponiveis.push(p); versoes.set(p.id, versao); }
 renderizarElenco();
 cena.iniciar();
+vigia.iniciar();
 
 if (!disponiveis.length) {
   $('loading').hidden = true;
@@ -1093,4 +1244,6 @@ if (!disponiveis.length) {
   prepararMiniaturas();
   await ouvido.preparar();
   estadoOcioso();
+  // Chegou inteiro até aqui: a contagem de recargas do vigia recomeça do zero.
+  esquecerRecargas();
 }

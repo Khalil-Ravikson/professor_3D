@@ -19,7 +19,10 @@ export function apontarCamera(camera, foco, distancia, desvioAlvo = -0.14) {
 }
 
 // Fundo transparente: a cor vem do CSS (paleta do personagem), sem geometria de cenário.
-export function criarCena(container) {
+// aoPerderContexto e aoRestaurarContexto: a GPU pode tirar o contexto WebGL a qualquer
+// momento (driver atualizado, suspensão da máquina, memória de vídeo no limite). Sem
+// tratar isso, a tela fica congelada para sempre.
+export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -51,17 +54,53 @@ export function criarCena(container) {
 
   const atualizadores = new Set();
   const relogio = new THREE.Clock();
+  // Marca de cada quadro: alimenta o contador de FPS e o vigia do laço.
+  let ultimoQuadro = performance.now(), quadros = 0, contextoPerdido = false;
+
   function iniciar() {
     renderer.setAnimationLoop(() => {
+      ultimoQuadro = performance.now();
+      quadros++;
       const dt = Math.min(relogio.getDelta(), 0.1), t = relogio.elapsedTime;
       for (const fn of atualizadores) fn(dt, t);
       renderer.render(scene, camera);
     });
   }
 
+  const tela = renderer.domElement;
+  // Sem preventDefault o navegador nem tenta restaurar o contexto.
+  tela.addEventListener('webglcontextlost', (ev) => {
+    ev.preventDefault();
+    contextoPerdido = true;
+    renderer.setAnimationLoop(null);
+    console.error('[cena] o contexto WebGL foi perdido.');
+    if (aoPerderContexto) aoPerderContexto();
+  });
+  tela.addEventListener('webglcontextrestored', () => {
+    contextoPerdido = false;
+    // O relógio andou enquanto a tela estava parada; zerar evita um salto de animação.
+    relogio.getDelta();
+    ultimoQuadro = performance.now();
+    iniciar();
+    console.info('[cena] contexto WebGL restaurado.');
+    if (aoRestaurarContexto) aoRestaurarContexto();
+  });
+
   return {
     renderer, scene, camera,
     definirFoco, enquadrar, iniciar,
     aoAtualizar(fn) { atualizadores.add(fn); return () => atualizadores.delete(fn); },
+    get ultimoQuadro() { return ultimoQuadro; },
+    get quadros() { return quadros; },
+    get contextoPerdido() { return contextoPerdido; },
+    // Só para teste: tira o contexto de verdade, como a GPU faria.
+    perderContextoDeProposito() {
+      const ext = renderer.getContext().getExtension('WEBGL_lose_context');
+      if (!ext) return false;
+      ext.loseContext();
+      // O navegador só devolve o contexto se alguém pedir; num quiosque ninguém pede.
+      setTimeout(() => { try { ext.restoreContext(); } catch (e) { console.warn('[cena] restoreContext:', e); } }, 300);
+      return true;
+    },
   };
 }

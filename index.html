@@ -82,6 +82,15 @@
   .carga-pct { font-size: .9rem; font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-motion: reduce) { .carga-barra { transition: none; } }
   .loading[hidden], .erro-avatar[hidden], .panel[hidden] { display: none; }
+  .aviso-quiosque {
+    position: absolute; inset: 0; z-index: 4; display: grid; place-content: center;
+    gap: 10px; text-align: center; padding: 24px;
+    background: var(--fundo-1); color: var(--tinta);
+  }
+  .aviso-quiosque[hidden] { display: none; }
+  .aviso-titulo { margin: 0; font-size: 1.35rem; font-weight: 800; }
+  .aviso-texto { margin: 0; color: var(--tinta-suave); max-width: 32ch; }
+  .aviso-quiosque .btn { justify-self: center; }
   .erro-avatar {
     position: absolute; inset: 0; z-index: 1; display: grid; align-content: center; gap: 8px;
     padding: 24px; text-align: center;
@@ -123,6 +132,12 @@
     background: var(--cartao); color: var(--tinta-suave);
   }
   .selo-voz[data-alerta="sim"] { color: #7a2e00; background: #ffe1c7; }
+  .diag { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; font-size: .9rem; }
+  .diag dt { color: var(--tinta-suave); }
+  .diag dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .diag dd[data-alerta="sim"] { color: #7a2e00; font-weight: 700; }
+  .diag-erros { list-style: none; margin: 10px 0 0; padding: 0; font-size: .8rem; color: var(--tinta-suave); }
+  .diag-erros li { padding: 3px 0; border-top: 1px solid #0001; font-family: ui-monospace, monospace; }
   .volume {
     position: absolute; left: 12px; top: 46px; z-index: 2;
     display: flex; align-items: center; gap: 6px;
@@ -343,6 +358,11 @@
       <p class="erro-detalhe" id="erroArquivo">Coloque o arquivo em <code id="erroCaminho"></code> e recarregue a página.</p>
       <p class="erro-detalhe" id="erroMotivo" hidden></p>
     </div>
+    <div class="aviso-quiosque" id="avisoQuiosque" role="alert" hidden>
+      <p class="aviso-titulo" id="avisoTitulo"></p>
+      <p class="aviso-texto" id="avisoTexto"></p>
+      <button class="btn" id="avisoAcao" type="button" hidden></button>
+    </div>
     <button class="gear" id="gear" type="button" aria-label="Configurações">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.3 7.3 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
     </button>
@@ -509,6 +529,20 @@
     <select id="envUso"></select>
     <div class="actions"><button class="btn" id="envEnviar" type="button">Enviar e testar</button></div>
     <p class="hint" id="envSaida" role="status"></p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Diagnóstico</legend>
+    <p class="hint">Números do totem. Atualizam enquanto esta janela está aberta.</p>
+    <dl class="diag" id="diag"></dl>
+    <label for="diagCambio">Cotação do dólar em reais</label>
+    <input id="diagCambio" type="number" min="1" max="20" step="0.01">
+    <p class="hint" id="diagFonte"></p>
+    <div class="actions">
+      <button class="btn ghost" id="diagZerar" type="button">Zerar o gasto da sessão</button>
+      <button class="btn ghost" id="diagContexto" type="button">Testar queda de imagem</button>
+    </div>
+    <ul class="diag-erros" id="diagErros"></ul>
   </fieldset>
 
   <fieldset>

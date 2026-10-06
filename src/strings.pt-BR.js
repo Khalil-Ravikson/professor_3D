@@ -26,6 +26,33 @@ export const T = {
       apagando: 'Apagando a conversa...',
     },
   },
+  // Avisos de quiosque: a tela que o público vê quando algo quebra. Sempre com um
+  // próximo passo, nunca com termo técnico nem código de erro.
+  quiosque: {
+    contextoPerdido: {
+      titulo: 'Um instante',
+      texto: 'A imagem caiu e está voltando sozinha.',
+    },
+    contextoNaoVoltou: {
+      titulo: 'Preciso recomeçar',
+      texto: 'A imagem não voltou. Toque no botão para começar de novo.',
+      acao: 'Recomeçar',
+    },
+    travou: {
+      titulo: 'Recomeçando',
+      texto: 'A tela parou e estou voltando sozinha.',
+    },
+    desistiu: {
+      titulo: 'Preciso de ajuda',
+      texto: 'Já tentei voltar sozinha algumas vezes. Chame quem está cuidando do totem.',
+      acao: 'Tentar mais uma vez',
+    },
+    erro: {
+      titulo: 'Algo quebrou aqui',
+      texto: 'Toque no botão para começar de novo.',
+      acao: 'Recomeçar',
+    },
+  },
   volume: {
     mudo: 'sem som',
     mudar: 'Desligar o som',

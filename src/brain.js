@@ -65,7 +65,7 @@ export function instrucaoDeLimite(limitePalavras) {
 const MAX_RODADAS = 10;
 
 // Uma rodada de streaming. Devolve as partes do modelo como vieram (com thoughtSignature).
-async function rodada({ apiKey, modelo, corpo, signal, aoTexto }) {
+async function rodada({ apiKey, modelo, corpo, signal, aoTexto, aoUso }) {
   const r = await fetch(URL_BASE + modelo + ':streamGenerateContent?alt=sse', {
     method: 'POST',
     signal,
@@ -75,9 +75,12 @@ async function rodada({ apiKey, modelo, corpo, signal, aoTexto }) {
   if (!r.ok) throw new ErroGemini(r.status, await r.text());
   const partes = [];
   let texto = '';
+  // O usageMetadata chega repetido a cada evento, com o acumulado da rodada; vale o último.
+  let uso = null;
   const leitorSSE = criarLeitorSSE((ev) => {
     const t = textoDoEvento(ev);
     for (const p of ev?.candidates?.[0]?.content?.parts || []) partes.push(p);
+    if (ev.usageMetadata) uso = ev.usageMetadata;
     if (t) { texto += t; aoTexto(t); }
   });
   const leitor = r.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -87,6 +90,7 @@ async function rodada({ apiKey, modelo, corpo, signal, aoTexto }) {
     leitorSSE.adicionar(value);
   }
   leitorSSE.finalizar();
+  if (uso && aoUso) aoUso(uso);
   return { partes, texto };
 }
 
@@ -97,6 +101,7 @@ async function rodada({ apiKey, modelo, corpo, signal, aoTexto }) {
 export async function perguntarEmFluxo({
   apiKey, modelo = MODELO_PADRAO, persona, historico, signal, aoTexto,
   ferramentas = {}, aoChamada = () => {}, temperatura = null, limitePalavras = null,
+  aoUso = null,
 }) {
   const contents = historico.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -121,7 +126,7 @@ export async function perguntarEmFluxo({
       corpo.tools = [{ functionDeclarations: declaracoes }];
       if (i === MAX_RODADAS - 1) corpo.toolConfig = { functionCallingConfig: { mode: 'NONE' } };
     }
-    const { partes, texto } = await rodada({ apiKey, modelo, corpo, signal, aoTexto });
+    const { partes, texto } = await rodada({ apiKey, modelo, corpo, signal, aoTexto, aoUso });
     total += texto;
     const chamadas = partes.filter((p) => p.functionCall);
     if (!chamadas.length) break;
