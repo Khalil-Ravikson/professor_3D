@@ -26,6 +26,11 @@ export const T = {
       apagando: 'Apagando a conversa...',
     },
   },
+  volume: {
+    mudo: 'sem som',
+    mudar: 'Desligar o som',
+    religar: 'Ligar o som',
+  },
   carga: {
     baixando: (nome) => `Chamando ${nome}`,
     movimentos: 'Preparando os movimentos',

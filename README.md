@@ -41,6 +41,30 @@ No Edge aparecem vozes neurais em português ("Microsoft Francisca Online (Natur
 
 Duas ressalvas: elas precisam de internet, e a boca se mexe por palavra, não pelo áudio.
 
+### Volume e nivelamento
+
+O controle de volume fica no canto do palco, embaixo do selo de voz: alto-falante para o mudo e barra para o volume. A escolha fica guardada neste navegador. O curso da barra é aplicado ao quadrado, então metade do curso soa pela metade.
+
+Três coisas acontecem sozinhas, em `src/audio.js`:
+
+- **Nivelamento por frase.** Cada frase sintetizada passa por um ganho próprio, calculado para o volume médio (RMS) chegar a -20 dBFS sem o pico passar de -1,5 dBFS. Frases baixas e altas chegam no mesmo volume. É RMS em dBFS, não LUFS do EBU R128.
+- **Intervalo entre sentenças.** 180 ms, sempre o mesmo, independente do motor e do tamanho da frase. Parar no meio não espera o intervalo.
+- **Redução do fundo.** Enquanto o microfone está aberto, o personagem cai para 30% do volume em vez de ficar mudo.
+
+Nada disso vale para a voz do sistema (Web Speech): ela toca fora do `AudioContext`, então o app não tem como medir nem mexer no volume dela. Só o intervalo entre sentenças continua valendo.
+
+Medir o volume de arquivos antes e depois do nivelamento:
+
+```bash
+node tools/medir-audio.mjs amostras/gemini-tts-Kore.wav
+```
+
+Normalizar um pacote de áudio pré-gravado (precisa do ffmpeg no PATH, `winget install Gyan.FFmpeg`):
+
+```bash
+node tools/normalizar-audio.mjs audios audios-normalizados --alvo -16
+```
+
 ## Teo e Rafa: quadro e calculadora
 
 - Esses dois respondem em linhas `FALA:` (vai para a voz) e `QUADRO:` (vai para o quadro).

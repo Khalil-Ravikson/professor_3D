@@ -11,6 +11,7 @@ import { criarKokoroNavegador } from './kokoro-browser.js';
 import { criarWebSpeech } from './webspeech.js';
 import { dividirFrases, limparParaFala, normalizarParaFala } from './frases.js';
 import { extrairGestos } from '../gestos.js';
+import { criarMesa, PAUSA_ENTRE_FRASES_MS } from '../audio.js';
 
 function criarCanal() {
   const itens = [];
@@ -32,13 +33,14 @@ function criarCanal() {
   };
 }
 
-export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = () => {}, aoInicioFrase = () => {}, aoPalavra, aoStatus, aoMudarVozesSistema, aoProgressoNavegador }) {
+export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoComecarFala, aoTerminarFala, aoFimFrase = () => {}, aoInicioFrase = () => {}, aoPalavra, aoStatus, aoMudarVozesSistema, aoProgressoNavegador }) {
   const ctx = new AudioContext();
   const saida = ctx.createGain();
   const analisador = ctx.createAnalyser();
   analisador.fftSize = 1024;
   saida.connect(analisador);
   analisador.connect(ctx.destination);
+  const mesa = criarMesa({ ctx, saida, volumeInicial, mudoInicial, aoMudar: aoMudarMesa });
 
   const servidor = criarKokoroServidor({ obterUrl: () => config.urlKokoro });
   const navegador = criarKokoroNavegador({ aoProgresso: aoProgressoNavegador });
@@ -91,14 +93,28 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
     return motor;
   }
 
-  function tocarBuffer(t, buffer) {
+  // Cada frase passa por um ganho próprio, para que todas cheguem no mesmo volume.
+  function tocarBuffer(t, buffer, rotulo) {
     return new Promise((resolver) => {
       const fonte = ctx.createBufferSource();
       fonte.buffer = buffer;
-      fonte.connect(saida);
+      const ganho = ctx.createGain();
+      ganho.gain.value = mesa.normalizar(buffer, rotulo).ganho;
+      fonte.connect(ganho);
+      ganho.connect(saida);
       t.fonte = fonte;
-      fonte.onended = () => { fonte.disconnect(); if (t.fonte === fonte) t.fonte = null; resolver(); };
+      fonte.onended = () => { fonte.disconnect(); ganho.disconnect(); if (t.fonte === fonte) t.fonte = null; resolver(); };
       fonte.start();
+    });
+  }
+
+  // Espera que parar() encerra na hora, para o intervalo entre sentenças não atrasar um corte.
+  function esperar(t, ms) {
+    if (t.cancelado) return Promise.resolve();
+    return new Promise((resolver) => {
+      const id = setTimeout(() => { t.timers.delete(cancelar); resolver(); }, ms);
+      const cancelar = () => { clearTimeout(id); resolver(); };
+      t.timers.add(cancelar);
     });
   }
 
@@ -140,9 +156,12 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
       const { valor: item, fim } = await t.audios.receber();
       if (fim || t.cancelado) break;
       if (!t.comecou) { t.comecou = true; aoComecarFala(); }
+      // Intervalo curto e constante entre sentenças: antes de cada uma, menos da primeira,
+      // para não somar atraso no fim da fala.
+      else { await esperar(t, PAUSA_ENTRE_FRASES_MS); if (t.cancelado) break; }
       anotar('toca-inicio', { turno: t.id, i: item.i });
       if (item.gestos && item.gestos.length) aoInicioFrase(item.gestos);
-      if (item.buffer) await tocarBuffer(t, item.buffer);
+      if (item.buffer) await tocarBuffer(t, item.buffer, item.texto.slice(0, 40));
       else await item.motor.falar(item.texto, t.voz, { signal: t.ctl.signal, aoPalavra });
       anotar('toca-fim', { turno: t.id, i: item.i, cancelado: !!t.cancelado });
       // Fronteira de sentença: único momento em que um gesto pendente pode começar.
@@ -159,6 +178,8 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
     t.cancelado = true;
     t.ctl.abort();
     if (t.fonte) { try { t.fonte.stop(); } catch (e) { console.warn('[voz] stop() numa fonte já parada:', e); } }
+    for (const cancelar of t.timers) cancelar();
+    t.timers.clear();
     sistema.parar();
     t.frases.fechar();
     t.audios.fechar();
@@ -167,7 +188,7 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
 
   function novoTurno(voz) {
     parar();
-    const t = { id: ++seq, voz, ctl: new AbortController(), frases: criarCanal(), audios: criarCanal(), cancelado: false, comecou: false, fonte: null };
+    const t = { id: ++seq, voz, ctl: new AbortController(), frases: criarCanal(), audios: criarCanal(), cancelado: false, comecou: false, fonte: null, timers: new Set() };
     turno = t;
     anotar('turno-inicio', { turno: t.id });
     lacoSintese(t);
@@ -182,6 +203,7 @@ export function criarVoz({ config, aoComecarFala, aoTerminarFala, aoFimFrase = (
     ctx,
     saida,
     analisador,
+    mesa,
     registro,
     get falando() { return !!(turno && turno.comecou); },
     get frasesProntas() { return preSintetizadas.size; },

@@ -123,6 +123,20 @@
     background: var(--cartao); color: var(--tinta-suave);
   }
   .selo-voz[data-alerta="sim"] { color: #7a2e00; background: #ffe1c7; }
+  .volume {
+    position: absolute; left: 12px; top: 46px; z-index: 2;
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--cartao);
+  }
+  .volume button {
+    width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
+    background: transparent; color: var(--tinta); display: grid; place-items: center;
+  }
+  .volume button svg { width: 20px; height: 20px; }
+  .volume button[aria-pressed="true"] { background: #ffe1c7; color: #7a2e00; }
+  .volume input[type=range] { width: 92px; min-height: 34px; accent-color: var(--acao); }
+  .volume output { font-size: .75rem; font-weight: 700; color: var(--tinta-suave); min-width: 2.4em; text-align: right; }
+  @media (max-width: 720px) { .volume input[type=range] { width: 70px; } .volume output { display: none; } }
   dialog input[type=text], dialog input[type=url] {
     width: 100%; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px;
     border: 2px solid #cfd8e6; background: #fff; color: #1f2a44;
@@ -338,6 +352,13 @@
     <p class="cam-aviso" id="camAviso" role="status" hidden>Câmera ligada</p>
     <span class="dot" aria-hidden="true"></span>
     <p class="selo-voz" id="seloVoz" role="status" data-alerta="nao">Voz: verificando</p>
+    <div class="volume" id="volume">
+      <button id="volMudo" type="button" aria-pressed="false" aria-label="Sem som">
+        <svg id="volIcone" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9v6h3.5L12 19V5L7.5 9H4zm11.5-1.3v8.6a4.5 4.5 0 0 0 0-8.6zm0-3.4v2.1a7 7 0 0 1 0 11.2v2.1a9 9 0 0 0 0-15.4z"/></svg>
+      </button>
+      <input id="volSlider" type="range" min="0" max="100" step="5" aria-label="Volume da voz">
+      <output id="volValor" for="volSlider"></output>
+    </div>
   </div>
 
   <div class="lado">

@@ -1,0 +1,55 @@
+{
+  "medidoEm": "2026-10-06",
+  "metodo": "RMS e pico em dBFS sobre as amostras, com porta de silêncio. Não é LUFS do EBU R128.",
+  "alvo": {
+    "rmsDb": -20,
+    "tetoPicoDb": -1.5,
+    "ganhoMaxDb": 12,
+    "ganhoMinDb": -12,
+    "pisoDb": -60
+  },
+  "arquivos": [
+    {
+      "arquivo": "gemini-tts-Kore.wav",
+      "duracao": 10.64,
+      "taxa": 24000,
+      "canais": 1,
+      "ganho": 0.47918145290822367,
+      "ganhoDb": -6.39,
+      "antes": {
+        "rmsDb": -13.61,
+        "picoDb": -1.45,
+        "aproveitado": 0.751,
+        "comPorta": true
+      },
+      "depois": {
+        "rmsDb": -20,
+        "picoDb": -7.84,
+        "aproveitado": 0.751,
+        "comPorta": true
+      },
+      "motivo": "alvo de RMS"
+    },
+    {
+      "arquivo": "gemini-tts-Puck.wav",
+      "duracao": 10,
+      "taxa": 24000,
+      "canais": 1,
+      "ganho": 0.5333348954876209,
+      "ganhoDb": -5.46,
+      "antes": {
+        "rmsDb": -14.54,
+        "picoDb": -1.26,
+        "aproveitado": 0.764,
+        "comPorta": true
+      },
+      "depois": {
+        "rmsDb": -20,
+        "picoDb": -6.72,
+        "aproveitado": 0.764,
+        "comPorta": true
+      },
+      "motivo": "alvo de RMS"
+    }
+  ]
+}

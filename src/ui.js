@@ -26,6 +26,11 @@ const micBtn = $('mic'), stopBtn = $('stop'), form = $('form'), input = $('text'
 const dlg = $('settings'), keyInput = $('key'), voiceSel = $('voiceSel'), elenco = $('elenco');
 const motorSel = $('motorSel'), urlInput = $('urlKokoro'), modeloInput = $('modelo');
 const elStatusVoz = $('statusVoz'), elSeloVoz = $('seloVoz'), bocaSel = $('bocaSel');
+const volSlider = $('volSlider'), volMudo = $('volMudo'), volValor = $('volValor'), volIcone = $('volIcone');
+// Desenho do alto-falante: com ondas quando há som, cortado quando está no mudo.
+// Fica aqui porque mostrarVolume roda durante criarVoz, antes do bloco do volume.
+const ICONE_SOM = 'M4 9v6h3.5L12 19V5L7.5 9H4zm11.5-1.3v8.6a4.5 4.5 0 0 0 0-8.6zm0-3.4v2.1a7 7 0 0 1 0 11.2v2.1a9 9 0 0 0 0-15.4z';
+const ICONE_MUDO = 'M4 9v6h3.5L12 19V5L7.5 9H4zm15.1 3 2.4-2.4-1.4-1.4-2.4 2.4-2.4-2.4-1.4 1.4 2.4 2.4-2.4 2.4 1.4 1.4 2.4-2.4 2.4 2.4 1.4-1.4z';
 const elQuadro = $('quadro');
 const quadro = criarQuadro(elQuadro);
 
@@ -40,6 +45,8 @@ const config = {
   urlKokoro: ler('url_kokoro', URL_PADRAO),
   modelo: ler('modelo', MODELO_PADRAO),
   lipsync: ler('lipsync', 'hibrido'),
+  volume: Number(ler('volume', '0.8')),
+  mudo: ler('mudo', 'nao') === 'sim',
 };
 
 const FADE_MS = 160;
@@ -56,6 +63,7 @@ const registroGestos = [];   // últimos pedidos ignorados ou tocados, para o pa
 let carga = 0;               // sobe a cada troca; carga antiga que termina depois é descartada
 let apiKey = ler('gemini_key');
 let ocupado = false, abortCtl = null, falando = false;
+let mesa = null;              // mesa de som; só existe depois de criarVoz
 const historicos = new Map(); // id -> [{ role, content, contas? }]
 // Ajustes do usuário por personagem (persona, temperatura, limite, voz). characters.js fica como padrão.
 let ajustes = lerJSON('ajustes_personagens', {});
@@ -77,6 +85,8 @@ const ROTULOS = {
 function definirEstado(s, texto) {
   if (s === 'loading-ear') { micBtn.disabled = true; elStatus.textContent = 'Preparando o ouvido...'; return; }
   app.dataset.state = s;
+  // Microfone aberto: o personagem continua audível, mas sai da frente de quem fala.
+  if (mesa) mesa.abaixarFundo(s === 'listening');
   elStatus.textContent = texto || ROTULOS[s];
   stopBtn.hidden = !(s === 'speaking' || s === 'thinking');
   if (s === 'idle') micBtn.disabled = false;
@@ -286,6 +296,9 @@ function renderizarAtalhos(atalhos) {
 /* ---------- Voz ---------- */
 const voz = criarVoz({
   config,
+  volumeInicial: config.volume,
+  mudoInicial: config.mudo,
+  aoMudarMesa: (m) => mostrarVolume(m),
   aoComecarFala: () => { falando = true; definirEstado('speaking'); },
   aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); avancarDepoisDaFala(); },
   aoFimFrase: () => liberarGesto(),
@@ -303,7 +316,31 @@ const voz = criarVoz({
   },
   aoProgressoNavegador: (pct) => { elStatusVoz.textContent = `Baixando o modelo Kokoro para o navegador... ${pct}%`; },
 });
+mesa = voz.mesa;
 function silenciar() { voz.parar(); falando = false; }
+
+/* ---------- Volume ---------- */
+// Vem da mesa, não do evento: o estado mostrado é sempre o que está tocando.
+function mostrarVolume({ volume, mudo }) {
+  const pct = Math.round(volume * 100);
+  if (document.activeElement !== volSlider) volSlider.value = String(pct);
+  volValor.textContent = mudo ? T.volume.mudo : `${pct}%`;
+  volMudo.setAttribute('aria-pressed', mudo ? 'true' : 'false');
+  volMudo.setAttribute('aria-label', mudo ? T.volume.religar : T.volume.mudar);
+  volIcone.firstElementChild.setAttribute('d', mudo ? ICONE_MUDO : ICONE_SOM);
+}
+
+volSlider.addEventListener('input', () => {
+  voz.preparar();
+  mesa.definirVolume(Number(volSlider.value) / 100);
+  gravar('volume', String(mesa.volume));
+  gravar('mudo', mesa.mudo ? 'sim' : 'nao');
+});
+volMudo.addEventListener('click', () => {
+  voz.preparar();
+  mesa.alternarMudo();
+  gravar('mudo', mesa.mudo ? 'sim' : 'nao');
+});
 const boca = criarBoca({ ctx: voz.ctx, analisador: voz.analisador, saida: voz.saida, modo: config.lipsync });
 
 // Selo no palco + linha de estado nas configurações.
@@ -1014,7 +1051,7 @@ $('fecharCreditos').addEventListener('click', () => $('creditos').close());
 // Gancho para testes automatizados e inspeção no console; só existe com ?debug na URL.
 if (new URLSearchParams(location.search).has('debug')) {
   window.__prof3d = {
-    cena, historicos, trocarPersonagem, buscarPersonagem, voz, config, boca, quadro, camera, camCfg,
+    cena, historicos, trocarPersonagem, buscarPersonagem, voz, mesa, config, boca, quadro, camera, camCfg,
     get presente() { return presenca.presente; },
     get ultimaLeitura() { return ultimaLeitura; },
     get ajustes() { return ajustes; },
@@ -1025,7 +1062,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get catalogo() { return catalogo; },
     get diretor() { return diretor; },
     licencas,
-    registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao,
+    registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao, definirEstado,
     get etapa() { return etapa; },
     // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
     irParaConversa(mic = 'sim') { sessaoAtiva = true; microfone = mic; definirEtapa('conversa'); },
