@@ -1,7 +1,9 @@
-# REPERTORIO.md — Professora 3D (versão multi-personagem)
+# REPERTORIO — Professora 3D (versão multi-personagem)
+
+Este arquivo mora em `repertorio/REPERTORIO.md`. Capturas de interface ficam em `repertorio/ui/`; o índice delas é `repertorio/REFERENCIAS-UI-INDEX.md`. Adicione `repertorio/ui/` ao `.gitignore`: são imagens de terceiros.
 
 Arquivo de referência do projeto. A IA lê isto **antes** de escrever código e atualiza a seção 12 sempre que descobrir algo novo.
-Pesquisa feita em 30/09/2026 e 01/10/2026. Seções 13 a 19 vieram na segunda rodada; 20 a 24 (tema UEMA, ingestão, vozes, orçamento, modo evento) na terceira; 25 a 27 (animação de aceno, profissionalização, skills) na quarta; 25.1b a 25.7 (mais ferramentas de VRMA, ativos do dono, catálogo por caso de uso, aceno simples) na quinta. Cada item tem um selo:
+Pesquisa feita em 30/09/2026 e 01/10/2026. Seções 13 a 19 vieram na segunda rodada; 20 a 24 (tema UEMA, ingestão, vozes, orçamento, modo evento) na terceira; 25 a 27 (animação de aceno, profissionalização, skills) na quarta; 25.1b a 25.7 (mais ferramentas de VRMA, ativos do dono, catálogo por caso de uso, aceno simples) na quinta; 28 a 31 (interface estilo jogo, VRMs anime gratuitos, Gemini TTS e contagem de caracteres, próximos passos) na sexta. Cada item tem um selo:
 
 - **[VERIFICADO]** encontrado em fonte pública nesta pesquisa
 - **[CONFERIR]** plausível, mas a IA deve confirmar (npm view, teste real) antes de depender disso
@@ -253,22 +255,7 @@ Lidas em `professora-3d.html`:
 
 Formato: `AAAA-MM-DD | o que testou | resultado | decisão`
 
-- 2026-10-01 | metadados do `8590256991748008892.vrm` | VRM 0.x, título AvatarSample_A, autor VRoid Project, licença Other com URL do VRoid Hub (uso por todos, comercial permitido, crédito desnecessário, redistribuição permitida) | movido para `assets/avatars/` com o nome original; Luma usa este modelo; Teo, Rafa e Nina continuam com os CC0 do 100Avatars (decisão do dono)
-- 2026-10-01 | folha de contato (4 instantes) + medidas de quadril dos 7 VRMA do pacote e do idle do ChatVRM, em `relatorios/folhas/` | a numeração do readme bateu com o que se vê: 01 volta de 360 graus com braços abertos; 02 sai agachada e levanta acenando, termina acenando (início e fim não neutros, 124 graus de diferença); 03 sinal com dedos perto do rosto; 04 mão à cabeça com indicador, depois aponta; 05 giro de 360 graus; 06 mão na cintura, de lado; 07 agacha 23 cm. Nenhum clipe tem trilha de expressão nem de olhar | 02 desligado por padrão (grande demais para cumprimento); 04 e 07 desligados; 04 fora do modo infantil
-- 2026-10-01 | `idle.vrma` (ChatVRM) no sample do VRoid | laço perfeito (primeiro e último quadro iguais), quadril desloca 1,7 cm | idle em laço NÃO é lacuna; a 25.6 estava desatualizada
-- 2026-10-01 | pesquisa de aceno pronto (P2, degrau 1) | nenhum .vrma de aceno simples com licença clara e gratuita encontrado; VTubeMe VRM Poser tem preset Wave mas exporta pose parada de 1 s; biblioteca VTubeMe (12 clipes) sem aceno; coleção BOOTH 5520942 proíbe uso comercial; melhor caminho: Mixamo 'Waving' + fbx2vrma-converter (MIT, CLI Node 18+) | aguardando o dono baixar
-- 2026-10-01 | conversão do `aceno.fbx` (Mixamo) com fbx2vrma-converter | converteu sem erro e o retarget ficou bom no sample (só o braço direito, quadril parado 2 mm, sem trilha de expressão). Mas o FBX tem só 0,37 s (12 quadros, medido com FBXLoader): é um único ciclo de oscilação com o braço já levantado, sem subir nem descer | perguntar ao dono: baixar de novo uma versão mais longa ou repetir o ciclo em laço com crossfade de entrada e saída
-- 2026-10-01 | `aceno2.fbx` (Mixamo, versão longa) convertido e testado no sample | 4,71 s, sobe o braço direito até o rosto, acena e desce; começa e termina neutro (0,2 grau de diferença), quadril 2 cm, sem trilha de expressão nem olhar, sem atravessar cabelo nas 4 capturas | entra no catálogo como `aceno` (ativo). Aceno procedural não é necessário
-- 2026-10-01 | linha de base (`node tools/medir.mjs base`, 1280x720, GPU D3D11, Kokoro local) | carga 2,7 s; 57,8 fps em repouso; primeira fala mediana 3,5 s (3 perguntas reais); heap 27,4 MB no início e 58,6 MB após 10 trocas (geometrias e texturas estáveis em 7 e 17) | o número de 10 trocas é INVÁLIDO: o `waitForFunction` do Playwright devolvia o objeto avatar como handle e o DevTools segurava cada avatar antigo (achado pelo snapshot do heap). Corrigido com `!!`; com a medição certa, 40 trocas ficam estáveis em ~32,7 MB, sem vazamento
-- 2026-10-01 | máquina de estados (src/gestos.js, testes unitários e e2e p3-gestos) | gesto do LLM vai como marca [gesto:nome] dentro da sentença e começa quando aquela sentença começa a tocar; marca inválida ignorada e registrada; intervalo mínimo conta do FIM do gesto (contar do início deixava o gesto seguinte cair sempre que o aceno de 4,7 s ainda tocava) | adotado
-- 2026-10-01 | aceno2 no enquadramento do app (câmera perto do rosto) | a mão passa NA FRENTE do rosto e encosta no cabelo por volta de 1,6 a 1,9 s; a folha de contato de corpo inteiro escondia isso. Distância mínima pulso-centro da cabeça: 0,25 m no sample; nos CC0 de cabeça grande (Teo, Nina) a razão pulso/altura da cabeça cai para 0,6 | aceno ativo, mas reprovado visualmente; pedir ao dono para baixar de novo no Mixamo com "Character Arm-Space" maior
-- 2026-10-01 | aba "Enviar movimento" (pedido do dono, fora do prompt original) | .fbx do Mixamo convertido no navegador com o exemplo oficial `loadMixamoAnimation.js` do three-vrm v3.5.5 (MIT, copiado em src/vendor/mixamo); .vrma direto; arquivo guardado só no IndexedDB do navegador; "usar como" troca o clipe de um gesto. Testado com aceno2.fbx: converte, mede, vira o aceno e sobrevive ao recarregar | adotado. A distância pulso-rosto NÃO detecta mão na frente do rosto (aceno2 e sinal de paz dão valores parecidos nos 5 modelos), então esse aviso foi retirado: confere-se na prévia
-- 2026-10-01 | "fixar no lugar" (pedido do dono) | quadril preso no X/Z do primeiro quadro do idle, altura e rotação livres (agachar e giro continuam). VRMA_02 sai de 0,335 m de deslocamento para 0,000 m. Usar `normalizedRestPose` ou a pose do arquivo quebrava o M6.2 nos VRM 0.x (o idle tira o quadril da pose de descanso e a câmera é apontada com o idle aplicado) | adotado, ligado por padrão
-- 2026-10-01 | P4 sessão: toque, rosto ou operador iniciam; operador ou inatividade (90 s, configurável) encerram com aceno, frase e limpeza do histórico | gatilho até o gesto: 0 a 7 ms. Gesto até a fala: 2,1 a 2,9 s sem pré-síntese (Kokoro sintetizando); com cumprimento e despedida pré-sintetizados, 301 a 306 ms (5 medições com o quiosque ocioso). Logo após carregar a página, ainda com a pré-síntese rodando, chegou a 500 a 750 ms | pré-síntese adotada. O carregamento do personagem não acena mais sozinho; o aceno é da sessão
-- 2026-10-01 | P5 fluxo de sessão (atração, cumprimento, consentimento, conversa, despedida, limpeza), teste p5-fluxo em retrato e paisagem | um próximo passo por etapa; microfone começa desligado e só aparece se a pessoa aceitar; "Prefiro escrever" esconde o microfone e deixa um botão para mudar de ideia; limpeza esquece a escolha. Textos em src/strings.pt-BR.js | adotado. ATENÇÃO: o reconhecimento de voz do Chrome/Edge (SpeechRecognition) envia o áudio ao serviço do navegador; por isso a frase diz "Nada fica gravado neste totem", não "nada sai daqui". A skill impeccable só tem o SKILL.md instalado (sem scripts nem reference/): `impeccable context`, `shape`, `onboard`, `clarify` e `adapt` não rodaram como comandos
-- 2026-10-01 | P6 acabamento: DESIGN.md (modos, três botões, movimento, espaçamento, identidade neutra), barra de carregamento com bytes reais do .vrm (stream + Content-Length; 85% download, resto montagem), créditos gerados dos dois CREDITS.md com a frase do VRoid em destaque, microfone sem transição de box-shadow, cartão de etapa escondido durante a carga | detector `impeccable@4.1.0 detect` limpo antes e depois (o único achado, fundo bege na ferramenta interna folha-contato, foi corrigido). polish e delight da skill não rodaram como comandos (skill sem references) | adotado
-- 2026-10-01 | P7 licenças: src/licenca.js (VRM 0.x e 1.0) no carregamento, painel "Licenças", bloqueio com motivo; tools/licencas.mjs gera THIRD-PARTY.md e relatorios/licencas.json e falha se houver bloqueio, AGPL/GPL, licença desconhecida ou arquivo proibido no git | 5 modelos permitidos (4 CC0 e o sample do VRoid Hub com redistribuição liberada); 9 dependências MIT ou Apache-2.0; bloqueio testado servindo o sample com allowedUserName=OnlyAuthor. AVISO: phonemizer 1.2.1 (dentro do kokoro-js) declara Apache-2.0 mas usa o eSpeak NG, GPL-3.0; só afeta o motor opcional "Kokoro no navegador" | adotado; aviso para o dono decidir
-- 2026-10-01 | galeria no painel (Tocar, Pausar, Velocidade, Ligado, Ok para criança) com Playwright em retrato e paisagem | passou; escolha persiste após recarregar | a prévia usa o enquadramento do rosto, então clipes de corpo inteiro aparecem cortados (ver problemas conhecidos)
+- (vazio)
 
 ---
 
@@ -778,7 +765,146 @@ Pontos da skill `design-taste-frontend` que valem aqui:
 
 Princípio da skill `impeccable` que vale como regra de trabalho: **verificar em passes limitados, não em laço.** Construir completo, inspecionar uma vez com uma rodada em lote (retrato e paisagem juntos), corrigir tudo de uma vez, confirmar com no máximo mais uma rodada, parar. Autoverificação sem fim custa dinheiro e piora o resultado.
 
-## 28. Fontes
+## 28. Interface estilo jogo: seleção e vitrine de personagens
+
+O dono pediu uma interface com cara de **jogo**: *Character Selection* e *Character Showcase*. Enviou duas imagens de referência. As capturas ficam em `repertorio/ui/` (modelo de índice em `repertorio/REFERENCIAS-UI-INDEX.md`). A leitura delas está abaixo em texto, para quem não consegue ver a imagem.
+
+### 28.1 Leitura das duas referências
+
+**Referência 1: editor de personagem 3D (a marca aparece como "Paparala").**
+- Três colunas claras. Esquerda: árvore da cena (Câmera, luzes, objetos, fundo, personagem) com abas Cena e Ativos. Centro: palco com o personagem sobre fundo off-white liso, barra de ferramentas flutuante no topo (selecionar, comentar, mão, recorte, tocar, zoom, desfazer e refazer, Exportar) e **barra de comando embaixo**: botão "+" que abre um menu (adicionar fotos ou vídeos, objetos 3D, arquivos), seletor de modo, seletor de modelo, microfone e enviar. Direita: propriedades (materiais em esferas, estilos em miniaturas, cor de fundo com hexadecimal e opacidade, alternador isométrico e perspectiva, controle de distorção).
+- Visual: cartões brancos de canto arredondado, sombra suave, tipografia sem serifa neutra, ícones de traço fino, **um único acento quente** (laranja) que vem do próprio personagem. Personagem 3D estilizado, no estilo de animação.
+- **Uso aqui:** console do operador (modo *Operate*) e barra de entrada da conversa.
+
+**Referência 2: tela de seleção de personagem de jogo (a marca aparece como "KORIX").**
+- Cartão grande de canto arredondado, fundo em gradiente azul-marinho para azul com dunas suaves e poucas estrelas.
+- Personagem grande no centro, **passando da moldura** do cartão (a cabeça ultrapassa o topo), em pé sobre um **pódio cilíndrico branco**.
+- **Esquerda:** roleta vertical de retratos circulares. O selecionado é maior, com anel colorido e uma seta de "tocar" saindo de um recorte em cunha. Os vizinhos são menores.
+- **Direita:** rótulo de papel em cinza grande e apagado ("Sprinter"), **nome enorme em branco** ("Liora"), botão "+" em coral, descrição em duas linhas, **três anéis segmentados** de atributos (Power, Accel, Speed) em amarelo, verde e ciano, contador "2/3" e botão de editar.
+- **Inferior:** botão largo em coral com **cantos chanfrados** ("Let's Play!"), encostado no pódio. Canto inferior direito: cartões inclinados e empilhados com os próximos personagens e um **slot vazio com "+"**.
+- **Topo:** marca à esquerda, links, "Play Now" em coral, ranking, busca e avatar do jogador.
+- **Uso aqui:** tela pública de seleção e vitrine (modo *Experience*).
+
+### 28.2 Catálogo de padrões
+
+| Padrão | Onde aparece | Como entra no app |
+|---|---|---|
+| Roleta de retratos | Ref. 2. [VERIFICADO] Um projeto de jogo descreve "portrait chips" com cabeça e ombros. | Miniaturas **renderizadas do próprio `.vrm`**. Selecionado maior, com anel. |
+| Vitrine com pódio | Ref. 2. [VERIFICADO] O mesmo projeto: herói grande sobre uma plataforma. | Pódio **em CSS** (elipse com sombra) sob o personagem. Não construir pódio em geometria 3D. |
+| Cartão do personagem: papel, nome grande, descrição curta | Ref. 2. [VERIFICADO] Um kit conceitual no Figma Community tem nome, classe, descrição curta e atributos. | Vem do objeto de dados do personagem. |
+| Atributos segmentados | Ref. 2. [VERIFICADO] O projeto de jogo usa barras segmentadas medidas contra o melhor herói. | "Perfil" com 3 traços de 1 a 5 nos dados. Chapado, sem brilho. |
+| Botão largo chanfrado | Ref. 2 | "Conversar com Luma". |
+| Contador de elenco ("2/4") | Ref. 2 | Posição do personagem no elenco. |
+| Slot bloqueado | Ref. 2 (slot vazio). [VERIFICADO] O projeto de jogo usa cadeados em skins. | Personagem sem `.vrm`: cartão "Em breve", sem arte inventada. |
+| Cartões dos próximos | Ref. 2 | Prévia do anterior e do próximo. |
+| Barra de comando inferior | Ref. 1 | Entrada da conversa: "+", modo (guiada ou livre), microfone, enviar. |
+| Árvore da cena e propriedades | Ref. 1 | Console do operador. |
+| Troca por setas, roleta, deslize e teclado | [VERIFICADO] no projeto de jogo | Acessível por toque, mouse e teclado. |
+| Largo em três colunas; celular em pé empilha vitrine, cartão e roster | [VERIFICADO] no projeto de jogo | Paisagem de quiosque e retrato. |
+
+### 28.3 Como adaptar sem cair em "cara de IA"
+
+- A ref. 2 usa gradiente azul profundo, anéis coloridos e brilho. **Levar estrutura e hierarquia, não os efeitos.** Sem brilho neon, sem gradiente roxo, sem cartão de vidro. Fundo azul-marinho a azul profundo, **um** acento (coral), três cores chapadas de perfil. [SUGESTÃO] As cores exatas devem ser amostradas das imagens em `repertorio/ui/`, não chutadas.
+- A skill `design-taste-frontend` manda acessibilidade e confiança passarem na frente do gosto estético em produto infantil e institucional.
+- **Não copiar** marca, nome, ilustração ou o desenho pixel a pixel. As imagens são referência de padrão.
+- "Perfil" é traço de personalidade fictício. Não apresentar como dado real.
+- CTA em português claro. Sem "Let's Play" literal. Sem travessão.
+- Movimento só em `transform` e `opacity`. Sem faíscas nem partículas. Respeitar `prefers-reduced-motion`.
+- Texto sobre cena 3D precisa de camada de contraste, testada em AA.
+- Alvos de toque de quiosque: 56 px ou mais.
+
+### 28.4 Telas
+
+1. **Vitrine (atração):** ciclo automático pelos personagens, cada um na sua pose de assinatura. Toque ou aproximação interrompe.
+2. **Seleção:** roleta, personagem no pódio, cartão, "Ouvir voz" (áudio pré-gravado e já em cache, então não gasta orçamento) e o botão de conversar.
+3. **Conversa:** mesmo idioma visual, com quadro e barra de entrada no estilo da ref. 1.
+4. **Console do operador (claro, no estilo da ref. 1):** cena, propriedades, galeria de animações, vozes, orçamento, armazenamento, cadastro de personagem.
+
+### 28.5 Onde achar mais exemplos
+
+- **Game UI Database** (`gameuidatabase.com`): [VERIFICADO] categorias "Character Select" (1.210 telas na consulta), "Overview & Stats" e "Character Creator/Editor". Tem filtros por estética (inclusive "3D Stylized") e por classificação etária (ESRB Everyone, PEGI 3 e 7). **Filtrar por Character Select + 3D Stylized + PEGI 3 ou 7** dá referências adequadas a público infantil.
+- **Interface In Game** (`interfaceingame.com`): [VERIFICADO] seções Character (1.338 capturas), Level selection, Lobby e Stats.
+- **Dribbble:** [VERIFICADO] perfis com a etiqueta "character select". Buscar "character select screen" e "hero selection".
+- **Figma Community, "Hero Selection UI Kit":** [VERIFICADO] kit conceitual de seleção de herói. [CONFERIR] licença antes de reutilizar qualquer parte.
+- Regra: salvar capturas em `repertorio/ui/` e registrar cada uma em `repertorio/REFERENCIAS-UI-INDEX.md` (fonte, o que levar, o que **não** levar). São material de referência privado: não redistribuir, não copiar, não commitar em repositório público.
+
+---
+
+## 29. Mais VRMs gratuitos em estilo anime
+
+| Fonte | Licença | O que tem | Cuidados |
+|---|---|---|---|
+| **Samples do VRoid Studio** (VRoidPreset A a Z; AvatarSample A, B e C no Hub) | [VERIFICADO] Uso livre, com ou sem fins lucrativos, sem crédito obrigatório. **Não é CC0.** Ver seção 2. | Modelos prontos em estilo anime | Não sugerir apoio da pixiv ao evento. |
+| **Samples CC0 do VRoid Studio (versões alfa)** | [VERIFICADO] CC0. A página oficial do VRoid lista HairSample_Male, HairSample_Female e β Ver AvatarSample 1 a 4 como CC0. | Um arquivo reunido no OpenGameArt traz também AvatarSample D, D Darkness, E, F, G, Base Female, Base Male, Sakurada Fumiriya e Sendagaya Shino. | [VERIFICADO] Os "AvatarSample D a G" dessas versões alfa **não** são os de mesmo nome da versão atual. [CONFERIR] versão do VRM de cada arquivo. |
+| **Open Source Avatars** (`opensourceavatars.com`) | [VERIFICADO] Coleção 100Avatars e coleção NeonGlitch86: CC0. **Outras coleções podem ser CC-BY**; a licença é por coleção. | Registro em JSON com link direto para cada `.vrm`: `.../ToxSam/open-source-avatars/main/data/projects.json` e `.../data/avatars/100avatars-r1.json` (no `raw.githubusercontent.com`). | Há um `vrm-gotchas.md` e um mapa Mixamo para VRM no repositório. O carregador de animação de exemplo é só para VRM 0.x. |
+| **madjin/vrm-samples** (GitHub) | Por pasta | Reúne samples do VRoid, Seed-san e outros | [CONFERIR] a licença de cada pasta. |
+| **VIVERSE Avatar Creator** | [CONFERIR] termos atuais | Criador gratuito no navegador que exporta VRM | [VERIFICADO] que exporta VRM. |
+| **Reenvios de terceiros no VRoid Hub** | A que constar na página do modelo e nos metadados | Por exemplo, um usuário reenviou os samples do VRoid Studio 2.1.0 em VRM 0.0 e 1.0 | Conveniente, mas confirmar que quem enviou tinha direito e ler as condições na página. |
+
+**Sobre o arquivo `8590256991748008892.vrm` do dono:** o número parece ser um identificador do Hub. Ele **não bate** com os endereços das páginas oficiais de AvatarSample A, B e C que consultei. Pode ser outro sample oficial (a versão 2.1.0 do Studio trouxe mais) ou um reenvio de terceiro. Abrir a página do modelo no Hub, ver autor e condições, e deixar o app ler os metadados (marco P7 do prompt 4).
+
+**Elenco:** com um segundo `.vrm` (o dono achou um para o Teo), o seletor passa a mostrar dois personagens. Rafa e Nina continuam em "Em breve" até haver arquivo. Escolha por critério: o checklist da seção 2, mais coerência de estilo entre os modelos e silhuetas que se distingam na roleta de retratos pequena.
+
+---
+
+## 30. Motor de voz do Gemini e contagem de caracteres para o orçamento
+
+### 30.1 O que se sabe
+
+- [VERIFICADO na página oficial de preços, consulta de 01/10/2026] Os tokens de áudio correspondem a **25 tokens por segundo**. O preço de saída em áudio do "Gemini 3.8 Flash TTS" aparece como **US$ 9,00 por milhão** até 31/12/2026 e **US$ 18,00** a partir de 01/01/2027; o "3.8 Flash-Lite TTS" aparece como US$ 10,80 e depois US$ 21,60. A tabela tem outras linhas sem rótulo legível (US$ 4,50 e US$ 16,20). [CONFERIR] qual é qual na página, e se o plano gratuito cobre o modelo.
+- [VERIFICADO em fontes secundárias, agosto e setembro de 2026] "Gemini 3.1 Flash TTS Preview": US$ 1,00 por milhão de tokens de texto na entrada e US$ 20,00 na saída de áudio; "2.5 Flash TTS": US$ 0,50 e US$ 10,00. **Os nomes e preços mudam rápido.** Não fixar id de modelo no código.
+- [VERIFICADO] São **30 vozes** pré-definidas, com controle de estilo por **instrução em linguagem natural** (ritmo, emoção, sotaque) e modo de vários falantes.
+- [CONFERIR] Suporte a português do Brasil e qualidade do sotaque. O laboratório de vozes decide.
+- [CONFERIR] Formato de saída (provavelmente PCM), se há streaming, limite de texto por requisição (uma fonte de terceiros fala em 4.000 bytes) e limites do plano gratuito (os modelos de voz em prévia têm limites mais apertados).
+- **Plano gratuito:** [VERIFICADO em uma fonte] o conteúdo pode ser usado para melhorar produtos do Google. Para voz de crianças, usar o plano pago e ler os termos de dados.
+
+**Vantagem de personagem:** como o estilo é instrução em texto, cada personagem pode ter **voz e estilo próprios nos dados** (ex.: "fale devagar e com paciência, como quem explica passo a passo"). O Kokoro só diferencia por voz e velocidade.
+
+### 30.2 Conta por resposta
+
+Premissas [SUGESTÃO, medir de verdade]: 300 caracteres falados, cerca de 15 caracteres por segundo, ou seja, 20 s de áudio e 500 tokens de áudio. Câmbio R$ 5,17 por dólar.
+
+| Preço de saída de áudio | Por resposta | 5.000 respostas |
+|---|---|---|
+| US$ 9 por milhão | R$ 0,023 | ≈ R$ 116 |
+| US$ 10 por milhão | R$ 0,026 | ≈ R$ 129 |
+| US$ 20 por milhão | R$ 0,052 | ≈ R$ 258 |
+| ElevenLabs Flash, US$ 0,05 por mil caracteres (referência) | R$ 0,078 | ≈ R$ 388 |
+
+O texto de entrada (cerca de 100 tokens) custa uma fração de centavo e pode ser ignorado na conta grossa.
+
+**Pré-gravação** é muito mais barata que voz ao vivo. 60 falas de 300 caracteres (18 mil caracteres) viram cerca de 1.200 s e 30 mil tokens: ≈ US$ 0,27 a US$ 0,60 no Gemini (R$ 1,40 a R$ 3,10), contra US$ 0,90 na ElevenLabs por API (e o plano mínimo custa US$ 6).
+
+### 30.3 Contador de caracteres para o orçamento
+
+Comando `npm run orcamento:falas` (a ser feito no passo seguinte):
+1. Lê todas as **falas fixas** por personagem (abertura, despedida, linha do tempo da UEMA, respostas do quiz, "ouvir voz") de arquivos de dados.
+2. Normaliza como o app normaliza antes de falar (léxico de pronúncia, remoção de marcas de emoção e de gesto). **Conta o texto que de fato vai para o motor.**
+3. Remove duplicatas por hash (texto + voz + estilo), porque o cache de áudio não gera duas vezes.
+4. Mostra por personagem e total: caracteres, segundos estimados, tokens de áudio (25 por segundo) e **custo por provedor** com **tabela de preços editável** (câmbio, preço por milhão de tokens, preço por mil caracteres, créditos por caractere).
+5. **Calibra** os caracteres por segundo com a duração real dos áudios gerados no laboratório de vozes, em vez de usar 15.
+6. Simula a conversa livre: estações, sessões por dia, turnos por sessão e caracteres por resposta, comparando com o teto de R$ 200 e com a margem de 15%.
+7. Alerta quando o plano gratuito do provedor deixaria de cobrir (cotas e limites de preview).
+
+---
+
+## 31. Próximos passos (em ordem)
+
+Itens 1 a 3 são desta rodada de interface. Do 4 em diante, registrar e **não implementar agora**.
+
+1. **Interface estilo jogo** (prompt 5): seleção, vitrine, conversa, console do operador.
+2. **Segundo `.vrm` (Teo)**: cadastrar, enquadrar, conferir licença e animações.
+3. **Mais `.vrm` estilo anime** para Rafa e Nina, seção 29.
+4. **Aceno simples e clipes que faltam** (prompt 4, seção 25.6 e 25.7).
+5. **Motor de voz do Gemini**: entra no laboratório de vozes. **Se as amostras agradarem**, vira a voz de pré-gravação e, se a qualidade e a latência forem boas, a voz premium ao vivo com teto de caracteres.
+6. **ElevenLabs**: entra no mesmo laboratório. Comparar com o Gemini em teste cego (plano gratuito para o teste, sem uso comercial). Só contratar se a diferença de qualidade justificar o custo ou se o Gemini falhar em português do Brasil, em latência ou nos limites.
+7. **Contagem de caracteres e orçamento por falas** (seção 30.3), com os números medidos no laboratório.
+8. **Pacote de áudio pré-gravado** com a voz escolhida, e ensaio no local do evento.
+9. **Revisão de licenças e créditos** de modelos, clipes, vozes e dependências antes do evento, e releitura das condições de uso dos samples do VRoid.
+
+---
+
+## 32. Fontes
 
 - Kokoro-FastAPI: github.com/remsky/Kokoro-FastAPI
 - kokoro-js: npmjs.com/package/kokoro-js
@@ -844,3 +970,16 @@ Princípio da skill `impeccable` que vale como regra de trabalho: **verificar em
 - VRM Add-on for Blender: vrm-addon-for-blender.info
 - Condições de uso dos VRoidPreset A a Z: vroid.pixiv.help/hc/en-us/articles/4402394424089-VRoidPreset-A-Z
 - Lista oficial do pacote VRMA (BOOTH): vroid.booth.pm/items/5512385
+- Game UI Database, telas de seleção de personagem: gameuidatabase.com/index.php?scrn=41
+- Game UI Database, visão geral e atributos: gameuidatabase.com/index.php?scrn=67
+- Interface In Game: interfaceingame.com
+- Roster, vitrine e barras de atributos em um projeto de jogo (descrição): github.com/jpcpais01/Pixel-Game/pull/232
+- Hero Selection UI Kit (Figma Community): figma.com/community/file/1555603680731959805/hero-selection-ui-kit
+- VRoid Studio CC0 models (OpenGameArt): opengameart.org/content/vroid-studio-cc0-models
+- Condições dos samples do VRoid Studio: vroid.pixiv.help/hc/en-us/articles/4402614652569
+- Open Source Avatars (registro e JSON): github.com/toxsam/open-source-avatars
+- madjin/vrm-samples: github.com/madjin/vrm-samples
+- Fontes gratuitas de VRM e licenças: tripo3d.ai/blog/free-vrm-model
+- Preços do Gemini API, incluindo TTS: ai.google.dev/gemini-api/docs/pricing
+- Gemini TTS, modelos e limites (resumo de terceiros): invideo.io/blog/gemini-tts-ai-voice
+- Gemini TTS, controle de estilo e 30 vozes (descrição de terceiros): fal.ai/models/fal-ai/gemini-tts/llms.txt

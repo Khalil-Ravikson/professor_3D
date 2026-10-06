@@ -16,3 +16,6 @@ assets/animations/aceno*.vrma
 .env.*
 *.local
 .claude/
+
+# capturas de interface de terceiros
+Repertorio/ui/
