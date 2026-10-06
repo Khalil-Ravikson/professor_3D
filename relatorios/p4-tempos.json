@@ -2,7 +2,7 @@
   "cumprimento": {
     "origem": "toque",
     "gatilhoAteGestoMs": 1,
-    "gestoAteFalaMs": 310
+    "gestoAteFalaMs": 303
   },
   "despedidaOperador": {
     "gatilhoAteGestoMs": 0

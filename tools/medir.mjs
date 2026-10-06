@@ -48,6 +48,8 @@ const memInicio = await memoria();
 
 const primeiraFala = [];
 if (chave) {
+  // Desde o P5 o app abre na etapa de atração, com o campo de escrever escondido.
+  await page.evaluate(() => window.__prof3d.irParaConversa('nao'));
   for (const q of PERGUNTAS) {
     await page.fill('#text', q);
     const ini = Date.now();

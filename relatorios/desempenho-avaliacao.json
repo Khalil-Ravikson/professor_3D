@@ -1,0 +1,26 @@
+{
+  "rotulo": "avaliacao",
+  "data": "2026-10-06T18:56:23.610Z",
+  "viewport": "1280x720",
+  "gpu": "d3d11",
+  "cargaInicialMs": 4301,
+  "fpsRepouso": 41.4,
+  "fpsFalando": null,
+  "primeiraFalaMs": [
+    5913,
+    8528,
+    3560
+  ],
+  "primeiraFalaMedianaMs": 5913,
+  "memInicio": {
+    "heapMB": 33.4,
+    "geometrias": 7,
+    "texturas": 17
+  },
+  "memDepois10Trocas": {
+    "heapMB": 34.9,
+    "geometrias": 7,
+    "texturas": 17
+  },
+  "erros": []
+}

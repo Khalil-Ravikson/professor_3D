@@ -280,6 +280,9 @@ Formato: `AAAA-MM-DD | o que testou | resultado | decisão`
 
 - 2026-10-06 | maratona do P9 (`node tools/maratona.mjs`), sessões simuladas em sequência, Gemini simulado, 1080x1920, GPU D3D11 | 9 minutos rodados dos 240 pedidos (o dono mandou parar): 49 sessões, 147 perguntas, 0 erros, 60,3 fps em todas as amostras, heap de 34,2 MB no início e 35,0 no fim, variando entre 32,2 e 38,1 conforme o personagem em cena. Geometrias e texturas mudam com o modelo (Luma 7/17, Rafa 2/4, Teo e Nina 1/3), então oscilação ali não é vazamento | o item "4 horas contínuas" fica **NÃO TESTADO**: 9 minutos não pegam vazamento lento. Para fechar, rodar `node tools/maratona.mjs 4` numa hora em que a máquina esteja livre
 
+- 2026-10-06 | P10: `npm run avaliar:rapido` (detector, unitários, licenças, animação, sessão, áudio e quiosque, nivelamento) | 7 etapas, todas OK, 32 capturas, relatório em `relatorios/avaliacao.json` | adotado. A etapa de desempenho (`tools/medir.mjs avaliacao`) rodou à parte: carga 4,3 s, primeira fala 3,6 a 8,5 s (mediana 5,9 s) com o servidor Kokoro quente, heap 33,4 MB no início e 34,9 MB depois de 10 trocas, 0 erros. FPS de repouso 41,4, contra 60,4 na rodada anterior com a máquina livre: a máquina estava ocupada, então o FPS é sensível ao que mais roda nela. Na primeira rodada a primeira fala deu 66 s e 42 s: foi o Kokoro frio
+- 2026-10-06 | `tools/medir.mjs` quebrou sem aviso desde o P5 | o app abre na etapa de atração, com o campo de escrever escondido, e o `page.fill('#text')` esperava um campo invisível até estourar o tempo | corrigido com `irParaConversa('nao')` antes das perguntas. Lição: ferramenta que não roda no comando de avaliação apodrece; por isso `npm run avaliar` agora chama todas
+
 ---
 
 ## 13. Referências visuais (direção, não cópia)

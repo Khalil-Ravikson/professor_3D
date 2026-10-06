@@ -1,0 +1,65 @@
+{
+  "data": "2026-10-06T16:41:33.175Z",
+  "segundos": 232.5,
+  "modo": "rapido",
+  "etapas": [
+    {
+      "nome": "Detector anti-slop",
+      "oQueProva": "nenhum padrão de interface genérica no HTML e no JS",
+      "ok": true,
+      "codigo": 0,
+      "segundos": 3
+    },
+    {
+      "nome": "Testes unitários",
+      "oQueProva": "frases, gestos, quadro, câmera, licença, áudio, vigia, custo e contraste",
+      "ok": true,
+      "codigo": 0,
+      "segundos": 1.9
+    },
+    {
+      "nome": "Licenças",
+      "oQueProva": "modelos, clipes e dependências; falha com AGPL, GPL, licença desconhecida ou arquivo proibido no git",
+      "ok": true,
+      "codigo": 0,
+      "segundos": 13.5
+    },
+    {
+      "nome": "Animação e gestos",
+      "oQueProva": "máquina de estados, gesto que não corta sentença, pedido inválido ignorado, capturas dos quadros-chave",
+      "ok": true,
+      "codigo": 0,
+      "segundos": 69.2
+    },
+    {
+      "nome": "Sessão e fluxo",
+      "oQueProva": "cumprimento, conversa, despedida e as etapas em retrato e paisagem",
+      "ok": true,
+      "codigo": 0,
+      "segundos": 95.7
+    },
+    {
+      "nome": "Áudio, quiosque e acessibilidade",
+      "oQueProva": "volume, intervalo entre frases, queda de contexto WebGL, vigia, diagnóstico, alvos de toque e foco",
+      "ok": true,
+      "codigo": 0,
+      "segundos": 49.1
+    },
+    {
+      "nome": "Nivelamento de áudio",
+      "oQueProva": "volume dos arquivos de amostra antes e depois",
+      "ok": true,
+      "codigo": 0,
+      "segundos": 0.1
+    },
+    {
+      "nome": "Desempenho",
+      "oQueProva": "pulado por --rapido",
+      "ok": true,
+      "pulado": true,
+      "segundos": 0
+    }
+  ],
+  "capturas": 32,
+  "resultado": "passou"
+}

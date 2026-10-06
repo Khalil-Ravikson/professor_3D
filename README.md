@@ -103,6 +103,39 @@ Onde conseguir `.vrm`:
 - **Boca:** segue o áudio que está tocando. O padrão pega o formato da vogal do wLipSync e a abertura do volume. Dá para trocar em Configurações → Movimento da boca.
 - **Comparar os métodos:** `comparar-lipsync.html` mostra o mesmo áudio em três avatares lado a lado.
 
+### Como mexer nos clipes
+
+O catálogo é `assets/animations/animacoes.json`. Cada clipe tem `id`, `arquivo`, `descricao`, `casoDeUso`, `loop`, `duracao`, `intensidade` (1 a 3), `infantilOk`, `origem`, `licenca` e `status` (`ativo`, `desligado`, `lacuna`, `procedural`). A seção `estados` liga cada estado ou gesto a um id de clipe, ou a uma lista (o diretor alterna). `null` é lacuna: o estado cai para o `idle` e o gesto é ignorado.
+
+**Adicionar um clipe**
+1. Ponha o `.vrma` em `assets/animations/`. Mixamo: baixe em FBX "Without Skin" e use a aba Enviar movimento (Configurações), que converte no navegador. Não confie no número do arquivo: veja o clipe tocando antes de dar nome.
+2. Acrescente o registro em `animacoes.json` e anote origem e licença em `assets/animations/CREDITS.md`.
+3. Se for do Mixamo ou do pacote do VRoid, acrescente o nome no `.gitignore`: são arquivos que não podem ser redistribuídos.
+
+**Ligar ou desligar um clipe:** Configurações, Animações. O interruptor "Ligado" e a marca "Ok para criança" ficam guardados neste navegador, por cima do JSON. Só entra na conversa quem está ligado.
+
+**Dar um gesto a um personagem:** o gesto vive em `estados` do catálogo, não no personagem. O LLM só recebe a lista dos gestos que têm clipe ativo, e pedido de gesto inexistente é ignorado e registrado. Para um clipe novo virar o aceno de todos, aponte `estados.aceno` para o id dele.
+
+**Onde baixar o pacote VRMA:** o "VRMA_MotionPack" do VRoid Project, na BOOTH, com a sua conta. O readme proíbe redistribuir, então a pasta fica no `.gitignore` e cada pessoa baixa a sua. Frase de crédito do readme: "Animation credits to pixiv Inc.'s VRoid Project".
+
+**Refazer a folha de contato** (4 instantes de cada clipe, mais as medidas de quadril):
+
+```bash
+python serve.py 8771
+node tools/gerar-folhas.mjs
+```
+
+Sai em `relatorios/folhas/`.
+
+## Avaliação completa
+
+```bash
+npm run avaliar          # tudo, inclusive a medição de desempenho (gasta 3 perguntas da chave)
+npm run avaliar:rapido   # sem a medição de desempenho
+```
+
+Roda, nesta ordem: detector anti-slop, testes unitários, licenças, animação e gestos, sessão e fluxo, áudio e quiosque, nivelamento de áudio e desempenho. Sobe o servidor na 8771 se ninguém estiver atendendo. Devolve código 1 se qualquer etapa falhar e grava `relatorios/avaliacao.json`.
+
 ## Adicionar um personagem
 
 1. Coloque o `.vrm` em `assets/avatars/`.
