@@ -19,3 +19,9 @@ assets/animations/aceno*.vrma
 
 # capturas de interface de terceiros
 Repertorio/ui/
+
+# áudio gerado pelo laboratório de voz
+relatorios/voz/audio/
+
+# teo2.vrm: copia do Cyberpal CC0 antigo, sem uso no app
+assets/avatars/teo2.vrm

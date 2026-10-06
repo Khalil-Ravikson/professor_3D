@@ -73,6 +73,7 @@ export const T = {
     semAudio: 'Ainda não tem áudio gravado',
     preparandoAudio: 'Preparando o áudio...',
     semAudioSistema: 'A voz do sistema não guarda áudio',
+    semAudioPaga: 'Voz paga não pré-grava sozinha; só toca áudio já guardado',
     semAudioServidor: 'O servidor de voz está fora do ar',
     emBreve: 'Em breve',
     emBreveNome: (nome) => `${nome}, em breve`,
@@ -127,6 +128,11 @@ export const T = {
     naoAbriu: (nome) => `O arquivo do avatar de ${nome} não abriu. Confira se é um .vrm válido.`,
     nenhum: 'Nenhum avatar encontrado.',
   },
+  vozGemini: {
+    semChave: 'Falta a chave do Gemini para a voz. Usando outra voz.',
+    teto: 'O teto de caracteres do Gemini TTS acabou por hoje. Usando outra voz.',
+    uso: (n, chars, teto, reais) => `Hoje: ${n} falas, ${chars} caracteres${teto ? ` de ${teto}` : ''}, R$ ${reais}.`,
+  },
   voz: {
     selo: {
       verificando: 'Voz: verificando',
@@ -134,6 +140,8 @@ export const T = {
       sistema: 'Voz do sistema',
       navegador: 'Voz: Kokoro no navegador',
       kokoro: 'Voz: Kokoro',
+      gemini: 'Voz: Gemini',
+      reserva: (nome) => `${nome} (reserva)`,
       servidorFora: 'Voz do sistema: servidor Kokoro fora do ar',
     },
     servidorOk: (detalhe) => `Servidor respondendo (${detalhe}).`,
@@ -205,6 +213,9 @@ export const T = {
     respostaGemini: 'Resposta do Gemini',
     ateFala: 'Até a primeira fala',
     semMedida: 'sem medida ainda',
+    vozGemini: 'Voz Gemini hoje',
+    vozGeminiValor: (n, chars, reais, mediana) => `${n} falas, ${chars} caracteres, R$ ${reais}${mediana ? `, mediana ${mediana} ms` : ''}`,
+    vozGeminiNenhuma: 'sem uso hoje',
     ms: (v, n) => (n ? `${v} ms (mediana de ${n})` : `${v} ms`),
     respostasHoje: 'Respostas hoje',
     respostasValor: (dia, sessao) => `${dia} (${sessao} nesta sessão)`,

@@ -9,6 +9,7 @@
 import { criarKokoroServidor, normalizarUrl } from './kokoro-server.js';
 import { criarKokoroNavegador } from './kokoro-browser.js';
 import { criarWebSpeech } from './webspeech.js';
+import { criarGeminiTts } from './gemini-motor.js';
 import { dividirFrases, limparParaFala, normalizarParaFala } from './frases.js';
 import { extrairGestos } from '../gestos.js';
 import { criarMesa, PAUSA_ENTRE_FRASES_MS } from '../audio.js';
@@ -45,6 +46,9 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
   const servidor = criarKokoroServidor({ obterUrl: () => config.urlKokoro });
   const navegador = criarKokoroNavegador({ aoProgresso: aoProgressoNavegador });
   const sistema = criarWebSpeech({ aoMudarVozes: aoMudarVozesSistema });
+  // config.gemini = { chave, modelo, voz, estilo, aoMedir, disponivel() } vem da interface (ui.js).
+  const gemini = criarGeminiTts({ obterConfig: () => config.gemini });
+  let statusGemini = { ok: null, detalhe: 'não usado' };
 
   let statusServidor = { ok: null, detalhe: 'verificando' };
   let motorAtual = null, avisoAtual = null;
@@ -76,7 +80,21 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
   function resolverMotor(voz) {
     let motor = sistema, aviso = null;
     const querNavegador = config.motor === 'kokoro-browser' || (voz && voz.motor === 'kokoro-browser');
-    if (config.motor === 'webspeech') {
+    // Gemini TTS: vale enquanto houver chave, teto de caracteres e a última chamada não tiver falhado.
+    // Senão cai para o Kokoro (ou a voz do sistema) e o aviso diz por quê.
+    let reservaDoGemini = false;
+    if (config.motor === 'gemini') {
+      const g = config.gemini ? config.gemini.disponivel() : { ok: false, aviso: 'O Gemini TTS não está configurado. Usando outra voz.' };
+      if (g.ok && statusGemini.ok !== false) {
+        if (motorAtual !== gemini || avisoAtual !== null) { motorAtual = gemini; avisoAtual = null; emitirStatus(); }
+        return gemini;
+      }
+      reservaDoGemini = true;
+      aviso = g.ok ? 'O Gemini TTS falhou. Usando outra voz.' : g.aviso;
+    }
+    if (reservaDoGemini) {
+      motor = statusServidor.ok ? servidor : sistema;
+    } else if (config.motor === 'webspeech') {
       motor = sistema;
     } else if (config.motor === 'auto' && sistema.temNatural && !querNavegador) {
       // Edge com vozes neurais pt-BR: grátis e mais naturais que o Kokoro em português.
@@ -145,6 +163,7 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
         console.warn(`[voz] ${motor.id} falhou; esta frase vai pela voz do sistema:`, e);
         anotar('sintese-erro', { turno: t.id, i, motor: motor.id });
         if (motor === servidor) { statusServidor = { ok: false, detalhe: 'falhou ao sintetizar' }; resolverMotor(t.voz); }
+        if (motor === gemini) { statusGemini = { ok: false, detalhe: e.status ? `HTTP ${e.status}` : 'falhou' }; resolverMotor(t.voz); }
         t.audios.enviar({ i, texto, motor: sistema, gestos });
       }
     }
@@ -211,6 +230,10 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
     get emTurno() { return !!turno; },
     get statusServidor() { return statusServidor; },
     sistema,
+    gemini,
+    get statusGemini() { return statusGemini; },
+    // Depois de mudar chave, modelo ou voz nas configurações, tenta o Gemini de novo.
+    reiniciarGemini() { statusGemini = { ok: null, detalhe: 'não usado' }; resolverMotor(null); },
     navegador,
     verificarServidor,
     resolverMotor,
@@ -221,6 +244,10 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
     async preSintetizar(texto, voz) {
       const motor = resolverMotor(voz);
       if (motor.direto) return false;
+      // Voz paga NUNCA pré-sintetiza sozinha: o cache é só de memória e se perde a cada carregamento,
+      // então cada abertura da página gastaria crédito à toa. Pré-gravar com voz paga é uma ação deliberada
+      // do operador (pacote de áudio, REPERTORIO seção 31), não efeito colateral de escolher o motor.
+      if (motor === gemini) return false;
       let ok = true;
       for (const f of dividirFrases(texto)) {
         const limpo = normalizarParaFala(limparParaFala(f)).trim();

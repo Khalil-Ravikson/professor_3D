@@ -603,6 +603,7 @@
       <option value="auto">Automático: vozes Natural do Edge se houver, senão Kokoro</option>
       <option value="kokoro-server">Kokoro no servidor local</option>
       <option value="kokoro-browser">Kokoro no navegador (só inglês)</option>
+      <option value="gemini">Gemini TTS (nuvem, gasta crédito)</option>
       <option value="webspeech">Voz do sistema</option>
     </select>
     <label for="urlKokoro">Endereço do servidor Kokoro</label>
@@ -615,6 +616,25 @@
     <label for="voiceSel">Voz do sistema</label>
     <select id="voiceSel"></select>
     <p class="hint">No Microsoft Edge aparecem vozes Natural em português (Francisca, Antonio). Grátis, mas precisam de internet.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Gemini TTS</legend>
+    <p class="hint"><strong>Gasta crédito de verdade</strong> e usa a chave do Gemini guardada neste navegador. Vale só quando o motor de voz acima é "Gemini TTS"; sem chave, sem saldo no teto ou com falha, cai sozinho para o Kokoro e avisa. Preços da página oficial, em 06/10/2026: US$ 9,00 (Flash) e US$ 6,00 (Flash-Lite) por milhão de tokens de áudio de saída, 25 tokens por segundo, e dobram em 01/01/2027.</p>
+    <label for="gtModelo">Modelo</label>
+    <select id="gtModelo">
+      <option value="gemini-3.8-flash-lite-tts">3.8 Flash-Lite TTS (mais rápido e mais barato)</option>
+      <option value="gemini-3.8-flash-tts">3.8 Flash TTS</option>
+    </select>
+    <label for="gtVoz">Voz</label>
+    <input id="gtVoz" type="text" list="vozesGemini" spellcheck="false" autocapitalize="off">
+    <datalist id="vozesGemini"><option value="Kore"><option value="Puck"><option value="Charon"><option value="Zephyr"></datalist>
+    <p class="hint">A documentação lista 30 vozes; estas quatro são as que ela cita pelo nome. Cada personagem pode ter a sua em <code>voz.gemini</code>, em characters.js.</p>
+    <label for="gtEstilo">Estilo (instrução em texto, opcional)</label>
+    <input id="gtEstilo" type="text" maxlength="200" placeholder="Ex.: fale devagar e com paciência">
+    <label for="gtTeto">Teto de caracteres por dia (0 desliga o teto)</label>
+    <input id="gtTeto" type="number" min="0" max="500000" step="1000">
+    <p class="hint" id="gtUso" role="status"></p>
   </fieldset>
 
   <fieldset>

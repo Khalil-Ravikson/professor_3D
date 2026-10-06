@@ -54,6 +54,38 @@ const config = {
   mudo: ler('mudo', 'nao') === 'sim',
 };
 
+/* ---------- Gemini TTS: uso do dia e telemetria ---------- */
+// O gasto de voz fica separado do de texto (custo.js): são modelos, preços e tetos diferentes.
+const hojeISO = () => new Date().toISOString().slice(0, 10);
+let usoGemini = (() => {
+  const salvo = lerJSON('voz_gemini', null);
+  return salvo && salvo.dia === hojeISO() ? salvo : { dia: hojeISO(), chamadas: 0, chars: 0, usd: 0, latencias: [] };
+})();
+const tetoGemini = () => Math.max(0, Number(ler('gt_teto', '20000')) || 0);
+
+config.gemini = {
+  get chave() { return apiKey; },
+  get modelo() { return ler('gt_modelo', 'gemini-3.8-flash-lite-tts'); },
+  get voz() { return ler('gt_voz', 'Kore'); },
+  get estilo() { return ler('gt_estilo', ''); },
+  // Chamado antes de cada escolha de motor: sem chave ou sem saldo no teto, o app usa outra voz e diz por quê.
+  disponivel() {
+    if (!apiKey) return { ok: false, aviso: T.vozGemini.semChave };
+    const teto = tetoGemini();
+    if (teto > 0 && usoGemini.chars >= teto) return { ok: false, aviso: T.vozGemini.teto };
+    return { ok: true };
+  },
+  aoMedir(m) {
+    if (usoGemini.dia !== hojeISO()) usoGemini = { dia: hojeISO(), chamadas: 0, chars: 0, usd: 0, latencias: [] };
+    usoGemini.chamadas++; usoGemini.chars += m.chars; usoGemini.usd += m.usd || 0;
+    usoGemini.latencias.push(m.totalMs);
+    if (usoGemini.latencias.length > 50) usoGemini.latencias.shift();
+    gravarJSON('voz_gemini', usoGemini);
+    console.info(`[voz-gemini] ${m.modelo} ${m.voz}: ${m.chars} caracteres, ${m.totalMs} ms para ${m.segundos} s de áudio (${m.tokensSaida} tokens, US$ ${(m.usd || 0).toFixed(5)})`);
+    if (typeof desenharUsoGemini === 'function') desenharUsoGemini();
+  },
+};
+
 const FADE_MS = 160;
 const reduzirMovimento = matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -403,6 +435,7 @@ elVit.cta.addEventListener('click', () => { voz.preparar(); if (etapa === 'atrac
 // nem chama serviço pago, qualquer que seja o motor de voz. Sem áudio guardado, fica desligado e diz por quê.
 function motivoSemAudio() {
   if (ultimoMotorVoz && ultimoMotorVoz.direto) return T.selecao.semAudioSistema;
+  if (ultimoMotorVoz && ultimoMotorVoz.id === 'gemini') return T.selecao.semAudioPaga;
   if (voz.statusServidor && voz.statusServidor.ok === false) return T.selecao.semAudioServidor;
   return T.selecao.preparandoAudio;
 }
@@ -620,7 +653,8 @@ function mostrarStatusVoz({ motor, aviso, servidor }) {
   const natural = motor && motor.id === 'webspeech' && motor.temNatural;
   const sel = T.voz.selo;
   let selo = motor ? (natural ? sel.edge : motor.id === 'webspeech' ? sel.sistema : motor.id === 'kokoro-browser' ? sel.navegador : sel.kokoro) : sel.verificando;
-  if (aviso) selo = aviso.startsWith('Servidor') ? sel.servidorFora : sel.sistema;
+  if (motor && motor.id === 'gemini') selo = sel.gemini;
+  if (aviso) selo = aviso.startsWith('Servidor') ? sel.servidorFora : (motor && motor.id !== 'webspeech' ? sel.reserva(selo) : sel.sistema);
   elSeloVoz.textContent = selo;
   elSeloVoz.dataset.alerta = aviso ? 'sim' : 'nao';
   const linhaServidor = s.ok === true ? T.voz.servidorOk(s.detalhe) : s.ok === false ? T.voz.servidorRuim(s.detalhe) : T.voz.verificando;
@@ -933,6 +967,7 @@ async function aplicarConfigVoz() {
   config.urlKokoro = urlNova;
   gravar('motor', config.motor);
   gravar('url_kokoro', config.urlKokoro);
+  voz.reiniciarGemini();
   if (mudouUrl || voz.statusServidor.ok !== true) await voz.verificarServidor();
   else voz.resolverMotor(personagem && personagem.voz);
   if (config.motor === 'kokoro-browser') {
@@ -944,6 +979,28 @@ async function aplicarConfigVoz() {
       elStatusVoz.textContent = T.voz.navegadorFalhou;
     }
   }
+}
+
+/* ---------- Painel Gemini TTS ---------- */
+const gt = { modelo: $('gtModelo'), voz: $('gtVoz'), estilo: $('gtEstilo'), teto: $('gtTeto'), uso: $('gtUso') };
+gt.modelo.value = config.gemini.modelo;
+gt.voz.value = config.gemini.voz;
+gt.estilo.value = config.gemini.estilo;
+gt.teto.value = String(tetoGemini());
+
+function medianaDe(v) { if (!v.length) return null; const o = [...v].sort((a, b) => a - b); return o[o.length >> 1]; }
+function desenharUsoGemini() {
+  gt.uso.textContent = T.vozGemini.uso(usoGemini.chamadas, usoGemini.chars.toLocaleString('pt-BR'), tetoGemini() ? tetoGemini().toLocaleString('pt-BR') : '', (usoGemini.usd * custo.resumo().cambio).toFixed(4));
+}
+desenharUsoGemini();
+for (const [campo, chave, normalizar] of [[gt.modelo, 'gt_modelo', (v) => v], [gt.voz, 'gt_voz', (v) => v.trim() || 'Kore'], [gt.estilo, 'gt_estilo', (v) => v.trim()], [gt.teto, 'gt_teto', (v) => String(Math.max(0, Math.round(Number(v) || 0)))]]) {
+  campo.addEventListener('change', () => {
+    gravar(chave, normalizar(campo.value));
+    if (campo === gt.teto) campo.value = ler(chave, '0');
+    voz.reiniciarGemini();
+    desenharUsoGemini();
+    if (config.motor === 'gemini') aplicarConfigVoz();
+  });
 }
 
 /* ---------- Painel de diagnóstico (só o operador vê) ---------- */
@@ -984,6 +1041,7 @@ function desenharDiagnostico() {
     [D.gpu, r.gpu ? D.gpuValor(r.gpu.geometrias, r.gpu.texturas) : D.semDados, false],
     [D.respostaGemini, r.latencia.perguntaMs === null ? D.semMedida : D.ms(r.latencia.perguntaMs, r.latencia.amostras), false],
     [D.ateFala, r.latencia.falaMs === null ? D.semMedida : D.ms(r.latencia.falaMs), false],
+    [D.vozGemini, usoGemini.chamadas ? D.vozGeminiValor(usoGemini.chamadas, usoGemini.chars.toLocaleString('pt-BR'), (usoGemini.usd * g.cambio).toFixed(4), medianaDe(usoGemini.latencias)) : D.vozGeminiNenhuma, false],
     [D.respostasHoje, D.respostasValor(g.respostas, g.sessao.respostas), false],
     [D.tokensHoje, D.tokensValor(n(g.entrada), n(g.saida + g.pensamento)), false],
     [D.gastoHoje, g.semPreco.length ? D.gastoSemPreco(g.usd.toFixed(4), g.semPreco.join(', ')) : D.gastoValor(g.reais.toFixed(2), g.usd.toFixed(4)), g.semPreco.length > 0],
@@ -1439,7 +1497,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get diretor() { return diretor; },
     licencas,
     registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao, definirEstado,
-    diagnostico, custo, vigia, recarregarAvatar, VERSAO, irPara, andar, retratos, definirEtapa, desenharVitrine,
+    diagnostico, custo, vigia, recarregarAvatar, VERSAO, irPara, andar, retratos, definirEtapa, desenharVitrine, get usoGemini() { return usoGemini; },
     get etapa() { return etapa; },
     // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
     irParaConversa(mic = 'sim') { sessaoAtiva = true; microfone = mic; definirEtapa('conversa'); },
