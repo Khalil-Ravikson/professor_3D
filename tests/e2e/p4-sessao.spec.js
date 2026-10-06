@@ -37,6 +37,9 @@ test('P4: cumprimento por toque, conversa, despedida pelo operador; e despedida 
   // 2. Cumprimento por toque na tela (depois de as frases fixas estarem prontas, como num quiosque ligado).
   await page.waitForFunction(() => window.__prof3d.voz.frasesProntas >= 4, null, { timeout: 30_000 });
   await page.mouse.click(300, 400);
+  expect(await page.evaluate(() => window.__prof3d.etapa)).toBe('selecao'); // fase 5: o toque chama a seleção
+  await expect(page.locator('#selConversar')).toBeEnabled();
+  await page.click('#selConversar');
   await expect.poll(() => page.evaluate(() => window.__prof3d.medidasSessao.length)).toBe(1);
   await expect.poll(() => page.evaluate(() => window.__prof3d.medidasSessao[0].gesto !== null)).toBe(true);
   await expect.poll(() => page.evaluate(() => window.__prof3d.voz.registro.some((e) => e.tipo === 'toca-inicio')), { timeout: 30_000 }).toBe(true);

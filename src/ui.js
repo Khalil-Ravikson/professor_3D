@@ -21,13 +21,14 @@ import { T } from './strings.pt-BR.js';
 import { avaliarLicenca } from './licenca.js';
 import { criarVigia, contarRecargas, esquecerRecargas } from './vigia.js';
 import { criarDiagnostico } from './diagnostico.js';
+import { lerMiniatura, gravarMiniatura } from './miniaturas.js';
 import { criarMedidorDeCusto, CAMBIO_PADRAO } from './custo.js';
 import { VERSAO, VERSAO_DATA, VERSAO_MARCO } from './versao.js';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
 const micBtn = $('mic'), stopBtn = $('stop'), form = $('form'), input = $('text');
-const dlg = $('settings'), keyInput = $('key'), voiceSel = $('voiceSel'), elenco = $('elenco');
+const dlg = $('settings'), keyInput = $('key'), voiceSel = $('voiceSel');
 const motorSel = $('motorSel'), urlInput = $('urlKokoro'), modeloInput = $('modelo');
 const elStatusVoz = $('statusVoz'), elSeloVoz = $('seloVoz'), bocaSel = $('bocaSel');
 const volSlider = $('volSlider'), volMudo = $('volMudo'), volValor = $('volValor'), volIcone = $('volIcone');
@@ -175,57 +176,187 @@ function esconderAviso() {
   $('avisoAcao').onclick = null;
 }
 
-/* ---------- Seletor ---------- */
-function renderizarElenco() {
-  elenco.replaceChildren(...disponiveis.map((p) => {
+/* ---------- Seleção (fase 5, tela B) ---------- */
+// Roleta de retratos, personagem vivo sobre o pódio (CSS), cartão com perfil e botão grande.
+// Quem aparece ativo é quem tem .vrm e não está marcado emBreve; os demais viram cartão com cadeado.
+// Nada aqui desenha personagem: o retrato é render do próprio .vrm (src/avatar.js, gerarMiniatura).
+const elSel = {
+  raiz: $('selecao'), roleta: $('roleta'), papel: $('selPapel'), nome: $('selNome'), desc: $('selDesc'),
+  perfil: $('selPerfil'), ficcao: $('selFiccao'), contador: $('selContador'), ouvir: $('selOuvir'),
+  motivo: $('selOuvirMotivo'), conversar: $('selConversar'), ant: $('selAnt'), prox: $('selProx'), vizinhos: $('selVizinhos'),
+};
+const retratos = new Map(); // id -> url do retrato; o cache durável fica no IndexedDB (src/miniaturas.js)
+const NS_SVG = 'http://www.w3.org/2000/svg';
+const CADEADO = 'M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3H9z';
+
+function icone(caminho, classe) {
+  const svg = document.createElementNS(NS_SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', classe);
+  const path = document.createElementNS(NS_SVG, 'path');
+  path.setAttribute('d', caminho); path.setAttribute('fill', 'currentColor');
+  svg.append(path);
+  return svg;
+}
+
+function renderizarSelecao() {
+  elSel.roleta.replaceChildren(...PERSONAGENS.map((p) => {
+    const li = document.createElement('li');
+    li.setAttribute('role', 'presentation');
     const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'card';
-    b.dataset.id = p.id;
-    b.setAttribute('aria-pressed', 'false');
-    b.style.setProperty('--card-fundo', p.paleta.fundo2);
-    b.style.setProperty('--card-tinta', p.paleta.tinta);
-    b.style.setProperty('--card-suave', p.paleta.tintaSuave);
-    const foto = document.createElement('span');
-    foto.className = 'card-foto';
-    foto.textContent = p.nome[0];
-    const texto = document.createElement('span');
-    texto.className = 'card-texto';
-    const nome = document.createElement('span'); nome.className = 'card-nome'; nome.textContent = p.nome;
-    const papel = document.createElement('span'); papel.className = 'card-papel'; papel.textContent = p.papel;
-    texto.append(nome, papel);
-    b.append(foto, texto);
-    b.title = `${p.nome}: ${p.papel}`;
-    return b;
+    b.type = 'button'; b.className = 'ret'; b.dataset.id = p.id;
+    b.setAttribute('role', 'option');
+    if (disponiveis.includes(p)) {
+      b.setAttribute('aria-selected', 'false');
+      b.setAttribute('aria-label', p.nome);
+      b.textContent = p.nome[0];
+    } else {
+      b.disabled = true;
+      b.setAttribute('aria-label', T.selecao.emBreveNome(p.nome));
+      const r = document.createElement('span'); r.className = 'rotulo-breve'; r.textContent = T.selecao.emBreve;
+      b.append(icone(CADEADO, 'cadeado'), r);
+    }
+    li.append(b);
+    return li;
   }));
-  $('elencoNav').hidden = disponiveis.length < 2;
+  elSel.conversar.disabled = true;
+  atualizarSelecao();
 }
 
-function marcarCardAtivo(id) {
-  for (const b of elenco.querySelectorAll('.card')) b.setAttribute('aria-pressed', String(b.dataset.id === id));
+function colocarRetrato(id, url) {
+  retratos.set(id, url);
+  const b = elSel.roleta.querySelector(`.ret[data-id="${id}"]`);
+  if (b) {
+    const img = document.createElement('img');
+    img.src = url; img.alt = ''; img.width = 120; img.height = 120;
+    b.replaceChildren(img);
+  }
+  atualizarVizinhos();
 }
 
-function colocarMiniatura(id, url) {
-  const foto = elenco.querySelector(`.card[data-id="${id}"] .card-foto`);
-  if (!foto) return;
-  const img = document.createElement('img');
-  img.src = url; img.alt = ''; img.width = 48; img.height = 48;
-  foto.replaceChildren(img);
+function vizinhosDe(p) {
+  const n = disponiveis.length, i = disponiveis.indexOf(p);
+  if (n < 2 || i < 0) return null;
+  return { ant: disponiveis[(i - 1 + n) % n], prox: disponiveis[(i + 1) % n] };
 }
 
-// Gera em sequência (um modelo por vez em memória) só as miniaturas que faltam no cache.
+function preencherVizinho(botao, p, rotulo) {
+  botao.setAttribute('aria-label', `${rotulo}: ${p.nome}`);
+  const nome = document.createElement('span'); nome.textContent = p.nome;
+  const url = retratos.get(p.id);
+  if (url) {
+    const img = document.createElement('img'); img.src = url; img.alt = '';
+    botao.replaceChildren(img, nome);
+  } else botao.replaceChildren(nome);
+  botao.dataset.id = p.id;
+}
+
+function atualizarVizinhos() {
+  const v = personagem && vizinhosDe(personagem);
+  elSel.vizinhos.hidden = !v;
+  if (!v) return;
+  // Com dois personagens, o anterior e o seguinte são a mesma pessoa: um cartão só.
+  elSel.ant.hidden = v.ant === v.prox;
+  if (!elSel.ant.hidden) preencherVizinho(elSel.ant, v.ant, T.selecao.anterior);
+  preencherVizinho(elSel.prox, v.prox, T.selecao.proximo);
+}
+
+function atualizarSelecao() {
+  for (const b of elSel.roleta.querySelectorAll('.ret:not(:disabled)')) {
+    b.setAttribute('aria-selected', String(!!personagem && b.dataset.id === personagem.id));
+  }
+  if (!personagem) return;
+  const p = personagem;
+  elSel.papel.textContent = p.papel;
+  elSel.nome.textContent = p.nome;
+  elSel.desc.textContent = p.descricao || '';
+  elSel.perfil.replaceChildren(...(p.perfil || []).map((t, i) => {
+    const li = document.createElement('li');
+    li.setAttribute('role', 'img');
+    li.setAttribute('aria-label', T.selecao.perfilAria(t.rotulo, t.valor));
+    const caixa = document.createElement('span'); caixa.className = 'anel-caixa';
+    const anel = document.createElement('span'); anel.className = 'anel';
+    anel.style.setProperty('--v', String(t.valor)); anel.style.setProperty('--cor', `var(--perfil-${i + 1})`);
+    const valor = document.createElement('span'); valor.className = 'anel-valor'; valor.textContent = String(t.valor);
+    caixa.append(anel, valor);
+    li.append(caixa, t.rotulo);
+    return li;
+  }));
+  elSel.ficcao.textContent = (p.perfil && p.perfil.length) ? T.selecao.ficcao : '';
+  const i = disponiveis.indexOf(p) + 1;
+  elSel.contador.textContent = `${i}/${disponiveis.length}`;
+  elSel.contador.setAttribute('aria-label', T.selecao.contador(i, disponiveis.length));
+  elSel.conversar.textContent = T.selecao.conversar(p.nome);
+  elSel.conversar.disabled = !avatar || avatar.vrm == null || ocupado;
+  elSel.ouvir.textContent = T.selecao.ouvirVoz;
+  // Marco I3 liga o áudio pré-gravado. Até lá o botão fica desligado e diz por quê.
+  elSel.motivo.textContent = elSel.ouvir.disabled ? T.selecao.semAudio : '';
+  atualizarVizinhos();
+  ajustarPalco();
+}
+
+// dir: +1 entra pela direita, -1 pela esquerda. Só o CSS usa, para o deslize do canvas.
+function irPara(p, dir = 1) {
+  if (!p || p === personagem || !disponiveis.includes(p)) return;
+  stage.style.setProperty('--dir', String(dir));
+  return trocarPersonagem(p);
+}
+
+function andar(passo) {
+  const v = personagem && vizinhosDe(personagem);
+  if (v) irPara(passo > 0 ? v.prox : v.ant, passo > 0 ? 1 : -1);
+}
+
+elSel.roleta.addEventListener('click', (e) => {
+  const b = e.target.closest('.ret');
+  if (!b || b.disabled) return;
+  const p = buscarPersonagem(b.dataset.id);
+  const dir = disponiveis.indexOf(p) > disponiveis.indexOf(personagem) ? 1 : -1;
+  irPara(p, dir);
+});
+elSel.ant.addEventListener('click', () => andar(-1));
+elSel.prox.addEventListener('click', () => andar(1));
+elSel.conversar.addEventListener('click', () => { voz.preparar(); iniciarSessao('toque'); });
+elSel.raiz.addEventListener('keydown', (e) => {
+  if (e.target.closest('input, textarea, select')) return;
+  const passo = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+  if (!passo) return;
+  e.preventDefault();
+  andar(passo);
+});
+$('selComoFunciona').addEventListener('click', () => $('comoFunciona').showModal());
+$('comoFechar').addEventListener('click', () => $('comoFunciona').close());
+$('comoTitulo').textContent = T.selecao.comoTitulo;
+$('comoPassos').replaceChildren(...T.selecao.comoPassos.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+$('comoFechar').textContent = T.selecao.fechar;
+
+// Em retrato o palco termina onde o cartão começa. O cartão muda de altura com o texto de cada
+// personagem, então a medida é feita de novo a cada troca e a cada mudança de tamanho.
+const retrato = matchMedia('(max-aspect-ratio: 5/6)');
+function ajustarPalco() {
+  if (etapa !== 'selecao' || !retrato.matches) { stage.style.removeProperty('--palco-h'); return; }
+  const topo = $('selCartao').getBoundingClientRect().top - app.getBoundingClientRect().top;
+  stage.style.setProperty('--palco-h', `${Math.max(240, Math.round(topo - 8))}px`);
+}
+new ResizeObserver(ajustarPalco).observe(elSel.raiz);
+new ResizeObserver(ajustarPalco).observe($('selCartao'));
+retrato.addEventListener('change', ajustarPalco);
+
+// Enquadramento: corpo inteiro na seleção, rosto e ombros nas demais telas. Quem decide é a etapa.
+function aplicarEnquadramento(animar) {
+  if (!avatar) return;
+  cena.definirCorpo(etapa === 'selecao' ? avatar.medidaCorpo() : null, animar);
+}
+
+// Gera em sequência (um modelo por vez em memória) só os retratos que faltam no cache.
 async function prepararMiniaturas() {
-  // v2: miniaturas feitas já com o idle aplicado (antes do M4 eram com a pose provisória).
-  const cache = lerJSON('miniaturas_v2', {});
   for (const p of disponiveis) {
     const versao = versoes.get(p.id);
-    const salvo = cache[p.id];
-    if (salvo && salvo.versao === versao) { colocarMiniatura(p.id, salvo.url); continue; }
+    const salvo = await lerMiniatura(p.id, versao);
+    if (salvo) { colocarRetrato(p.id, salvo.url); continue; }
     try {
       const url = await gerarMiniatura(p.arquivoVrm, { idle: 'assets/animations/idle.vrma' });
-      cache[p.id] = { versao, url };
-      gravarJSON('miniaturas_v2', cache);
-      colocarMiniatura(p.id, url);
+      await gravarMiniatura(p.id, versao, url);
+      colocarRetrato(p.id, url);
     } catch (e) {
       console.warn(`[miniatura] ${p.nome}:`, e);
     }
@@ -254,11 +385,11 @@ async function trocarPersonagem(p) {
   cancelarTudo();
 
   personagem = p;
+  atualizarSelecao(); // texto, perfil e roleta mudam na hora; o modelo chega depois
   gravar('personagem', p.id);
   aplicarPaleta(p.paleta);
   document.title = `${p.nome} 3D`;
   micBtn.setAttribute('aria-label', T.avatar.falar(p.nome));
-  marcarCardAtivo(p.id);
   if (etapa === 'atracao') definirEtapa('atracao'); // o convite usa o nome do personagem
   renderizarAtalhos(p.atalhos);
   voz.resolverMotor(p.voz);
@@ -298,6 +429,8 @@ async function trocarPersonagem(p) {
     registrarChecklist(p.nome, checarVrm(vrm, bytes));
     avatar = montarAvatar(vrm, cena, { bases, tetoBoca: p.tetoBoca, fixarNoLugar });
     cena.definirFoco(avatar.posicaoCabeca, p.enquadramento);
+    aplicarEnquadramento(false); // na seleção troca para corpo inteiro; o deslize é do canvas, não da câmera
+    atualizarSelecao();
     // Gestos ativos já ficam prontos, para o primeiro aceno não esperar o download.
     await Promise.all(diretor.gestosValidos().flatMap((g) => diretor.clipesDe(g)).map((c) => clipeDoArquivo(c.arquivo, vrm)));
     if (minha !== carga) return;
@@ -337,12 +470,7 @@ function mostrarQuadroDe(p, hist) {
   for (const linha of separarFalaEQuadro(hist[idx].content).quadro) quadro.adicionarLinha(linha);
 }
 
-elenco.addEventListener('click', (e) => {
-  const b = e.target.closest('.card');
-  if (!b) return;
-  const p = buscarPersonagem(b.dataset.id);
-  if (p) trocarPersonagem(p);
-});
+
 
 function renderizarAtalhos(atalhos) {
   $('chips').replaceChildren(...atalhos.map((a) => {
@@ -470,6 +598,9 @@ let etapa = 'atracao', microfone = null, timerEtapa = null; // microfone: null (
 function definirEtapa(e) {
   etapa = e;
   app.dataset.etapa = e;
+  elSel.raiz.hidden = e !== 'selecao';
+  if (e === 'selecao') atualizarSelecao();
+  aplicarEnquadramento(true);
   clearTimeout(timerEtapa);
   app.dataset.microfone = microfone === 'sim' ? 'sim' : 'nao';
   usarVozBtn.hidden = !(e === 'conversa' && microfone === 'nao');
@@ -514,7 +645,7 @@ function voltarParaAtracao() {
 
 elPasso.acao.addEventListener('click', () => {
   voz.preparar();
-  if (etapa === 'atracao') iniciarSessao('toque');
+  if (etapa === 'atracao') definirEtapa('selecao');
   else if (etapa === 'consentimento') { microfone = 'sim'; definirEtapa('conversa'); micBtn.focus(); }
 });
 elPasso.alt.addEventListener('click', () => {
@@ -586,11 +717,21 @@ function encerrarSessao(origem) {
   return true;
 }
 
+let toqueX = null;
 stage.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button, input, select, textarea, form, a, .quadro')) return;
   voz.preparar();
-  iniciarSessao('toque');
+  if (etapa === 'atracao') definirEtapa('selecao');
+  else if (etapa === 'selecao') toqueX = e.clientX;
 });
+// Deslizar o dedo no palco troca de personagem na seleção.
+stage.addEventListener('pointerup', (e) => {
+  if (toqueX === null) return;
+  const dx = e.clientX - toqueX;
+  toqueX = null;
+  if (etapa === 'selecao' && Math.abs(dx) > 60) andar(dx < 0 ? 1 : -1);
+});
+stage.addEventListener('pointercancel', () => { toqueX = null; });
 
 /* ---------- Pergunta ---------- */
 async function perguntarAoPersonagem(q) {
@@ -844,7 +985,7 @@ const filtros = { x: new FiltroOneEuro({ beta: 0.3 }), y: new FiltroOneEuro({ be
 
 function cumprimentarQuemChegou() {
   if (!personagem || ocupado || app.dataset.state !== 'idle') return;
-  iniciarSessao('rosto');
+  if (etapa === 'atracao') definirEtapa('selecao'); // o rosto chama a seleção; quem escolhe é a pessoa
 }
 
 const camera = criarCamera({
@@ -1208,7 +1349,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get diretor() { return diretor; },
     licencas,
     registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao, definirEstado,
-    diagnostico, custo, vigia, recarregarAvatar, VERSAO,
+    diagnostico, custo, vigia, recarregarAvatar, VERSAO, irPara, andar, retratos,
     get etapa() { return etapa; },
     // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
     irParaConversa(mic = 'sim') { sessaoAtiva = true; microfone = mic; definirEtapa('conversa'); },
@@ -1220,8 +1361,8 @@ if (new URLSearchParams(location.search).has('debug')) {
 // Sem catálogo o corpo fica na pose do arquivo e não há gestos; o motivo vai para o console.
 try { catalogo = await carregarCatalogo(); await carregarEnviados(); } catch (e) { console.error('[animacoes] catálogo não carregou:', e); }
 const checagens = await Promise.all(PERSONAGENS.map(async (p) => [p, await verificarArquivo(p.arquivoVrm)]));
-for (const [p, versao] of checagens) if (versao) { disponiveis.push(p); versoes.set(p.id, versao); }
-renderizarElenco();
+for (const [p, versao] of checagens) if (versao && !p.emBreve) { disponiveis.push(p); versoes.set(p.id, versao); }
+renderizarSelecao();
 cena.iniciar();
 vigia.iniciar();
 

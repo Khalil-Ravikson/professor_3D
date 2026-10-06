@@ -3,31 +3,12 @@
 // Cada registro vira um clipe do catálogo com arquivo "enviado:<id>" (ver clipeDoArquivo em avatar.js).
 import * as THREE from 'three';
 
-const BANCO = 'prof3d', LOJA = 'movimentos';
+import { operar as operarBanco } from './banco.js';
 
-function abrir() {
-  return new Promise((ok, falha) => {
-    const req = indexedDB.open(BANCO, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(LOJA, { keyPath: 'id' });
-    req.onsuccess = () => ok(req.result);
-    req.onerror = () => falha(req.error);
-  });
-}
+const LOJA = 'movimentos';
 
-async function operar(modo, fn) {
-  const db = await abrir();
-  try {
-    return await new Promise((ok, falha) => {
-      const tx = db.transaction(LOJA, modo);
-      const req = fn(tx.objectStore(LOJA));
-      tx.oncomplete = () => ok(req && req.result);
-      tx.onerror = () => falha(tx.error);
-      tx.onabort = () => falha(tx.error || new Error('transação abortada (cota cheia?)'));
-    });
-  } finally {
-    db.close();
-  }
-}
+// O banco é aberto por src/banco.js (versão 2, com as lojas de movimentos e de miniaturas).
+const operar = (modo, fn) => operarBanco(LOJA, modo, fn);
 
 export const listarMovimentos = () => operar('readonly', (s) => s.getAll());
 export const salvarMovimento = (registro) => operar('readwrite', (s) => s.put(registro));

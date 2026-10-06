@@ -439,6 +439,14 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
       get tempo() { return previa ? previa.time : 0; },
     },
     atualizar,
+    // Altura real do corpo no mundo, para o enquadramento de corpo inteiro. Mede vértice a vértice
+    // (precise), porque a caixa da geometria não acompanha o esqueleto. Cabelo e acessórios entram.
+    medidaCorpo() {
+      vrm.scene.updateMatrixWorld(true);
+      const caixa = new THREE.Box3().setFromObject(vrm.scene, true);
+      const c = caixa.getCenter(new THREE.Vector3());
+      return { base: caixa.min.y, topo: caixa.max.y, x: c.x, z: c.z };
+    },
     get bases() { return Object.keys(acoesBase); },
     get estadoBase() { return estadoBase; },
     // Toca um gesto de uma vez; aoFim roda quando ele acaba e o corpo volta ao estado-base.

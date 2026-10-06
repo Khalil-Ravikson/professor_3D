@@ -29,15 +29,22 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
     await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar) && window.__prof3d.voz.frasesProntas >= 4, null, { timeout: 60_000 });
     const textos = [];
 
-    // 1. Atração: um botão no painel ("Começar"), sem conversa, sem microfone.
+    // 1. Atração: um botão no painel, sem conversa, sem microfone.
     await expect(page.locator('#passo')).toBeVisible();
     await expect(page.locator('#passoTitulo')).toHaveText('Luma está aqui');
-    expect(await botoesVisiveis(page)).toEqual(['Começar']);
+    expect(await botoesVisiveis(page)).toEqual(['Escolher personagem']);
     textos.push(await textoVisivel(page));
     await page.screenshot({ path: `relatorios/p5-1-atracao-${nome}.png` });
 
-    // 2. Cumprimento: some o convite, aparece a fala.
+    // 1b. Seleção (fase 5): a atração leva à escolha; o botão grande começa a conversa.
     await page.click('#passoAcao');
+    expect(await page.evaluate(() => window.__prof3d.etapa)).toBe('selecao');
+    await expect(page.locator('#selConversar')).toHaveText('Conversar com Luma');
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: `relatorios/p5-1b-selecao-${nome}.png` });
+
+    // 2. Cumprimento: some a seleção, aparece a fala.
+    await page.click('#selConversar');
     await expect(page.locator('#answer')).toContainText('Que bom te ver');
     expect(await page.evaluate(() => window.__prof3d.etapa)).toBe('cumprimento');
     await page.waitForTimeout(1200);
@@ -76,6 +83,7 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
 
     // 6. Segunda pessoa escolhe escrever: microfone some, aparece a opção de mudar de ideia.
     await page.click('#passoAcao');
+    await page.click('#selConversar'); // atração, seleção, cumprimento
     await expect(page.locator('#passoTitulo')).toHaveText('Posso ouvir você?', { timeout: 20_000 });
     await page.click('#passoAlt');
     await expect(page.locator('#mic')).toBeHidden();

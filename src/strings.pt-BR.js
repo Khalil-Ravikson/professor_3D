@@ -10,8 +10,8 @@ export const T = {
   etapas: {
     atracao: {
       titulo: (nome) => `${nome} está aqui`,
-      texto: 'Toque para começar uma conversa.',
-      acao: 'Começar',
+      texto: 'Toque para escolher com quem conversar.',
+      acao: 'Escolher personagem',
     },
     consentimento: {
       titulo: 'Posso ouvir você?',
@@ -56,6 +56,24 @@ export const T = {
       texto: 'Toque no botão para começar de novo.',
       acao: 'Recomeçar',
     },
+  },
+  selecao: {
+    regiao: 'Escolha de personagem',
+    comoFunciona: 'Como funciona',
+    comoTitulo: 'Como funciona',
+    comoPassos: ['Escolha quem vai conversar com você.', 'Aperte o botão grande para começar.', 'Fale ou escreva a sua pergunta.'],
+    fechar: 'Fechar',
+    conversar: (nome) => `Conversar com ${nome}`,
+    ouvirVoz: 'Ouvir voz',
+    semAudio: 'Ainda não tem áudio gravado',
+    emBreve: 'Em breve',
+    emBreveNome: (nome) => `${nome}, em breve`,
+    ficcao: 'Traços inventados para o jogo, não são dados reais.',
+    perfilAria: (rotulo, valor) => `${rotulo}: ${valor} de 5`,
+    contador: (i, n) => `${i} de ${n}`,
+    anterior: 'Personagem anterior',
+    proximo: 'Personagem seguinte',
+    roleta: 'Personagens',
   },
   quadro: {
     naoConferido: 'Número que não veio da calculadora nem do enunciado',

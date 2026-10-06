@@ -3,6 +3,9 @@
 //
 // paleta: vira variáveis CSS em :root (ver aplicarPaleta em ui.js). paleta.fonte: tipografia do personagem
 //   (Baloo 2 para os infantis; Atkinson Hyperlegible para Teo/Rafa, que leem números).
+// descricao: duas linhas, na tela de seleção. perfil: três traços de 1 a 5, INVENTADOS para o jogo (nunca dado real).
+// emBreve: o personagem tem .vrm mas aparece bloqueado, com cadeado, e não carrega.
+// selecao: enquadramento de corpo inteiro da tela de seleção (mesmos campos de enquadramento).
 // enquadramento: distancia = câmera até a cabeça, em metros;
 //                altura = deslocamento vertical do foco a partir do osso head.
 // voz: { motor, id (voz Kokoro; aceita mistura "pm_alex(1)+pm_santa(1)"), speed,
@@ -49,6 +52,8 @@ export const PERSONAGENS = [
     id: 'luma',
     nome: 'Luma',
     papel: 'Professora de perguntas do dia a dia e histórias',
+    descricao: 'Responde perguntas de todo dia com calma, em frases curtas, e conta histórias.',
+    perfil: [{ rotulo: 'Paciência', valor: 5 }, { rotulo: 'Humor', valor: 3 }, { rotulo: 'Curiosidade', valor: 4 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
     publico: '5 a 10 anos',
     arquivoVrm: 'assets/avatars/8590256991748008892.vrm', // AvatarSample_A do VRoid Hub (nome original mantido)
     creditosVrm: '',
@@ -63,6 +68,7 @@ export const PERSONAGENS = [
     quadro: false,
     ferramentas: [],
     enquadramento: { distancia: 2.0, altura: 0.12 },
+    selecao: { distancia: 3.6, altura: -0.62 }, // corpo inteiro, na tela de seleção
     gestos: null,
     atalhos: [
       { rotulo: 'Uma história', pergunta: 'Me conte uma história curtinha' },
@@ -72,10 +78,10 @@ export const PERSONAGENS = [
       { rotulo: 'Uma piada', pergunta: 'Me conte uma piada' },
     ],
     paleta: {
-      fundo1: '#f7fbfd', fundo2: '#dfeef6',
-      tinta: '#1f2a44', tintaSuave: '#51607e', cartao: '#ffffff',
-      acao: '#cf4034', acaoTinta: '#ffffff', acaoSombra: '#9e2f25', realce: '#ffc93c', realceTinta: '#1f2a44',
-      ok: '#2f8a54',
+      fundo1: '#0c1c3e', fundo2: '#1d4175',
+      tinta: '#ffffff', tintaSuave: '#aab6d3', cartao: '#0f2a57',
+      acao: '#e0224a', acaoTinta: '#ffffff', acaoSombra: '#8f1230', realce: '#ffffff', realceTinta: '#0c1c3e',
+      ok: '#3fbf6a',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',
     },
   },
@@ -83,6 +89,8 @@ export const PERSONAGENS = [
     id: 'matematico',
     nome: 'Teo',
     papel: 'Resolve problemas de matemática passo a passo',
+    descricao: 'Mostra cada passo no quadro e confere toda conta na calculadora antes de responder.',
+    perfil: [{ rotulo: 'Lógica', valor: 5 }, { rotulo: 'Paciência', valor: 4 }, { rotulo: 'Humor', valor: 2 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
     publico: '10 anos ou mais',
     arquivoVrm: 'assets/avatars/teo.vrm',
     creditosVrm: '',
@@ -107,6 +115,7 @@ export const PERSONAGENS = [
     quadro: true,
     ferramentas: ['calcular'],
     enquadramento: { distancia: 2.4, altura: 0.22 },
+    selecao: { distancia: 3.8, altura: -0.64 }, // corpo inteiro, na tela de seleção
     gestos: null,
     atalhos: [
       { rotulo: 'Equação do 1º grau', pergunta: 'Resolva 3x + 7 = 25' },
@@ -115,10 +124,10 @@ export const PERSONAGENS = [
       { rotulo: 'Frações', pergunta: 'Quanto é 2/3 mais 3/4?' },
     ],
     paleta: {
-      fundo1: '#23272e', fundo2: '#15181d',
-      tinta: '#eef1f5', tintaSuave: '#a9b2bf', cartao: '#2c323b',
-      acao: '#e0873a', acaoTinta: '#15181d', acaoSombra: '#a55e22', realce: '#e0873a', realceTinta: '#15181d',
-      ok: '#58b884',
+      fundo1: '#0a2036', fundo2: '#144a6e',
+      tinta: '#ffffff', tintaSuave: '#b4cde0', cartao: '#0d2d4a',
+      acao: '#c24a16', acaoTinta: '#ffffff', acaoSombra: '#85310d', realce: '#ffffff', realceTinta: '#0a2036',
+      ok: '#3fbf6a',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
     },
   },
@@ -126,6 +135,9 @@ export const PERSONAGENS = [
     id: 'engenheiro',
     nome: 'Rafa',
     papel: 'Projeta, estima e compara alternativas',
+    descricao: 'Pensa em mais de uma saída, faz as estimativas e só então escolhe a melhor.',
+    perfil: [{ rotulo: 'Precisão', valor: 5 }, { rotulo: 'Criatividade', valor: 4 }, { rotulo: 'Paciência', valor: 3 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
+    emBreve: true, // tem .vrm, mas fica bloqueado na seleção até o dono liberar
     publico: '12 anos ou mais',
     arquivoVrm: 'assets/avatars/rafa.vrm',
     creditosVrm: '',
@@ -148,6 +160,7 @@ export const PERSONAGENS = [
     quadro: true,
     ferramentas: ['calcular'],
     enquadramento: { distancia: 2.4, altura: 0.16 },
+    selecao: { distancia: 3.8, altura: -0.64 }, // corpo inteiro, na tela de seleção
     gestos: null,
     atalhos: [
       { rotulo: 'Estante de madeira', pergunta: 'Quero uma estante para 200 livros. Madeira maciça, MDF ou aço?' },
@@ -155,10 +168,10 @@ export const PERSONAGENS = [
       { rotulo: 'Caixa d’água', pergunta: 'Qual tamanho de caixa d’água para uma casa com 4 pessoas?' },
     ],
     paleta: {
-      fundo1: '#f4f2ea', fundo2: '#e6e2d3',
-      tinta: '#20303a', tintaSuave: '#55646d', cartao: '#fbfaf5',
-      acao: '#2f6e8f', acaoTinta: '#ffffff', acaoSombra: '#1f4b62', realce: '#2f6e8f', realceTinta: '#ffffff',
-      ok: '#3f8a4f',
+      fundo1: '#0d2230', fundo2: '#1b5a63',
+      tinta: '#ffffff', tintaSuave: '#b4d3d6', cartao: '#0f3340',
+      acao: '#b5471b', acaoTinta: '#ffffff', acaoSombra: '#7a2f11', realce: '#ffffff', realceTinta: '#0d2230',
+      ok: '#3fbf6a',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
     },
   },
@@ -166,6 +179,9 @@ export const PERSONAGENS = [
     id: 'cientista',
     nome: 'Nina',
     papel: 'Explica fenômenos e propõe experimentos seguros',
+    descricao: 'Explica fenômenos e propõe experimentos seguros para fazer com um adulto.',
+    perfil: [{ rotulo: 'Curiosidade', valor: 5 }, { rotulo: 'Humor', valor: 4 }, { rotulo: 'Paciência', valor: 4 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
+    emBreve: true, // tem .vrm, mas fica bloqueado na seleção até o dono liberar
     publico: '8 anos ou mais',
     arquivoVrm: 'assets/avatars/nina.vrm',
     creditosVrm: '',
@@ -185,6 +201,7 @@ export const PERSONAGENS = [
     quadro: false,
     ferramentas: [],
     enquadramento: { distancia: 1.6, altura: 0.28 },
+    selecao: { distancia: 3.4, altura: -0.6 }, // corpo inteiro, na tela de seleção
     gestos: null,
     atalhos: [
       { rotulo: 'Por que o gelo boia?', pergunta: 'Por que o gelo boia na água?' },
@@ -192,10 +209,10 @@ export const PERSONAGENS = [
       { rotulo: 'Ímãs', pergunta: 'Por que o ímã gruda na geladeira?' },
     ],
     paleta: {
-      fundo1: '#eef6f1', fundo2: '#d6e9df',
-      tinta: '#1d3328', tintaSuave: '#4c6558', cartao: '#ffffff',
-      acao: '#2e7d5b', acaoTinta: '#ffffff', acaoSombra: '#1d5a40', realce: '#f2b134', realceTinta: '#1d3328',
-      ok: '#2e7d5b',
+      fundo1: '#102040', fundo2: '#2a4a86',
+      tinta: '#ffffff', tintaSuave: '#bcc8e6', cartao: '#16305f',
+      acao: '#d03a3a', acaoTinta: '#ffffff', acaoSombra: '#8e2424', realce: '#ffffff', realceTinta: '#102040',
+      ok: '#3fbf6a',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',
     },
   },

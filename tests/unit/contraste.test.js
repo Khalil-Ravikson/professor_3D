@@ -33,6 +33,7 @@ function paresDe(p) {
     [c.tinta, c.fundo2, 4.5, 'texto sobre o fundo do gradiente'],
     [c.tinta, c.cartao, 4.5, 'texto no cartão, no quadro e nas legendas'],
     [c.tintaSuave, c.fundo1, 4.5, 'texto secundário sobre o fundo'],
+    [c.tintaSuave, c.fundo2, 4.5, 'texto secundário na ponta clara do gradiente, o pior caso'],
     [c.tintaSuave, c.cartao, 4.5, 'o que a pessoa disse, e o rótulo do quadro'],
     [c.realceTinta, c.realce, 4.5, 'texto do botão Enviar'],
     [c.acaoTinta, c.acao, 4.5, 'ícone do microfone e texto do botão principal'],
@@ -55,7 +56,7 @@ for (const p of PERSONAGENS) {
 
 test('a paleta padrão do CSS é a da primeira personagem', () => {
   // Se divergirem, a tela pisca com outra cor até o ui.js aplicar a paleta.
-  assert.equal(PERSONAGENS[0].paleta.fundo1, '#f7fbfd');
-  assert.equal(PERSONAGENS[0].paleta.tinta, '#1f2a44');
-  assert.equal(PERSONAGENS[0].paleta.acao, '#cf4034');
+  assert.equal(PERSONAGENS[0].paleta.fundo1, '#0c1c3e');
+  assert.equal(PERSONAGENS[0].paleta.tinta, '#ffffff');
+  assert.equal(PERSONAGENS[0].paleta.acao, '#e0224a');
 });

@@ -74,7 +74,9 @@ test('M6.2-4 (simulado): rosto do avatar num canvas -> presença, olhar acompanh
   const presente = await page.evaluate(() => window.__prof3d.presente);
   test.skip(!presente, 'O MediaPipe não reconheceu o rosto do avatar como rosto: presença, olhar e sorriso ficam para o teste com câmera real.');
 
-  // Cumprimentou (fala de presença no balão).
+  // Fase 5: o rosto chama a seleção, e não cumprimenta sozinho. A pessoa escolhe e aperta o botão grande.
+  await expect.poll(() => page.evaluate(() => window.__prof3d.etapa)).toBe('selecao');
+  await page.click('#selConversar');
   await expect(page.locator('#answer')).toHaveText('Oi! Que bom te ver. Quer me perguntar alguma coisa?');
 
   // Olhar: move a câmera do "rosto falso" para os lados e vê o yaw do lookAt do avatar principal mudar de sinal.

@@ -60,6 +60,7 @@ test('P9 legenda do que o personagem fala fica visível e é anunciada', async (
   // No cumprimento, a fala do aceno aparece escrita.
   await page.evaluate(() => window.__prof3d.definirEstado('idle'));
   await page.click('#passoAcao');
+  await page.click('#selConversar'); // atração, seleção, cumprimento
   await expect(page.locator('#answer')).not.toBeEmpty();
   await expect(bolha).toBeVisible();
   await page.screenshot({ path: 'relatorios/p9-legenda.png' });

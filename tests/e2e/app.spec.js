@@ -4,7 +4,8 @@
 import { test, expect } from '@playwright/test';
 
 const KOKORO = 'http://127.0.0.1:8880';
-const PERSONAGENS = ['luma', 'matematico', 'engenheiro', 'cientista'];
+// Ativos na seleção. Rafa ('engenheiro') e Nina ('cientista') têm .vrm, mas estão marcados emBreve e não carregam.
+const PERSONAGENS = ['luma', 'matematico'];
 
 async function kokoroNoAr() {
   try {
@@ -37,7 +38,7 @@ async function abrir(page, { chave = '', armazenamento = {} } = {}) {
 }
 
 async function trocarPara(page, id) {
-  await page.click(`.card[data-id="${id}"]`);
+  await page.evaluate((alvo) => window.__prof3d.irPara(window.__prof3d.buscarPersonagem(alvo)), id);
   await page.waitForFunction((alvo) => {
     const P = window.__prof3d;
     return P.personagem.id === alvo && P.avatar && document.getElementById('loading').hidden;
@@ -54,7 +55,7 @@ test('M1: abre, carrega o VRM e o console fica limpo', async ({ page }) => {
   expect(erros).toEqual([]);
 });
 
-test('M2: 4 personagens, 2 voltas, memória estável e sem erro', async ({ page }) => {
+test('M2: 2 personagens ativos, 2 voltas, memória estável e sem erro', async ({ page }) => {
   const erros = await abrir(page);
   const disponiveis = await page.evaluate(() => window.__prof3d.disponiveis);
   expect(disponiveis).toEqual(PERSONAGENS);
