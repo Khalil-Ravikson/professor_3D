@@ -4,6 +4,7 @@
 // paleta: vira variáveis CSS em :root (ver aplicarPaleta em ui.js). paleta.fonte: tipografia do personagem
 //   (Baloo 2 para os infantis; Atkinson Hyperlegible para Teo/Rafa, que leem números).
 // descricao: duas linhas, na tela de seleção. perfil: três traços de 1 a 5, INVENTADOS para o jogo (nunca dado real).
+// vitrine: frase curta mostrada na vitrine. amostraVoz: texto do botão Ouvir voz, que só toca áudio já guardado em cache.
 // emBreve: o personagem tem .vrm mas aparece bloqueado, com cadeado, e não carrega.
 // selecao: enquadramento de corpo inteiro da tela de seleção (mesmos campos de enquadramento).
 // enquadramento: distancia = câmera até a cabeça, em metros;
@@ -53,6 +54,8 @@ export const PERSONAGENS = [
     nome: 'Luma',
     papel: 'Professora de perguntas do dia a dia e histórias',
     descricao: 'Responde perguntas de todo dia com calma, em frases curtas, e conta histórias.',
+    vitrine: 'Me pergunte o que você quiser.', // frase curta da vitrine; só texto, sem som
+    amostraVoz: 'Oi! Eu sou a Luma. Esta é a minha voz.', // o que o botão Ouvir voz toca (só de cache, nunca sintetiza na hora)
     perfil: [{ rotulo: 'Paciência', valor: 5 }, { rotulo: 'Humor', valor: 3 }, { rotulo: 'Curiosidade', valor: 4 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
     publico: '5 a 10 anos',
     arquivoVrm: 'assets/avatars/8590256991748008892.vrm', // AvatarSample_A do VRoid Hub (nome original mantido)
@@ -90,6 +93,8 @@ export const PERSONAGENS = [
     nome: 'Teo',
     papel: 'Resolve problemas de matemática passo a passo',
     descricao: 'Mostra cada passo no quadro e confere toda conta na calculadora antes de responder.',
+    vitrine: 'Traga um problema e a gente resolve passo a passo.', // frase curta da vitrine; só texto, sem som
+    amostraVoz: 'Oi! Eu sou o Teo. Esta é a minha voz.', // o que o botão Ouvir voz toca (só de cache, nunca sintetiza na hora)
     perfil: [{ rotulo: 'Lógica', valor: 5 }, { rotulo: 'Paciência', valor: 4 }, { rotulo: 'Humor', valor: 2 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
     publico: '10 anos ou mais',
     arquivoVrm: 'assets/avatars/teo.vrm',
@@ -136,6 +141,8 @@ export const PERSONAGENS = [
     nome: 'Rafa',
     papel: 'Projeta, estima e compara alternativas',
     descricao: 'Pensa em mais de uma saída, faz as estimativas e só então escolhe a melhor.',
+    vitrine: 'Vamos pensar numa solução juntos.', // frase curta da vitrine; só texto, sem som
+    amostraVoz: 'Oi! Eu sou o Rafa. Esta é a minha voz.', // o que o botão Ouvir voz toca (só de cache, nunca sintetiza na hora)
     perfil: [{ rotulo: 'Precisão', valor: 5 }, { rotulo: 'Criatividade', valor: 4 }, { rotulo: 'Paciência', valor: 3 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
     emBreve: true, // tem .vrm, mas fica bloqueado na seleção até o dono liberar
     publico: '12 anos ou mais',
@@ -180,6 +187,8 @@ export const PERSONAGENS = [
     nome: 'Nina',
     papel: 'Explica fenômenos e propõe experimentos seguros',
     descricao: 'Explica fenômenos e propõe experimentos seguros para fazer com um adulto.',
+    vitrine: 'Vamos descobrir como as coisas funcionam.', // frase curta da vitrine; só texto, sem som
+    amostraVoz: 'Oi! Eu sou a Nina. Esta é a minha voz.', // o que o botão Ouvir voz toca (só de cache, nunca sintetiza na hora)
     perfil: [{ rotulo: 'Curiosidade', valor: 5 }, { rotulo: 'Humor', valor: 4 }, { rotulo: 'Paciência', valor: 4 }], // traços inventados para o jogo, de 1 a 5; não são dados reais (regra I3)
     emBreve: true, // tem .vrm, mas fica bloqueado na seleção até o dono liberar
     publico: '8 anos ou mais',

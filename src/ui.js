@@ -266,6 +266,7 @@ function atualizarSelecao() {
   }
   if (!personagem) return;
   const p = personagem;
+  desenharVitrine();
   elSel.papel.textContent = p.papel;
   elSel.nome.textContent = p.nome;
   elSel.desc.textContent = p.descricao || '';
@@ -288,8 +289,7 @@ function atualizarSelecao() {
   elSel.conversar.textContent = T.selecao.conversar(p.nome);
   elSel.conversar.disabled = !avatar || avatar.vrm == null || ocupado;
   elSel.ouvir.textContent = T.selecao.ouvirVoz;
-  // Marco I3 liga o áudio pré-gravado. Até lá o botão fica desligado e diz por quê.
-  elSel.motivo.textContent = elSel.ouvir.disabled ? T.selecao.semAudio : '';
+  atualizarOuvir();
   atualizarVizinhos();
   ajustarPalco();
 }
@@ -341,10 +341,91 @@ new ResizeObserver(ajustarPalco).observe(elSel.raiz);
 new ResizeObserver(ajustarPalco).observe($('selCartao'));
 retrato.addEventListener('change', ajustarPalco);
 
+/* ---------- Vitrine (fase 5, tela A) ---------- */
+// Percorre os personagens ativos sozinha, cada um na sua pose de assinatura (o gesto "atracao" do catálogo; sem clipe
+// ativo, fica no idle). Sem som: nada toca sozinho. Toque ou rosto levam à seleção (ver os ouvintes do palco).
+const elVit = { raiz: $('vitrine'), dica: $('vitDica'), papel: $('vitPapel'), nome: $('vitNome'), frase: $('vitFrase'), pontos: $('vitPontos'), cta: $('vitrineCta') };
+// Com ?debug a vitrine só cicla se o tempo foi pedido (vitrine_s): os testes esperam na atração e não podem ver o personagem trocar.
+const DEBUG = new URLSearchParams(location.search).has('debug');
+const vitrineMs = () => Math.max(3, Number(ler('vitrine_s', DEBUG ? '3600' : '10')) || 10) * 1000;
+const selecaoOciosoMs = () => Math.max(10, Number(ler('selecao_ocioso_s', '60')) || 60) * 1000;
+let timerVitrine = null, timerPose = null, timerOcioso = null;
+
+elVit.dica.textContent = T.vitrine.dica;
+elVit.cta.textContent = T.vitrine.cta;
+
+function desenharVitrine() {
+  if (!personagem) return;
+  elVit.papel.textContent = personagem.papel;
+  elVit.nome.textContent = personagem.nome;
+  elVit.frase.textContent = personagem.vitrine || '';
+  elVit.pontos.replaceChildren(...disponiveis.map((p) => {
+    const li = document.createElement('li');
+    if (p === personagem) li.setAttribute('aria-current', 'true');
+    return li;
+  }));
+  elVit.pontos.hidden = disponiveis.length < 2;
+}
+
+function pararVitrine() { clearTimeout(timerVitrine); clearTimeout(timerPose); timerVitrine = timerPose = null; }
+
+function iniciarVitrine() {
+  pararVitrine();
+  desenharVitrine();
+  // A pose de assinatura entra um instante depois do personagem aparecer. Gesto sem clipe ativo é ignorado e registrado.
+  // Com ?debug e sem vitrine_s pedido, a pose não toca: os testes medem o corpo parado na atração.
+  const quietoNoDebug = DEBUG && !ler('vitrine_s', '');
+  if (!quietoNoDebug) timerPose = setTimeout(() => { if (etapa === 'atracao' && avatar && !sessaoAtiva) pedirGesto('atracao', 'vitrine'); }, 1800);
+  if (disponiveis.length > 1) timerVitrine = setTimeout(avancarVitrine, vitrineMs());
+}
+
+async function avancarVitrine() {
+  if (etapa !== 'atracao') return;
+  const v = personagem && vizinhosDe(personagem);
+  if (!v) return;
+  await irPara(v.prox, 1);
+  if (etapa === 'atracao') iniciarVitrine();
+}
+
+// Na escolha, parar um tempo sem tocar em nada devolve a tela à vitrine, para a próxima pessoa.
+function tocarOciosoSelecao() {
+  clearTimeout(timerOcioso);
+  if (etapa === 'selecao') timerOcioso = setTimeout(() => { if (etapa === 'selecao') definirEtapa('atracao'); }, selecaoOciosoMs());
+}
+for (const alvo of [elSel.raiz, stage]) {
+  alvo.addEventListener('pointerdown', tocarOciosoSelecao);
+  alvo.addEventListener('keydown', tocarOciosoSelecao);
+}
+elVit.cta.addEventListener('click', () => { voz.preparar(); if (etapa === 'atracao') definirEtapa('selecao'); });
+
+/* ---------- Ouvir voz ---------- */
+// Toca o áudio que já está em cache. Nunca sintetiza na hora, então o botão não gasta orçamento
+// nem chama serviço pago, qualquer que seja o motor de voz. Sem áudio guardado, fica desligado e diz por quê.
+function motivoSemAudio() {
+  if (ultimoMotorVoz && ultimoMotorVoz.direto) return T.selecao.semAudioSistema;
+  if (voz.statusServidor && voz.statusServidor.ok === false) return T.selecao.semAudioServidor;
+  return T.selecao.preparandoAudio;
+}
+
+function atualizarOuvir() {
+  if (!personagem) return;
+  const texto = personagem.amostraVoz;
+  const pronta = !!texto && voz.temPronta(texto, efetivo(personagem).voz);
+  elSel.ouvir.disabled = !pronta;
+  elSel.motivo.textContent = pronta ? '' : motivoSemAudio();
+}
+
+elSel.ouvir.addEventListener('click', () => {
+  if (!personagem) return;
+  voz.preparar();
+  silenciar();
+  voz.tocarPronta(personagem.amostraVoz, efetivo(personagem).voz);
+});
+
 // Enquadramento: corpo inteiro na seleção, rosto e ombros nas demais telas. Quem decide é a etapa.
 function aplicarEnquadramento(animar) {
   if (!avatar) return;
-  cena.definirCorpo(etapa === 'selecao' ? avatar.medidaCorpo() : null, animar);
+  cena.definirCorpo(etapa === 'selecao' || etapa === 'atracao' ? avatar.medidaCorpo() : null, animar);
 }
 
 // Gera em sequência (um modelo por vez em memória) só os retratos que faltam no cache.
@@ -534,6 +615,7 @@ const boca = criarBoca({ ctx: voz.ctx, analisador: voz.analisador, saida: voz.sa
 let ultimoMotorVoz = null; // só para o painel de diagnóstico, que não pode ter efeito colateral
 function mostrarStatusVoz({ motor, aviso, servidor }) {
   ultimoMotorVoz = motor;
+  atualizarOuvir(); // sem personagem ainda, ela sai na primeira linha
   const s = servidor || {};
   const natural = motor && motor.id === 'webspeech' && motor.temNatural;
   const sel = T.voz.selo;
@@ -599,16 +681,17 @@ function definirEtapa(e) {
   etapa = e;
   app.dataset.etapa = e;
   elSel.raiz.hidden = e !== 'selecao';
+  elVit.raiz.hidden = e !== 'atracao';
   if (e === 'selecao') atualizarSelecao();
+  if (e === 'atracao') iniciarVitrine(); else pararVitrine();
+  tocarOciosoSelecao();
   aplicarEnquadramento(true);
   clearTimeout(timerEtapa);
   app.dataset.microfone = microfone === 'sim' ? 'sim' : 'nao';
   usarVozBtn.hidden = !(e === 'conversa' && microfone === 'nao');
   usarVozBtn.textContent = T.etapas.conversa.mudarParaVoz;
   const p = personagem ? personagem.nome : '';
-  if (e === 'atracao') {
-    mostrarPasso(T.etapas.atracao.titulo(p), T.etapas.atracao.texto, '', T.etapas.atracao.acao, null);
-  } else if (e === 'consentimento') {
+  if (e === 'consentimento') {
     const c = T.etapas.consentimento;
     mostrarPasso(c.titulo, c.texto, camera.ligada ? c.camLigada : c.camDesligada, c.acao, c.alternativa);
   } else {
@@ -688,7 +771,8 @@ function acenarEFalar(tipo, origem, frase) {
 
 function prepararFrasesFixas(p) {
   const ef = efetivo(p);
-  for (const f of [ef.oiPresenca, ef.despedida]) if (f) voz.preSintetizar(f, ef.voz);
+  Promise.all([ef.oiPresenca, ef.despedida, p.amostraVoz].filter(Boolean).map((f) => voz.preSintetizar(f, ef.voz)))
+    .then(() => { if (personagem === p) atualizarOuvir(); });
 }
 
 function iniciarSessao(origem) {
@@ -1275,6 +1359,12 @@ const elInativ = $('opInatividade');
 elInativ.value = inatividadeS();
 elInativ.addEventListener('change', () => { const v = Math.max(15, Math.min(600, Number(elInativ.value) || 90)); elInativ.value = v; gravar('inatividade_s', String(v)); tocarInatividade(); });
 
+const elOcioso = $('opSelecaoOcioso'), elVitTempo = $('opVitrineTempo');
+elOcioso.value = selecaoOciosoMs() / 1000;
+elOcioso.addEventListener('change', () => { const v = Math.max(10, Math.min(600, Number(elOcioso.value) || 60)); elOcioso.value = v; gravar('selecao_ocioso_s', String(v)); tocarOciosoSelecao(); });
+elVitTempo.value = Number(ler('vitrine_s', '10')) || 10; // o campo mostra o que foi guardado; o modo ?debug não muda o que o operador vê
+elVitTempo.addEventListener('change', () => { const v = Math.max(3, Math.min(60, Number(elVitTempo.value) || 10)); elVitTempo.value = v; gravar('vitrine_s', String(v)); if (etapa === 'atracao') iniciarVitrine(); });
+
 const elFixar = $('fixarLugar');
 elFixar.checked = fixarNoLugar();
 elFixar.addEventListener('change', () => gravar('fixar_lugar', elFixar.checked ? 'sim' : 'nao'));
@@ -1349,7 +1439,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get diretor() { return diretor; },
     licencas,
     registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao, definirEstado,
-    diagnostico, custo, vigia, recarregarAvatar, VERSAO, irPara, andar, retratos,
+    diagnostico, custo, vigia, recarregarAvatar, VERSAO, irPara, andar, retratos, definirEtapa, desenharVitrine,
     get etapa() { return etapa; },
     // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
     irParaConversa(mic = 'sim') { sessaoAtiva = true; microfone = mic; definirEtapa('conversa'); },

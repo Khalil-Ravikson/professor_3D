@@ -85,8 +85,8 @@ etapa('Licenças', 'modelos, clipes e dependências; falha com AGPL, GPL, licen�
 etapa('Animação e gestos', 'máquina de estados, gesto que não corta sentença, pedido inválido ignorado, capturas dos quadros-chave',
   () => rodar('npx', ['playwright', 'test', 'tests/e2e/p3-gestos.spec.js', 'tests/e2e/p1-galeria.spec.js']));
 
-etapa('Seleção de personagem', 'roleta, pódio, perfil, troca por clique, seta, teclado e deslize, retratos em cache e 20 trocas sem vazar memória',
-  () => rodar('npx', ['playwright', 'test', 'tests/e2e/p11-selecao.spec.js']));
+etapa('Vitrine e seleção de personagem', 'ciclo sem som, retorno por inatividade, roleta, pódio, perfil, troca por clique, seta, teclado e deslize, retratos em cache, 20 trocas sem vazar memória e Ouvir voz sem chamada de rede',
+  () => rodar('npx', ['playwright', 'test', 'tests/e2e/p11-selecao.spec.js', 'tests/e2e/p11-vitrine.spec.js']));
 
 etapa('Sessão e fluxo', 'cumprimento, conversa, despedida e as etapas em retrato e paisagem',
   () => rodar('npx', ['playwright', 'test', 'tests/e2e/p4-sessao.spec.js', 'tests/e2e/p5-fluxo.spec.js']));

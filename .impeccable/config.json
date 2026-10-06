@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "wireframes/index.html"
+        ],
+        "createdAt": "2026-10-06T19:50:38.785Z",
+        "reason": "Claude decidiu, sem confirmação do usuário: wireframe de planejamento com telas em miniatura, não é a interface; a hierarquia real está nas telas implementadas"
+      }
+    ]
+  }
+}

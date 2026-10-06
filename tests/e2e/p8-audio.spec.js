@@ -22,6 +22,7 @@ async function abrir(page, viewport = { width: 1280, height: 720 }) {
     () => !!(window.__prof3d && window.__prof3d.avatar) && !/Preparando/.test(document.getElementById('status').textContent),
     null, { timeout: 90_000 },
   );
+  await page.evaluate(() => window.__prof3d.irParaConversa('nao')); // a vitrine é muda e esconde o volume
 }
 
 test('P8 controle de volume: visível, muda o ganho e lembra depois de recarregar', async ({ page }) => {
@@ -59,6 +60,7 @@ test('P8 controle de volume: visível, muda o ganho e lembra depois de recarrega
   // Recarrega: volta no mesmo lugar.
   await page.reload();
   await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.mesa), null, { timeout: 90_000 });
+  await page.evaluate(() => window.__prof3d.irParaConversa('nao')); // o reload volta para a vitrine, que esconde o volume
   expect(await page.evaluate(() => window.__prof3d.mesa.volume)).toBeCloseTo(0.4, 5);
   expect(await page.evaluate(() => window.__prof3d.mesa.mudo)).toBe(true);
 

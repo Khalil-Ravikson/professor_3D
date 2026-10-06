@@ -12,6 +12,7 @@ async function abrir(page, extra = {}) {
     localStorage.clear();
     localStorage.setItem('prof3d_gemini_key', 'chave-falsa');
     localStorage.setItem('prof3d_personagem', 'luma');
+    localStorage.setItem('prof3d_vitrine_s', '60'); // a vitrine não troca de personagem no meio do teste
     for (const [c, v] of Object.entries(x)) localStorage.setItem('prof3d_' + c, v);
   }, extra);
   await page.goto('/?debug');

@@ -15,6 +15,7 @@ async function abrir(page, viewport) {
     localStorage.setItem('prof3d_teste_p11', 'sim');
     localStorage.setItem('prof3d_personagem', 'luma');
     localStorage.setItem('prof3d_motor', 'webspeech');
+    localStorage.setItem('prof3d_vitrine_s', '60'); // a vitrine não troca de personagem no meio do teste
   });
   await page.goto('/?debug');
   await page.waitForFunction(
@@ -25,7 +26,7 @@ async function abrir(page, viewport) {
 }
 
 async function irParaSelecao(page) {
-  await page.click('#passoAcao');
+  await page.click('#vitrineCta');
   await expect.poll(() => page.evaluate(() => window.__prof3d.etapa)).toBe('selecao');
   await page.waitForTimeout(900); // a câmera desliza do rosto para o corpo inteiro
 }
@@ -91,6 +92,14 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
       return c.left < pod.r && c.right > pod.l && c.top < pod.b && c.bottom > pod.t;
     });
     expect(cobre, 'o cartão não pode cobrir o pódio').toBe(false);
+
+    // O que o operador precisa continua ao alcance do dedo: nenhuma faixa de texto cobre a engrenagem nem a câmera.
+    const alcance = await page.evaluate(() => ['gear', 'camBtn'].map((id) => {
+      const r = document.getElementById(id).getBoundingClientRect();
+      const topo = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return topo && (topo.id === id || topo.closest('#' + id)) ? null : `${id} coberto por ${topo && (topo.id || topo.className || topo.tagName)}`;
+    }).filter(Boolean));
+    expect(alcance, alcance.join('; ')).toEqual([]);
 
     await page.screenshot({ path: `relatorios/p11-selecao-luma-${nome}.png` });
     expect(erros).toEqual([]);
@@ -172,7 +181,7 @@ test('I2 seleção: o Tab alcança os controles, na ordem, com anel de foco', as
   }
   // O botão de conversar tem o anel de foco na caixa (o clip-path cortaria um contorno no próprio botão).
   await page.focus('#selConversar');
-  const anel = await page.evaluate(() => getComputedStyle(document.querySelector('.sel-conversar-caixa'), null).outlineStyle);
+  const anel = await page.evaluate(() => getComputedStyle(document.getElementById('selConversar').parentElement, null).outlineStyle);
   expect(['solid', 'auto']).toContain(anel);
 });
 

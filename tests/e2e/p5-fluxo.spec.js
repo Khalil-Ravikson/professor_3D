@@ -30,14 +30,15 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
     const textos = [];
 
     // 1. Atração: um botão no painel, sem conversa, sem microfone.
-    await expect(page.locator('#passo')).toBeVisible();
-    await expect(page.locator('#passoTitulo')).toHaveText('Luma está aqui');
-    expect(await botoesVisiveis(page)).toEqual(['Escolher personagem']);
+    await expect(page.locator('#vitrine')).toBeVisible();
+    await expect(page.locator('#vitNome')).toHaveText('Luma');
+    await expect(page.locator('#vitrineCta')).toHaveText('Toque para escolher');
+    await expect(page.locator('#passo')).toBeHidden(); // o cartão de etapa só existe a partir do consentimento
     textos.push(await textoVisivel(page));
     await page.screenshot({ path: `relatorios/p5-1-atracao-${nome}.png` });
 
-    // 1b. Seleção (fase 5): a atração leva à escolha; o botão grande começa a conversa.
-    await page.click('#passoAcao');
+    // 1b. Seleção (fase 5): a vitrine leva à escolha; o botão grande começa a conversa.
+    await page.click('#vitrineCta');
     expect(await page.evaluate(() => window.__prof3d.etapa)).toBe('selecao');
     await expect(page.locator('#selConversar')).toHaveText('Conversar com Luma');
     await page.waitForTimeout(900);
@@ -82,8 +83,8 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
     await page.screenshot({ path: `relatorios/p5-6-limpeza-${nome}.png` });
 
     // 6. Segunda pessoa escolhe escrever: microfone some, aparece a opção de mudar de ideia.
-    await page.click('#passoAcao');
-    await page.click('#selConversar'); // atração, seleção, cumprimento
+    await page.click('#vitrineCta');
+    await page.click('#selConversar'); // vitrine, seleção, cumprimento
     await expect(page.locator('#passoTitulo')).toHaveText('Posso ouvir você?', { timeout: 20_000 });
     await page.click('#passoAlt');
     await expect(page.locator('#mic')).toBeHidden();

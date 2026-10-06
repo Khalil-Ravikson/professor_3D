@@ -51,16 +51,13 @@ test('P9 legenda do que o personagem fala fica visível e é anunciada', async (
   const bolha = page.locator('.bubble');
   await expect(bolha).toHaveAttribute('aria-live', 'polite');
 
-  // Na atração o painel some, mas basta o personagem falar para a legenda voltar.
+  // A vitrine e a escolha são mudas: não há fala para legendar. Na vitrine o painel inteiro some.
   expect(await page.evaluate(() => window.__prof3d.etapa)).toBe('atracao');
   await expect(bolha).toBeHidden();
-  await page.evaluate(() => window.__prof3d.definirEstado('speaking'));
-  await expect(bolha).toBeVisible();
 
   // No cumprimento, a fala do aceno aparece escrita.
-  await page.evaluate(() => window.__prof3d.definirEstado('idle'));
-  await page.click('#passoAcao');
-  await page.click('#selConversar'); // atração, seleção, cumprimento
+  await page.click('#vitrineCta');
+  await page.click('#selConversar'); // vitrine, seleção, cumprimento
   await expect(page.locator('#answer')).not.toBeEmpty();
   await expect(bolha).toBeVisible();
   await page.screenshot({ path: 'relatorios/p9-legenda.png' });

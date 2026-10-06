@@ -236,6 +236,21 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
       }
       return ok;
     },
+    // O texto já está inteiro em cache de áudio? Só motores que devolvem áudio (Kokoro) guardam;
+    // a voz do sistema fala direto e não tem arquivo para guardar.
+    temPronta(texto, voz) {
+      const motor = resolverMotor(voz);
+      if (motor.direto) return false;
+      const partes = dividirFrases(texto).map((f) => normalizarParaFala(limparParaFala(f)).trim()).filter(Boolean);
+      return partes.length > 0 && partes.every((f) => preSintetizadas.has(chaveFrase(motor, voz, f)));
+    },
+    // Toca SÓ o que está em cache. Nunca sintetiza: é o que garante que o botão "Ouvir voz" não gasta
+    // orçamento nem chama serviço pago. Devolve false (e não toca nada) se faltar qualquer frase.
+    tocarPronta(texto, voz) {
+      if (!this.temPronta(texto, voz)) return false;
+      this.falarTexto(texto, voz);
+      return true;
+    },
     falarTexto(texto, voz) {
       const t = novoTurno(voz);
       for (const f of dividirFrases(texto)) t.adicionar(f);

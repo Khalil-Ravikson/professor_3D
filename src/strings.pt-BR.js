@@ -57,6 +57,11 @@ export const T = {
       acao: 'Recomeçar',
     },
   },
+  vitrine: {
+    regiao: 'Vitrine de personagens',
+    dica: 'Toque na tela para escolher quem vai conversar',
+    cta: 'Toque para escolher',
+  },
   selecao: {
     regiao: 'Escolha de personagem',
     comoFunciona: 'Como funciona',
@@ -66,6 +71,9 @@ export const T = {
     conversar: (nome) => `Conversar com ${nome}`,
     ouvirVoz: 'Ouvir voz',
     semAudio: 'Ainda não tem áudio gravado',
+    preparandoAudio: 'Preparando o áudio...',
+    semAudioSistema: 'A voz do sistema não guarda áudio',
+    semAudioServidor: 'O servidor de voz está fora do ar',
     emBreve: 'Em breve',
     emBreveNome: (nome) => `${nome}, em breve`,
     ficcao: 'Traços inventados para o jogo, não são dados reais.',
