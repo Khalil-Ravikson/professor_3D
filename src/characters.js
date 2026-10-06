@@ -74,7 +74,7 @@ export const PERSONAGENS = [
     paleta: {
       fundo1: '#f7fbfd', fundo2: '#dfeef6',
       tinta: '#1f2a44', tintaSuave: '#51607e', cartao: '#ffffff',
-      acao: '#d9473a', acaoSombra: '#9e2f25', realce: '#ffc93c', realceTinta: '#1f2a44',
+      acao: '#cf4034', acaoTinta: '#ffffff', acaoSombra: '#9e2f25', realce: '#ffc93c', realceTinta: '#1f2a44',
       ok: '#2f8a54',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',
     },
@@ -117,7 +117,7 @@ export const PERSONAGENS = [
     paleta: {
       fundo1: '#23272e', fundo2: '#15181d',
       tinta: '#eef1f5', tintaSuave: '#a9b2bf', cartao: '#2c323b',
-      acao: '#e0873a', acaoSombra: '#a55e22', realce: '#e0873a', realceTinta: '#15181d',
+      acao: '#e0873a', acaoTinta: '#15181d', acaoSombra: '#a55e22', realce: '#e0873a', realceTinta: '#15181d',
       ok: '#58b884',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
     },
@@ -157,7 +157,7 @@ export const PERSONAGENS = [
     paleta: {
       fundo1: '#f4f2ea', fundo2: '#e6e2d3',
       tinta: '#20303a', tintaSuave: '#55646d', cartao: '#fbfaf5',
-      acao: '#2f6e8f', acaoSombra: '#1f4b62', realce: '#2f6e8f', realceTinta: '#ffffff',
+      acao: '#2f6e8f', acaoTinta: '#ffffff', acaoSombra: '#1f4b62', realce: '#2f6e8f', realceTinta: '#ffffff',
       ok: '#3f8a4f',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
     },
@@ -194,7 +194,7 @@ export const PERSONAGENS = [
     paleta: {
       fundo1: '#eef6f1', fundo2: '#d6e9df',
       tinta: '#1d3328', tintaSuave: '#4c6558', cartao: '#ffffff',
-      acao: '#2e7d5b', acaoSombra: '#1d5a40', realce: '#f2b134', realceTinta: '#1d3328',
+      acao: '#2e7d5b', acaoTinta: '#ffffff', acaoSombra: '#1d5a40', realce: '#f2b134', realceTinta: '#1d3328',
       ok: '#2e7d5b',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',
     },

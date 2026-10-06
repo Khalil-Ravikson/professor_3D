@@ -79,26 +79,18 @@ function historicoDe(id) {
   return historicos.get(id);
 }
 
-const ROTULOS = {
-  idle: 'Aperte o microfone e fale!',
-  listening: 'Estou ouvindo... aperte de novo quando terminar',
-  thinking: 'Pensando...',
-  speaking: 'Falando...',
-  error: 'Algo deu errado.',
-};
-
 function definirEstado(s, texto) {
-  if (s === 'loading-ear') { micBtn.disabled = true; elStatus.textContent = 'Preparando o ouvido...'; return; }
+  if (s === 'loading-ear') { micBtn.disabled = true; elStatus.textContent = T.estado.preparandoOuvido; return; }
   app.dataset.state = s;
   // Microfone aberto: o personagem continua audível, mas sai da frente de quem fala.
   if (mesa) mesa.abaixarFundo(s === 'listening');
-  elStatus.textContent = texto || ROTULOS[s];
+  elStatus.textContent = texto || T.estado[s];
   stopBtn.hidden = !(s === 'speaking' || s === 'thinking');
   if (s === 'idle') micBtn.disabled = false;
 }
 
 function estadoOcioso() {
-  definirEstado('idle', apiKey ? undefined : 'Um adulto precisa colocar a chave do Gemini na engrenagem.');
+  definirEstado('idle', apiKey ? undefined : T.estado.semChave);
 }
 
 /* ---------- Cena ---------- */
@@ -145,7 +137,7 @@ const vigia = criarVigia({
 
 const MAPA_PALETA = {
   fundo1: '--fundo-1', fundo2: '--fundo-2', tinta: '--tinta', tintaSuave: '--tinta-suave',
-  cartao: '--cartao', acao: '--acao', acaoSombra: '--acao-sombra', realce: '--realce',
+  cartao: '--cartao', acao: '--acao', acaoTinta: '--acao-tinta', acaoSombra: '--acao-sombra', realce: '--realce',
   realceTinta: '--realce-tinta', ok: '--ok', fonte: '--fonte',
 };
 function aplicarPaleta(p) {
@@ -265,7 +257,7 @@ async function trocarPersonagem(p) {
   gravar('personagem', p.id);
   aplicarPaleta(p.paleta);
   document.title = `${p.nome} 3D`;
-  micBtn.setAttribute('aria-label', `Falar com ${p.nome}`);
+  micBtn.setAttribute('aria-label', T.avatar.falar(p.nome));
   marcarCardAtivo(p.id);
   if (etapa === 'atracao') definirEtapa('atracao'); // o convite usa o nome do personagem
   renderizarAtalhos(p.atalhos);
@@ -315,8 +307,8 @@ async function trocarPersonagem(p) {
   } catch (e) {
     if (minha !== carga) return;
     console.error(`[avatar] ${p.nome}:`, e);
-    if (e instanceof AvatarAusenteError) mostrarErroAvatar(`Falta o arquivo do avatar de ${p.nome}.`, p.arquivoVrm);
-    else mostrarErroAvatar(`O arquivo do avatar de ${p.nome} não abriu. Confira se é um .vrm válido.`, p.arquivoVrm);
+    if (e instanceof AvatarAusenteError) mostrarErroAvatar(T.avatar.ausente(p.nome), p.arquivoVrm);
+    else mostrarErroAvatar(T.avatar.naoAbriu(p.nome), p.arquivoVrm);
   } finally {
     if (minha === carga) {
       $('loading').hidden = true;
@@ -375,13 +367,13 @@ const voz = criarVoz({
   aoStatus: mostrarStatusVoz,
   aoMudarVozesSistema: (vozes, manual) => {
     const auto = document.createElement('option');
-    auto.value = ''; auto.textContent = 'Automática por personagem';
+    auto.value = ''; auto.textContent = T.voz.automatica;
     voiceSel.replaceChildren(auto, ...vozes.map((v) => {
       const o = document.createElement('option'); o.value = v.name; o.textContent = `${v.name} (${v.lang})`; return o;
     }));
     voiceSel.value = manual ? manual.name : '';
   },
-  aoProgressoNavegador: (pct) => { elStatusVoz.textContent = `Baixando o modelo Kokoro para o navegador... ${pct}%`; },
+  aoProgressoNavegador: (pct) => { elStatusVoz.textContent = T.voz.baixandoModelo(pct); },
 });
 mesa = voz.mesa;
 function silenciar() { voz.parar(); falando = false; }
@@ -416,11 +408,12 @@ function mostrarStatusVoz({ motor, aviso, servidor }) {
   ultimoMotorVoz = motor;
   const s = servidor || {};
   const natural = motor && motor.id === 'webspeech' && motor.temNatural;
-  let selo = motor ? (natural ? 'Voz: Edge Natural' : motor.id === 'webspeech' ? 'Voz do sistema' : motor.id === 'kokoro-browser' ? 'Voz: Kokoro no navegador' : 'Voz: Kokoro') : 'Voz: verificando';
-  if (aviso) selo = aviso.startsWith('Servidor') ? 'Voz do sistema: servidor Kokoro fora do ar' : 'Voz do sistema';
+  const sel = T.voz.selo;
+  let selo = motor ? (natural ? sel.edge : motor.id === 'webspeech' ? sel.sistema : motor.id === 'kokoro-browser' ? sel.navegador : sel.kokoro) : sel.verificando;
+  if (aviso) selo = aviso.startsWith('Servidor') ? sel.servidorFora : sel.sistema;
   elSeloVoz.textContent = selo;
   elSeloVoz.dataset.alerta = aviso ? 'sim' : 'nao';
-  const linhaServidor = s.ok === true ? `Servidor respondendo (${s.detalhe}).` : s.ok === false ? `Servidor ${s.detalhe}.` : 'Verificando o servidor...';
+  const linhaServidor = s.ok === true ? T.voz.servidorOk(s.detalhe) : s.ok === false ? T.voz.servidorRuim(s.detalhe) : T.voz.verificando;
   elStatusVoz.textContent = aviso ? `${linhaServidor} ${aviso}` : linhaServidor;
 }
 
@@ -606,14 +599,14 @@ async function perguntarAoPersonagem(q) {
   if (!sessaoAtiva) { sessaoAtiva = true; app.dataset.sessao = 'ativa'; }
   if (etapa !== 'conversa') definirEtapa('conversa');
   tocarInatividade();
-  if (!apiKey) { definirEstado('idle', 'Um adulto precisa colocar a chave do Gemini na engrenagem.'); dlg.showModal(); return; }
+  if (!apiKey) { definirEstado('idle', T.estado.semChave); dlg.showModal(); return; }
   const quem = personagem;
   const marca = diagnostico.marcarPergunta();
   marcaPergunta = marca;
   const ef = efetivo(quem);
   const hist = historicoDe(quem.id);
   silenciar(); ocupado = true;
-  elHeard.textContent = 'Você: ' + q;
+  elHeard.textContent = T.estado.voce(q);
   elAnswer.textContent = '';
   definirEstado('thinking');
   if (ef.quadro) { elQuadro.hidden = false; quadro.limpar(q); }
@@ -653,7 +646,7 @@ async function perguntarAoPersonagem(q) {
     for (const f of divisor.finalizar()) falaTurno.adicionar(f);
     falaTurno.finalizar();
     if (personagem !== quem) { hist.pop(); return; }
-    if (!texto) { hist.pop(); elAnswer.textContent = 'Hmm, não consegui responder isso. Vamos tentar outra pergunta?'; return; }
+    if (!texto) { hist.pop(); elAnswer.textContent = T.resposta.vazia; return; }
     hist.push({ role: 'assistant', content: texto.replace(/\[gesto:[^\]]*\]\s*/gi, ''), contas });
     elAnswer.textContent = removerMarcas(limparParaFala(falado)).trim() || separarFalaEQuadro(hist[hist.length - 1].content).fala;
   } catch (e) {
@@ -665,12 +658,12 @@ async function perguntarAoPersonagem(q) {
     if (e instanceof ErroGemini) {
       // O 400 também acontece com chave válida quando a requisição tem algo que o modelo recusa.
       const motivo = (() => { try { return JSON.parse(e.detalhe).error.message; } catch (x) { return (e.detalhe || '').slice(0, 200); } })();
-      elAnswer.textContent = [401, 403].includes(e.status) ? 'A chave da API não foi aceita. Confira na engrenagem.'
-        : e.status === 400 ? `O Gemini recusou o pedido (400): ${motivo}`
-        : e.status === 429 ? 'Muitas perguntas de uma vez. Espere um pouquinho!'
-        : `Ops, deu erro (${e.status}). Tente de novo!`;
+      elAnswer.textContent = [401, 403].includes(e.status) ? T.resposta.chaveRecusada
+        : e.status === 400 ? T.resposta.recusado(motivo)
+        : e.status === 429 ? T.resposta.muitasPerguntas
+        : T.resposta.erroHttp(e.status);
     } else {
-      elAnswer.textContent = 'Não consegui falar com o Gemini. Confira a internet e tente de novo!';
+      elAnswer.textContent = T.resposta.semInternet;
     }
   } finally {
     ocupado = false;
@@ -681,10 +674,10 @@ async function perguntarAoPersonagem(q) {
 
 /* ---------- Ouvido ---------- */
 const ouvido = criarOuvido({
-  aoOuvirParcial: (t) => { elHeard.textContent = 'Você: ' + t; },
+  aoOuvirParcial: (t) => { elHeard.textContent = T.estado.voce(t); },
   aoOuvirFinal: (t) => perguntarAoPersonagem(t),
   aoMudarEstado: definirEstado,
-  aoProgresso: (pct) => { elStatus.textContent = `Preparando o ouvido... ${pct}%`; },
+  aoProgresso: (pct) => { elStatus.textContent = T.estado.preparandoOuvidoPct(pct); },
 });
 
 /* ---------- Controles ---------- */
@@ -723,7 +716,7 @@ async function aplicarConfigVoz() {
       mostrarStatusVoz({ motor: voz.navegador, aviso: null, servidor: await voz.navegador.verificar() });
     } catch (e) {
       console.error('[kokoro-browser] não carregou:', e);
-      elStatusVoz.textContent = 'O Kokoro no navegador não carregou. Veja o console.';
+      elStatusVoz.textContent = T.voz.navegadorFalhou;
     }
   }
 }
@@ -737,14 +730,15 @@ const fmtSeg = (s) => (s < 60 ? `${s} s` : s < 3600 ? `${Math.floor(s / 60)} min
 // Estado de cada serviço, com o motivo quando está ruim.
 function estadoDosServicos() {
   const sv = voz.statusServidor || {};
+  const sv2 = T.diagnostico.servicos;
   const lic = personagem ? licencas.get(personagem.id) : null;
   return {
-    Gemini: apiKey ? `chave configurada, modelo ${config.modelo}` : 'sem chave',
-    Voz: (ultimoMotorVoz ? ultimoMotorVoz.nome : 'escolhendo') +
-      (sv.ok === true ? ' (servidor respondendo)' : sv.ok === false ? ` (servidor ${sv.detalhe})` : ''),
-    Ouvido: ouvido.gravando ? 'ouvindo agora' : 'pronto',
-    Câmera: camera && camera.ligada ? 'ligada' : 'desligada',
-    Avatar: avatar ? `${personagem.nome} carregado${lic ? `, licença ${T.licenca.decisao[lic.decisao] || lic.decisao}` : ''}` : 'sem avatar',
+    Gemini: apiKey ? sv2.gemini(config.modelo) : sv2.semChave,
+    Voz: (ultimoMotorVoz ? ultimoMotorVoz.nome : sv2.escolhendo) +
+      (sv.ok === true ? sv2.servidorOk : sv.ok === false ? sv2.servidorRuim(sv.detalhe) : ''),
+    Ouvido: ouvido.gravando ? sv2.ouvindo : sv2.ouvidoPronto,
+    Câmera: camera && camera.ligada ? sv2.camLigada : sv2.camDesligada,
+    Avatar: avatar ? sv2.avatar(personagem.nome, lic && (T.licenca.decisao[lic.decisao] || lic.decisao)) : sv2.semAvatar,
   };
 }
 
@@ -754,20 +748,22 @@ function desenharDiagnostico() {
   if (!dlg.open) return;
   const r = diagnostico.retrato(estadoDosServicos());
   const g = custo.resumo();
+  const D = T.diagnostico;
+  const n = (v) => v.toLocaleString('pt-BR');
   const linhas = [
-    ['Versão', `${VERSAO} (${VERSAO_MARCO}, ${VERSAO_DATA})`, false],
-    ['Em pé há', fmtSeg(r.emPe), false],
-    ['Quadros por segundo', r.fps === null ? 'medindo' : String(r.fps), r.fps !== null && r.fps < 25],
-    ['Imagem', r.contextoPerdido ? 'contexto perdido' : 'normal', r.contextoPerdido],
-    ['Memória', r.memoria ? `${r.memoria.usadaMb} MB de ${r.memoria.limiteMb} MB` : 'o navegador não informa', false],
-    ['Na placa de vídeo', r.gpu ? `${r.gpu.geometrias} geometrias, ${r.gpu.texturas} texturas` : 'sem dados', false],
-    ['Resposta do Gemini', r.latencia.perguntaMs === null ? 'sem medida ainda' : `${r.latencia.perguntaMs} ms (mediana de ${r.latencia.amostras})`, false],
-    ['Até a primeira fala', r.latencia.falaMs === null ? 'sem medida ainda' : `${r.latencia.falaMs} ms`, false],
-    ['Respostas hoje', `${g.respostas} (${g.sessao.respostas} nesta sessão)`, false],
-    ['Tokens hoje', `${g.entrada.toLocaleString('pt-BR')} de entrada, ${(g.saida + g.pensamento).toLocaleString('pt-BR')} de saída`, false],
-    ['Gasto hoje', g.semPreco.length ? `US$ ${g.usd.toFixed(4)}, sem preço para ${g.semPreco.join(', ')}` : `R$ ${g.reais.toFixed(2)} (US$ ${g.usd.toFixed(4)})`, g.semPreco.length > 0],
-    ['Recargas automáticas', String(contarRecargas()), contarRecargas() > 0],
-    ['Erros', r.erros ? `${r.erros}, último às ${r.ultimoErro.t}` : 'nenhum', r.erros > 0],
+    [D.versao, `${VERSAO} (${VERSAO_MARCO}, ${VERSAO_DATA})`, false],
+    [D.emPe, fmtSeg(r.emPe), false],
+    [D.fps, r.fps === null ? D.medindo : String(r.fps), r.fps !== null && r.fps < 25],
+    [D.imagem, r.contextoPerdido ? D.imagemPerdida : D.imagemOk, r.contextoPerdido],
+    [D.memoria, r.memoria ? D.memoriaValor(r.memoria.usadaMb, r.memoria.limiteMb) : D.semMemoria, false],
+    [D.gpu, r.gpu ? D.gpuValor(r.gpu.geometrias, r.gpu.texturas) : D.semDados, false],
+    [D.respostaGemini, r.latencia.perguntaMs === null ? D.semMedida : D.ms(r.latencia.perguntaMs, r.latencia.amostras), false],
+    [D.ateFala, r.latencia.falaMs === null ? D.semMedida : D.ms(r.latencia.falaMs), false],
+    [D.respostasHoje, D.respostasValor(g.respostas, g.sessao.respostas), false],
+    [D.tokensHoje, D.tokensValor(n(g.entrada), n(g.saida + g.pensamento)), false],
+    [D.gastoHoje, g.semPreco.length ? D.gastoSemPreco(g.usd.toFixed(4), g.semPreco.join(', ')) : D.gastoValor(g.reais.toFixed(2), g.usd.toFixed(4)), g.semPreco.length > 0],
+    [D.recargas, String(contarRecargas()), contarRecargas() > 0],
+    [D.erros, r.erros ? D.errosValor(r.erros, r.ultimoErro.t) : D.semErros, r.erros > 0],
   ];
   for (const [nome, valor] of Object.entries(r.servicos)) linhas.push([nome, valor, RUIM.test(valor)]);
 
@@ -777,7 +773,7 @@ function desenharDiagnostico() {
     if (alerta) dd.dataset.alerta = 'sim';
     return [dt, dd];
   }));
-  $('diagFonte').textContent = `Preços: ${g.fonte}. Sem preço do modelo na tabela, o gasto aparece só em tokens.`;
+  $('diagFonte').textContent = D.fonte(g.fonte);
   elDiagErros.replaceChildren(...diagnostico.erros.slice(-5).reverse().map((e) => {
     const li = document.createElement('li');
     li.textContent = `${e.t} ${e.origem}: ${e.mensagem}`;
@@ -793,7 +789,7 @@ elCambio.addEventListener('change', () => {
 $('diagZerar').addEventListener('click', () => { custo.zerarSessao(); desenharDiagnostico(); });
 $('diagContexto').addEventListener('click', () => {
   if (!cena.perderContextoDeProposito()) {
-    $('diagFonte').textContent = 'Este navegador não deixa derrubar o contexto de propósito (falta WEBGL_lose_context).';
+    $('diagFonte').textContent = T.diagnostico.semPerdaDeContexto;
     return;
   }
   dlg.close();
@@ -823,14 +819,14 @@ $('closeSettings').addEventListener('click', async () => {
   gravar('modelo', config.modelo);
   dlg.close();
   await aplicarConfigVoz();
-  if (!ocupado && !ouvido.gravando) definirEstado('idle', apiKey ? 'Tudo pronto!' : 'Falta a chave do Gemini.');
+  if (!ocupado && !ouvido.gravando) definirEstado('idle', apiKey ? T.estado.pronto : T.estado.faltaChave);
 });
 $('testVoice').addEventListener('click', async () => {
   voz.preparar(); silenciar();
   await aplicarConfigVoz();
   const p = personagem || disponiveis[0] || PERSONAGENS[0];
   const vozTeste = config.motor === 'kokoro-browser' ? { motor: 'kokoro-browser', id: 'af_heart', speed: 1 } : efetivo(p).voz;
-  const frase = config.motor === 'kokoro-browser' ? `Hi, I am ${p.nome}. This is the English voice.` : `Oi! Eu sou ${p.nome}. Esta é a minha voz.`;
+  const frase = config.motor === 'kokoro-browser' ? T.voz.testeIngles(p.nome) : T.voz.teste(p.nome);
   voz.falarTexto(frase, vozTeste);
 });
 
@@ -855,9 +851,9 @@ const camera = criarCamera({
   aoMudar: ({ estado, motivo }) => {
     const ligada = estado === 'ligada';
     camBtn.setAttribute('aria-pressed', String(ligada));
-    camBtn.setAttribute('aria-label', ligada ? 'Desligar a câmera' : 'Ligar a câmera');
+    camBtn.setAttribute('aria-label', ligada ? T.camera.desligar : T.camera.ligar);
     camAviso.hidden = !ligada;
-    camEstado.textContent = { ligando: 'Ligando a câmera...', ligada: `Câmera ligada (${camera.delegado || ''}).`, desligada: 'Câmera desligada.', erro: `A câmera não ligou: ${motivo}.` }[estado];
+    camEstado.textContent = { ligando: T.camera.ligando, ligada: T.camera.ligada(camera.delegado || ''), desligada: T.camera.desligada, erro: T.camera.erro(motivo) }[estado];
     if (!ligada) {
       presenca = criarPresenca(); detSorriso = criarDetectorSorriso();
       if (avatar) { avatar.olharPara(null); avatar.espelhar(null); }
@@ -963,7 +959,7 @@ modoInfantil.addEventListener('change', () => { gravar('modo_infantil', modoInfa
 function fmtDur(s) { return `${Number(s).toFixed(1).replace('.', ',')} s`; }
 
 function renderizarGaleria() {
-  if (!catalogo) { elGaleria.replaceChildren(); $('galeriaLacunas').textContent = 'Catálogo de animações não carregou.'; return; }
+  if (!catalogo) { elGaleria.replaceChildren(); $('galeriaLacunas').textContent = T.galeria.semCatalogo; return; }
   const clipes = aplicarEscolhas(catalogo).filter((c) => !modoInfantil.checked || c.infantilOk);
   elGaleria.replaceChildren(...clipes.map((c) => {
     const li = document.createElement('li');
@@ -981,7 +977,7 @@ function renderizarGaleria() {
         ${c.enviado ? '<button class="btn ghost g-apagar" type="button">Apagar</button>' : ''}
       </div>`;
     li.querySelector('.g-nome').textContent = c.id;
-    li.querySelector('.g-meta').textContent = `${fmtDur(c.duracao)} | ${c.loop ? 'laço' : 'uma vez'} | intensidade ${c.intensidade}`;
+    li.querySelector('.g-meta').textContent = T.galeria.meta(fmtDur(c.duracao), c.loop, c.intensidade);
     li.querySelector('.g-desc').textContent = c.descricao;
     const ligado = li.querySelector('.g-ligado'), crianca = li.querySelector('.g-crianca');
     ligado.checked = c.status === 'ativo';
@@ -992,16 +988,16 @@ function renderizarGaleria() {
     li.querySelector('.g-tocar').addEventListener('click', async () => {
       if (!avatar) return;
       const clipe = await clipeDoArquivo(c.arquivo, avatar.vrm);
-      if (!clipe) { li.querySelector('.g-desc').textContent = `Não abriu ${c.arquivo}. Confira se o arquivo está na pasta.`; return; }
+      if (!clipe) { li.querySelector('.g-desc').textContent = T.galeria.naoAbriu(c.arquivo); return; }
       dlg.classList.add('espiando');
-      pausar.setAttribute('aria-pressed', 'false'); pausar.textContent = 'Pausar';
+      pausar.setAttribute('aria-pressed', 'false'); pausar.textContent = T.galeria.pausar;
       avatar.previa.tocar(clipe, { velocidade: Number(vel.value), laco: c.loop });
     });
     pausar.addEventListener('click', () => {
       if (!avatar || !avatar.previa.ativa) return;
       const p = pausar.getAttribute('aria-pressed') !== 'true';
       avatar.previa.pausar(p);
-      pausar.setAttribute('aria-pressed', String(p)); pausar.textContent = p ? 'Continuar' : 'Pausar';
+      pausar.setAttribute('aria-pressed', String(p)); pausar.textContent = p ? T.galeria.continuar : T.galeria.pausar;
     });
     vel.addEventListener('change', () => avatar && avatar.previa.velocidade(Number(vel.value)));
     const apagar = li.querySelector('.g-apagar');
@@ -1011,7 +1007,7 @@ function renderizarGaleria() {
   const ocultos = catalogo.clipes.length - clipes.length;
   $('galeriaLacunas').textContent =
     (ocultos ? `${ocultos} clipe(s) escondido(s) pelo modo infantil. ` : '') +
-    `Faltam clipes para: ${catalogo.lacunas.map((l) => l.id).join(', ')}.`;
+    T.galeria.lacunas(catalogo.lacunas.map((l) => l.id).join(', '));
 }
 
 dlg.addEventListener('close', () => {
@@ -1047,7 +1043,7 @@ function usosPossiveis() {
 }
 function preencherUsos() {
   const atual = elEnvio.uso.value;
-  const nenhum = document.createElement('option'); nenhum.value = ''; nenhum.textContent = 'Só na galeria';
+  const nenhum = document.createElement('option'); nenhum.value = ''; nenhum.textContent = T.galeria.soNaGaleria;
   elEnvio.uso.replaceChildren(nenhum, ...usosPossiveis().map((u) => { const o = document.createElement('option'); o.value = u; o.textContent = u; return o; }));
   elEnvio.uso.value = atual;
 }
@@ -1057,7 +1053,7 @@ function registroDoEnviado(m) {
     id: m.id, arquivo: 'enviado:' + m.id, descricao: m.descricao, casoDeUso: m.uso ? [m.uso] : [],
     loop: !!m.medidas.pareceLaco, duracao: m.medidas.duracao, intensidade: 1, infantilOk: true,
     origem: `enviado pelo operador (${m.nomeArquivo})`,
-    licenca: m.tipo === 'fbx' ? 'Mixamo (termos da Adobe); não redistribuir' : 'conferir a licença do arquivo enviado',
+    licenca: m.tipo === 'fbx' ? T.envio.licencaFbx : T.envio.licencaVrma,
     status: 'ativo', enviado: true,
   };
 }
@@ -1079,7 +1075,7 @@ async function apagarEnviado(id) {
     await apagarMovimento(id);
   } catch (e) {
     console.error('[movimentos] não apagou:', e);
-    elEnvio.saida.textContent = 'Não consegui apagar. Veja o console.';
+    elEnvio.saida.textContent = T.envio.naoApagou;
     return;
   }
   esquecerEnviado(id);
@@ -1094,13 +1090,13 @@ async function apagarEnviado(id) {
 elEnvio.btn.addEventListener('click', async () => {
   const f = elEnvio.arquivo.files[0];
   const saida = (t) => { elEnvio.saida.textContent = t; };
-  if (!f) { saida('Escolha um arquivo .fbx (Mixamo) ou .vrma.'); return; }
+  if (!f) { saida(T.envio.escolhaArquivo); return; }
   const tipo = /\.fbx$/i.test(f.name) ? 'fbx' : /\.vrma$/i.test(f.name) ? 'vrma' : null;
-  if (!tipo) { saida('Só aceito .fbx do Mixamo ou .vrma.'); return; }
-  if (!avatar) { saida('Espere o personagem carregar.'); return; }
+  if (!tipo) { saida(T.envio.tipoInvalido); return; }
+  if (!avatar) { saida(T.envio.espereCarregar); return; }
   const nome = elEnvio.nome.value.trim() || f.name.replace(/\.[^.]+$/, '');
   const id = idDoNome(nome);
-  saida('Convertendo...');
+  saida(T.envio.convertendo);
   elEnvio.btn.disabled = true;
   try {
     const blob = new Blob([await f.arrayBuffer()], { type: 'application/octet-stream' });
@@ -1118,15 +1114,15 @@ elEnvio.btn.addEventListener('click', async () => {
     if (m.uso) gravarJSON('estados_extra', { ...lerJSON('estados_extra', {}), [m.uso]: id });
     diretor = novoDiretor(personagem);
     const avisos = avisosDasMedidas(medidas);
-    saida(`Pronto: ${fmtDur(medidas.duracao)}${m.uso ? `, usado como "${m.uso}"` : ''}. ` +
-      (avisos.length ? 'Atenção: ' + avisos.join('; ') + '.' : 'Corpo parado e começo e fim parecidos.') + ' Olhe a prévia: a mão na frente do rosto só se vê tocando.');
+    saida(T.envio.pronto(fmtDur(medidas.duracao), m.uso) +
+      (avisos.length ? T.envio.comAvisos(avisos.join('; ')) : T.envio.semAvisos) + T.envio.olheAPrevia);
     renderizarGaleria();
     dlg.classList.add('espiando');
     avatar.previa.tocar(clipe, { laco: false });
   } catch (e) {
     console.error('[movimentos] envio falhou:', e);
     esquecerEnviado(id);
-    saida(/quota/i.test(String(e)) ? 'Sem espaço no navegador para guardar o arquivo.' : 'O envio falhou. Veja o console.');
+    saida(/quota/i.test(String(e)) ? T.envio.semEspaco : T.envio.falhou);
   } finally {
     elEnvio.btn.disabled = false;
   }
@@ -1187,8 +1183,8 @@ async function montarCreditos() {
       }
       corpo.appendChild(ul);
     }
-    const h = document.createElement('h3'); h.textContent = 'Código de terceiros'; corpo.appendChild(h);
-    const p = document.createElement('p'); p.textContent = 'three.js (MIT), @pixiv/three-vrm e o exemplo de Mixamo do three-vrm (MIT, pixiv Inc.), MediaPipe (Apache 2.0), Kokoro (Apache 2.0).'; corpo.appendChild(p);
+    const h = document.createElement('h3'); h.textContent = T.creditos.terceiros; corpo.appendChild(h);
+    const p = document.createElement('p'); p.textContent = T.creditos.terceirosLista; corpo.appendChild(p);
   } catch (e) {
     console.error('[creditos]', e);
     corpo.textContent = T.creditos.erro;
@@ -1232,7 +1228,7 @@ vigia.iniciar();
 if (!disponiveis.length) {
   $('loading').hidden = true;
   aplicarPaleta(PERSONAGENS[0].paleta);
-  mostrarErroAvatar('Nenhum avatar encontrado.', PERSONAGENS.map((p) => p.arquivoVrm).join(', '));
+  mostrarErroAvatar(T.avatar.nenhum, PERSONAGENS.map((p) => p.arquivoVrm).join(', '));
   $('painel').hidden = true;
 } else {
   const salvo = buscarPersonagem(ler('personagem'));
