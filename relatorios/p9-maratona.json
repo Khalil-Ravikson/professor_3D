@@ -1,0 +1,107 @@
+{
+  "status": "rodando",
+  "comecou": "2026-10-06T16:20:01.507Z",
+  "terminou": "2026-10-06T16:21:16.489Z",
+  "horasPedidas": 4,
+  "horasRodadas": 0.02,
+  "geminiReal": false,
+  "sessoes": 7,
+  "perguntas": 21,
+  "erros": 0,
+  "listaDeErros": [],
+  "heapMb": {
+    "primeira": 34.3,
+    "ultima": 34.7,
+    "maior": 34.7,
+    "menor": 34.3
+  },
+  "fps": {
+    "primeira": 60.3,
+    "ultima": 60.3,
+    "menor": 60.3,
+    "mediana": 60.3
+  },
+  "geometrias": {
+    "primeira": 7,
+    "ultima": 7
+  },
+  "texturas": {
+    "primeira": 17,
+    "ultima": 17
+  },
+  "recargasDoVigia": 0,
+  "amostras": [
+    {
+      "t": "2026-10-06T16:20:11.899Z",
+      "minuto": 0,
+      "sessoes": 1,
+      "perguntas": 3,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 34.3,
+      "geometrias": 7,
+      "texturas": 17,
+      "quadros": 553,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 17,
+        "falaMs": 18,
+        "amostras": 3
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 3,
+        "entrada": 5400,
+        "saida": 540,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 5400,
+          "saida": 540,
+          "respostas": 3
+        },
+        "usd": 0.013,
+        "reais": 0.07,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:21:13.473Z",
+      "minuto": 1,
+      "sessoes": 7,
+      "perguntas": 21,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 34.7,
+      "geometrias": 7,
+      "texturas": 17,
+      "quadros": 4247,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 15,
+        "falaMs": 15,
+        "amostras": 21
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 21,
+        "entrada": 37800,
+        "saida": 3780,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 37800,
+          "saida": 3780,
+          "respostas": 21
+        },
+        "usd": 0.0907,
+        "reais": 0.47,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    }
+  ]
+}

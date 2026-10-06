@@ -29,3 +29,18 @@ Só quando existir um pacote de áudio gravado (seção 31 do REPERTORIO, item 8
 |---|---|---|---|
 | 11 | Instalar o ffmpeg (`winget install Gyan.FFmpeg`) e rodar `node tools/normalizar-audio.mjs <pasta>`. | Sai um relatório com I, TP e LRA antes e depois de cada arquivo, e os arquivos normalizados numa pasta nova. | |
 | 12 | Ouvir os arquivos normalizados em sequência. | Todos no mesmo volume, sem nenhum estourado. | |
+
+## P9, quiosque (06/10/2026)
+
+O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ninguém mexendo. O que falta conferir é o totem de verdade.
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 13 | Engrenagem, Diagnóstico, "Testar queda de imagem". | A tela mostra "Um instante" e o personagem volta sozinho em poucos segundos, sem recarregar a página. | |
+| 14 | Com o app aberto, suspender a máquina (fechar a tampa) e acordar depois de uns minutos. | O app **não** recarrega. O vigia entende suspensão como pausa, não como travamento. | |
+| 15 | Deixar o app numa aba em segundo plano por uns minutos e voltar. | Mesma coisa: nada de recarga automática. | |
+| 16 | Atualizar o driver de vídeo ou tirar e pôr o cabo de uma tela externa com o app aberto. | É o caso real de queda de contexto. Conferir se o aviso aparece e o personagem volta. | |
+| 17 | Deixar o totem ligado a noite inteira com o app aberto. | De manhã, abrir a engrenagem: "Recargas automáticas" deve estar em 0 e "Erros" vazio ou com motivo conhecido. | |
+| 18 | Conferir o painel com a chave real do Gemini depois de umas 20 perguntas. | "Gasto hoje" mostra valor em reais, e a cotação do dólar está atualizada. | |
+| 19 | Olhar a tela do público com o totem de pé, a 1 m de distância. | A legenda do que o personagem fala é legível e nenhum texto fica apagado sobre o fundo. | |
+| 20 | Navegar só pelo teclado (Tab e Enter), sem tocar na tela. | Dá para começar a conversa, mexer no volume e enviar uma pergunta escrita. O anel de foco é visível em todos. | |

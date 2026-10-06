@@ -273,6 +273,9 @@ Formato: `AAAA-MM-DD | o que testou | resultado | decisão`
 - 2026-10-01 | galeria no painel (Tocar, Pausar, Velocidade, Ligado, Ok para criança) com Playwright em retrato e paisagem | passou; escolha persiste após recarregar | a prévia usa o enquadramento do rosto, então clipes de corpo inteiro aparecem cortados (ver problemas conhecidos)
 - 2026-10-06 | P8 áudio: volume visível no palco, intervalo entre sentenças, redução do fundo com o microfone aberto e normalização por frase (`src/audio.js`) | intervalo medido no navegador com a voz do sistema: 182 a 194 ms (pedido 180), diferença entre o maior e o menor de 12 ms. Volume com curva ao quadrado (meio curso = 25% de ganho), rampa linear de 60 ms: o `setTargetAtTime` nunca chega a zero e deixava um fio de som no mudo. Fundo cai para 30% enquanto o microfone está aberto. Normalização por frase: RMS alvo -20 dBFS com teto de pico em -1,5 dBFS e travas de +12/-12 dB; medida nos dois WAV de `amostras/` (Gemini TTS), -13,61 e -14,54 dBFS viraram -20,00 e -20,00 (diferença entre eles: 0,93 dB antes, 0 dB depois) | adotado. A medida é RMS em dBFS com porta de silêncio, NÃO é LUFS do EBU R128: ponderação K daria mais trabalho do que o problema pede para frases curtas de fala. Para o pacote pré-gravado vale o `loudnorm` do ffmpeg em duas passagens (`tools/normalizar-audio.mjs`); o ffmpeg não está instalado nesta máquina, então esse script está NÃO TESTADO. A voz do sistema (Web Speech) não passa pelo AudioContext: o controle de volume e a normalização não valem para ela, só o intervalo entre sentenças
 
+- 2026-10-06 | P9 robustez de quiosque: perda de contexto WebGL, vigia do laço, diagnóstico do operador, acessibilidade e textos num arquivo só | Queda de contexto forçada com `WEBGL_lose_context` e recuperada no teste: o laço para, o público vê um aviso curto e o modelo é remontado sem recarregar a página. O vigia precisou de duas proteções que não estavam óbvias: aba oculta (o navegador para o rAF de propósito) e rodada perdida do próprio vigia (o `setInterval` é estrangulado em segundo plano e para na suspensão da máquina); sem elas, acordar a máquina recarregava a página. Contraste: dois achados reais, branco sobre a cor de ação da Luma dava 4,27:1 e sobre o laranja do Teo 2,73:1, contra os 4,5:1 do WCAG | adotado. Cada paleta passou a declarar `acaoTinta`, a cor que contrasta com a sua cor de ação, e o vermelho da Luma escureceu de #d9473a para #cf4034
+- 2026-10-06 | preços do Gemini na fonte primária (ai.google.dev/gemini-api/docs/pricing) | o `gemini-3.5-flash`, que é o `MODELO_PADRAO` do app, custa US$ 1,50 de entrada e US$ 9,00 de saída por milhão: 5 vezes a entrada e 3,6 vezes a saída do 2.5 Flash. Com a premissa da seção 23, 5.000 respostas dão R$ 124, contra R$ 21 do 3.1 Flash-Lite e R$ 7 do 2.5 Flash-Lite | medidor de gasto no painel do operador, com os tokens que a própria API informa; a escolha do modelo é do dono (ver seção 23)
+
 ---
 
 ## 13. Referências visuais (direção, não cópia)
@@ -551,6 +554,27 @@ Todas usam o RAG, citam a fonte e funcionam em modo infantil.
 | Gemini 2.5 Flash-Lite | US$ 0,10 entrada / 0,40 saída por 1 M tokens | [VERIFICADO] fonte secundária |
 | Gemini 2.5 Flash | US$ 0,30 / 2,50 | [VERIFICADO] fonte secundária |
 | Gemini 3.1 Flash-Lite | US$ 0,25 / 1,50 | [VERIFICADO] fonte secundária |
+
+### Atualização de 06/10/2026: preços lidos na fonte primária
+
+[VERIFICADO] Página oficial de preços da API Gemini (ai.google.dev/gemini-api/docs/pricing), consultada em 06/10/2026. Por 1 milhão de tokens, entrada de texto, modo pago:
+
+| Modelo | Entrada | Saída |
+|---|---|---|
+| Gemini 3.5 Flash | US$ 1,50 | US$ 9,00 |
+| Gemini 3.1 Flash-Lite | US$ 0,25 | US$ 1,50 |
+| Gemini 2.5 Flash | US$ 0,30 | US$ 2,50 |
+| Gemini 2.5 Flash-Lite | US$ 0,10 | US$ 0,40 |
+
+Os três últimos batem com a tabela acima, que vinha de fonte secundária. O que mudou é o **modelo padrão do app**: `MODELO_PADRAO` em `src/brain.js` é o `gemini-3.5-flash`, que custa 5 vezes a entrada e 3,6 vezes a saída do 2.5 Flash. Com a mesma premissa (2.000 tokens de entrada, 200 de saída, câmbio de 5,17):
+
+| Modelo | Por resposta | 5.000 respostas |
+|---|---|---|
+| 3.5 Flash (padrão de hoje) | R$ 0,0248 | **R$ 124** |
+| 3.1 Flash-Lite | R$ 0,0041 | R$ 21 |
+| 2.5 Flash-Lite | R$ 0,0014 | R$ 7 |
+
+R$ 124 de 5.000 respostas cabe no teto de R$ 200, mas sobra pouco para a voz premium pré-gravada do plano B. **Decisão do dono:** manter o 3.5 Flash e cortar da voz, ou trocar o padrão para um Flash-Lite. O medidor de gasto do painel do operador mostra o número real do dia.
 
 ### Contas
 Premissa: resposta com 2.000 tokens de entrada (persona, trechos do RAG, histórico) e 200 de saída; 300 caracteres falados.

@@ -118,6 +118,43 @@ Onde conseguir `.vrm`:
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Quiosque: o que acontece quando algo quebra
+
+Pensado para o totem ficar horas ligado sem ninguém olhando.
+
+| Situação | O que o app faz |
+|---|---|
+| A GPU tira o contexto WebGL (driver atualizado, máquina suspensa, memória de vídeo no limite) | Para o laço, mostra "Um instante" e remonta o personagem quando o contexto volta, sem recarregar a página. Se não voltar em 8 s, oferece recomeçar. |
+| O laço de renderização para de desenhar | O vigia (`src/vigia.js`) recarrega a página depois de 10 s parado. Aba oculta e máquina suspensa não contam como travamento. |
+| Trava de novo depois de recarregar | Depois de 3 tentativas o app desiste e pede para chamar quem cuida do totem. |
+| Erro de JavaScript que ninguém tratou | Vira linha no painel do operador. A tela do público não some por causa disso. |
+
+Para testar sem esperar: engrenagem, Diagnóstico, "Testar queda de imagem". O botão derruba o contexto de verdade, com a extensão `WEBGL_lose_context`.
+
+### Painel de diagnóstico
+
+Na engrenagem, no fim das configurações. Só o operador vê; a versão do app não aparece em lugar nenhum da tela do público.
+
+Mostra versão, tempo em pé, quadros por segundo, memória, uso da placa de vídeo, latência do Gemini, tempo até a primeira fala, gasto do dia, recargas automáticas, erros e o estado de cada serviço.
+
+O gasto vem dos tokens que a própria API informa, convertidos pela tabela de preços de `src/custo.js` (lida em ai.google.dev/gemini-api/docs/pricing em 06/10/2026) e pela cotação do dólar, que é editável no painel. Modelo fora da tabela aparece só em tokens: o app não chuta preço.
+
+### Teste de longa duração
+
+```bash
+node tools/maratona.mjs 4
+```
+
+Roda sessões simuladas em sequência pelo número de horas pedido, troca de personagem a cada 10 sessões e grava uma amostra por minuto em `relatorios/p9-maratona.json` (memória, FPS, geometrias, texturas, latência e erros). Sem `--real` o Gemini é simulado e nada sai para a internet. Ctrl+C encerra e grava o que já mediu.
+
+### Acessibilidade
+
+- Legenda do que o personagem fala sempre visível, em região `aria-live`.
+- Alvos de toque de 44 px na tela do público, conferidos por teste em retrato e paisagem.
+- Contraste conferido por teste em cada paleta (4,5:1 para texto, regra do WCAG 2.1).
+- Anel de foco em todos os controles, com o Tab passando por eles.
+- Modo calmo nas configurações, que também liga sozinho com "reduzir movimento" do sistema.
+
 ## Design
 
 Direção visual, tipografia e paleta (com o motivo de cada escolha) em `DESIGN.md`. A interface funciona em retrato (totem 1080×1920, celular) e em paisagem (avatar à esquerda, quadro e conversa à direita).
