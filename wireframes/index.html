@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframes da fase 5</title>
+<style>
+  /* Wireframes de média fidelidade. Servem para aprovar ESTRUTURA e HIERARQUIA, não acabamento.
+     Os blocos tracejados marcam o que vem do .vrm vivo ou de um render dele: nenhuma arte inventada (I4).
+     Fonte: pilha do sistema. A decisão de fonte está no DESIGN.md e depende de baixar os arquivos. */
+  :root {
+    /* Tokens propostos (valores medidos, ver DESIGN.md) */
+    --fundo-0: #0c1c3e; --fundo-1: #14315f; --fundo-2: #1d4175;
+    --tinta: #ffffff; --tinta-suave: #aab6d3;
+    --acao: #e0224a; --acao-anel: #ff4d6d;
+    --perfil-1: #f2c230; --perfil-2: #3fbf6a; --perfil-3: #35b6d6;
+    --podio: #e1e2e7;
+    --alvo: 56px;
+    /* Console (claro) */
+    --c-fundo: #f6f6f6; --c-cartao: #ffffff; --c-tinta: #1a1a1a; --c-suave: #4d4d4d; --c-linha: #e3e3e3; --c-acento: #c9531f;
+    --fonte: system-ui, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #2b2f3a; color: #e8eaf0; font-family: var(--fonte); }
+  h1 { font-size: 1.2rem; margin: 0 0 4px; }
+  .nota { margin: 0 0 20px; color: #aab6d3; max-width: 90ch; line-height: 1.45; font-size: .95rem; }
+  h2 { font-size: 1rem; margin: 28px 0 10px; padding-top: 14px; border-top: 1px solid #ffffff22; }
+  .linha { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .moldura { flex: 0 0 auto; }
+  .moldura > b { display: block; font-size: .8rem; color: #aab6d3; margin-bottom: 6px; font-weight: 600; }
+  /* Quadro lógico 1280x720 e 540x960, reduzido para caber na página. */
+  .tela { position: relative; overflow: hidden; transform-origin: top left; border-radius: 10px; }
+  .paisagem { width: 1280px; height: 720px; }
+  .retrato { width: 540px; height: 960px; }
+  .escala-p { width: 704px; height: 396px; } .escala-p .tela { transform: scale(.55); }
+  .escala-r { width: 337px; height: 600px; } .escala-r .tela { transform: scale(.625); }
+
+  /* ---------- Público: azul profundo, um acento ---------- */
+  .pub { background: linear-gradient(170deg, var(--fundo-0) 0%, var(--fundo-1) 55%, var(--fundo-2) 100%); color: var(--tinta); font-family: var(--fonte); }
+  .vivo { position: absolute; border: 2px dashed #ffffff55; border-radius: 14px; display: grid; place-content: center; text-align: center; color: #ffffffaa; font-size: 15px; line-height: 1.35; padding: 8px; }
+  .podio { position: absolute; border-radius: 50%; background: var(--podio); box-shadow: 0 18px 0 -6px #00000033; }
+  .topo { position: absolute; top: 20px; left: 28px; right: 28px; display: flex; justify-content: space-between; align-items: center; font-size: 17px; color: var(--tinta-suave); }
+  .topo span + span { margin-left: 24px; }
+  .papel { color: var(--tinta-suave); opacity: .75; font-size: 34px; font-weight: 700; letter-spacing: .02em; }
+  .nome { font-size: 92px; font-weight: 800; line-height: 1; margin: 2px 0 10px; }
+  .desc { font-size: 19px; line-height: 1.4; color: var(--tinta-suave); max-width: 34ch; }
+  .roleta { position: absolute; left: 36px; top: 110px; display: flex; flex-direction: column; gap: 18px; align-items: center; }
+  .retr { width: 78px; height: 78px; border-radius: 50%; background: #ffffff22; border: 2px dashed #ffffff55; display: grid; place-content: center; font-size: 12px; color: #ffffffaa; text-align: center; }
+  .retr.sel { width: 120px; height: 120px; border: 4px solid var(--acao-anel); background: #ffffff33; }
+  .retr.trava { border-style: solid; border-color: #ffffff33; }
+  .cunha { position: absolute; left: 10px; top: 297px; width: 34px; height: 34px; background: var(--tinta); clip-path: polygon(0 0, 100% 50%, 0 100%); border-radius: 4px; }
+  .perfil { display: flex; gap: 16px; margin: 14px 0 6px; }
+  .ind { width: 82px; text-align: center; font-size: 14px; color: var(--tinta-suave); }
+  .ind i { display: block; width: 82px; height: 82px; border-radius: 50%; margin-bottom: 4px; }
+  .ind.a i { background: conic-gradient(var(--perfil-1) 0 60%, #ffffff22 0); mask: radial-gradient(circle, transparent 54%, #000 56%); }
+  .ind.b i { background: conic-gradient(var(--perfil-2) 0 80%, #ffffff22 0); mask: radial-gradient(circle, transparent 54%, #000 56%); }
+  .ind.c i { background: conic-gradient(var(--perfil-3) 0 40%, #ffffff22 0); mask: radial-gradient(circle, transparent 54%, #000 56%); }
+  .ficcao { font-size: 13px; color: var(--tinta-suave); opacity: .85; margin: 0; }
+  .btn { display: inline-grid; place-content: center; min-height: var(--alvo); padding: 0 28px; font-weight: 800; font-size: 20px; color: #fff; background: var(--acao); border: 0; }
+  .chanfro { clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
+  .btn.sec { background: #ffffff1f; font-weight: 700; font-size: 17px; border-radius: 12px; }
+  .contador { font-size: 26px; font-weight: 800; margin: 4px 0; } .contador small { font-size: 18px; color: var(--tinta-suave); font-weight: 600; }
+  .vizinhos { position: absolute; right: 36px; bottom: 36px; display: flex; gap: 14px; }
+  .viz { width: 104px; height: 128px; border-radius: 16px; background: #ffffff1f; border: 2px dashed #ffffff44; display: grid; place-content: center; font-size: 13px; color: #ffffffaa; text-align: center; }
+  .viz.ant { transform: rotate(-7deg); } .viz.prox { transform: rotate(5deg); }
+  /* Conversa */
+  .balao { position: absolute; background: #0c1c3eee; border: 2px solid #ffffff2a; border-radius: 16px; padding: 14px 18px; font-size: 22px; line-height: 1.4; }
+  .barra { position: absolute; left: 24px; right: 24px; bottom: 22px; height: 76px; border-radius: 22px; background: #0c1c3ee6; border: 2px solid #ffffff2a; display: flex; align-items: center; gap: 12px; padding: 0 14px; }
+  .mais, .mic, .env { width: var(--alvo); height: var(--alvo); border-radius: 50%; display: grid; place-content: center; font-weight: 800; font-size: 22px; flex: 0 0 auto; }
+  .mais { background: #ffffff1f; } .mic { background: var(--acao); } .env { background: var(--tinta); color: var(--fundo-0); }
+  .modo { display: flex; border-radius: 999px; background: #ffffff1f; padding: 4px; font-size: 16px; font-weight: 700; flex: 0 0 auto; }
+  .modo b { padding: 10px 18px; border-radius: 999px; } .modo b.on { background: var(--tinta); color: var(--fundo-0); } .modo b:not(.on) { color: var(--tinta-suave); }
+  .campo { flex: 1; height: var(--alvo); border-radius: 14px; background: #ffffff14; display: flex; align-items: center; padding: 0 16px; color: var(--tinta-suave); font-size: 18px; }
+  .estados { position: absolute; display: flex; gap: 8px; font-size: 14px; font-weight: 700; flex-wrap: wrap; }
+  .estados span { padding: 6px 12px; border-radius: 999px; background: #ffffff1f; color: var(--tinta-suave); } .estados span.on { background: var(--tinta); color: var(--fundo-0); }
+  .quadro { position: absolute; background: #ffffff; color: #14315f; border-radius: 14px; padding: 16px 18px; font-family: ui-monospace, Consolas, monospace; font-size: 18px; line-height: 1.6; }
+  .legenda { position: absolute; left: 24px; right: 24px; text-align: center; font-size: 26px; font-weight: 700; line-height: 1.3; text-shadow: 0 2px 0 #0c1c3e; }
+  .camada { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(transparent, #0c1c3ecc); }
+  /* ---------- Console do operador: claro ---------- */
+  .con { background: var(--c-fundo); color: var(--c-tinta); font-family: var(--fonte); }
+  .con .painel { position: absolute; background: var(--c-cartao); border-radius: 16px; box-shadow: 0 1px 0 var(--c-linha), 0 8px 24px #0000000d; padding: 14px; font-size: 15px; }
+  .con h3 { margin: 0 0 10px; font-size: 15px; }
+  .abas { display: flex; background: var(--c-fundo); border-radius: 12px; padding: 4px; margin-bottom: 12px; font-size: 14px; font-weight: 600; }
+  .abas b { flex: 1; text-align: center; padding: 8px 4px; border-radius: 9px; color: var(--c-suave); } .abas b.on { background: var(--c-cartao); color: var(--c-tinta); box-shadow: 0 1px 2px #0002; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; color: var(--c-suave); } .item.on { background: #f1f1f1; color: var(--c-tinta); font-weight: 600; }
+  .item::before { content: ""; width: 22px; height: 22px; border-radius: 6px; background: var(--c-linha); }
+  .ferr { position: absolute; display: flex; gap: 6px; background: var(--c-cartao); border-radius: 14px; padding: 8px 10px; box-shadow: 0 8px 24px #00000014; font-size: 13px; font-weight: 600; color: var(--c-suave); }
+  .ferr span { padding: 6px 10px; border-radius: 8px; } .ferr span.on { background: #f1f1f1; color: var(--c-tinta); }
+  .con .vivo { border-color: #00000033; color: #00000088; }
+  .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .mini div { height: 62px; border-radius: 12px; background: var(--c-fundo); border: 2px dashed #00000022; display: grid; place-content: center; font-size: 12px; color: var(--c-suave); }
+  .campo-c { display: flex; border: 1px solid var(--c-linha); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+  .campo-c span { padding: 10px 12px; font-size: 14px; } .campo-c span:first-child { flex: 1; } .campo-c span:last-child { border-left: 1px solid var(--c-linha); color: var(--c-suave); }
+  .trilha { position: absolute; display: flex; gap: 6px; font-size: 13px; font-weight: 600; color: var(--c-suave); background: var(--c-cartao); border-radius: 999px; padding: 6px; box-shadow: 0 8px 24px #00000014; }
+  .trilha span { padding: 7px 12px; border-radius: 999px; } .trilha span.on { background: var(--c-tinta); color: #fff; }
+  .lic { position: absolute; background: #fff5e8; border: 1px solid #f0c890; color: #6b3a00; border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+  .legenda-wf { margin: 8px 0 0; font-size: .85rem; color: #aab6d3; max-width: 62ch; line-height: 1.4; }
+  ul.nums { margin: 6px 0 0; padding-left: 18px; font-size: .85rem; color: #cfd6e8; line-height: 1.45; max-width: 66ch; }
+</style>
+</head>
+<body>
+<h1>Fase 5: wireframes das quatro telas, em paisagem e retrato</h1>
+<p class="nota">
+  Para aprovar <b>estrutura e hierarquia</b>. Blocos tracejados são o personagem vivo (o .vrm carregado) ou um render dele: nada é desenhado à mão.
+  Cores são os tokens propostos no DESIGN.md. Fonte aqui é a do sistema; a fonte final depende de baixar os arquivos, que eu pergunto antes.
+  Os três indicadores de perfil são traços de personalidade <b>inventados para o jogo</b> e a tela diz isso.
+</p>
+
+<!-- ======================= A. VITRINE ======================= -->
+<h2>A. Vitrine (atração)</h2>
+<div class="linha">
+  <div class="moldura"><b>Paisagem 1280x720</b>
+    <div class="escala-p"><div class="tela paisagem pub">
+      <div class="topo"><span>Toque na tela para escolher quem vai conversar</span></div>
+      <div class="podio" style="left:420px;top:420px;width:440px;height:84px"></div>
+      <div class="vivo" style="left:490px;top:56px;width:300px;height:400px">personagem vivo,<br>pose de assinatura<br>(clipe ativo do catálogo<br>ou idle)</div>
+      <div style="position:absolute;left:0;right:0;bottom:36px;text-align:center">
+        <div class="papel" style="font-size:26px">Professora de perguntas do dia a dia</div>
+        <div class="nome" style="font-size:72px;margin:0">Luma</div>
+        <div class="desc" style="margin:4px auto 0;max-width:46ch">Frase curta do personagem, dita pelo texto, sem som automático.</div>
+      </div>
+      <div class="estados" style="right:28px;bottom:28px"><span class="on">1</span><span>2</span><span>3</span><span>4</span></div>
+    </div></div>
+    <p class="legenda-wf">Sem som. Percorre o elenco sozinha. Toque ou rosto detectado leva à seleção. Os pontos mostram a posição no ciclo.</p>
+  </div>
+  <div class="moldura"><b>Retrato 540x960</b>
+    <div class="escala-r"><div class="tela retrato pub">
+      <div class="topo" style="font-size:15px"><span>Toque para escolher</span></div>
+      <div class="podio" style="left:90px;top:600px;width:360px;height:76px"></div>
+      <div class="vivo" style="left:110px;top:70px;width:320px;height:570px">personagem vivo</div>
+      <div style="position:absolute;left:0;right:0;bottom:60px;text-align:center">
+        <div class="papel" style="font-size:22px">Professora de perguntas do dia a dia</div>
+        <div class="nome" style="font-size:68px;margin:0">Luma</div>
+        <div class="desc" style="margin:4px auto 0;font-size:17px">Frase curta do personagem.</div>
+      </div>
+      <div class="estados" style="left:0;right:0;bottom:24px;justify-content:center"><span class="on">1</span><span>2</span><span>3</span><span>4</span></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ======================= B. SELECAO ======================= -->
+<h2>B. Seleção de personagem</h2>
+<div class="linha">
+  <div class="moldura"><b>Paisagem 1280x720</b>
+    <div class="escala-p"><div class="tela paisagem pub">
+      <div class="topo"><span>Como funciona</span><span>Ajuda</span></div>
+      <div class="roleta">
+        <div class="retr">Teo</div>
+        <div class="retr sel">Luma<br>render</div>
+        <div class="retr">Rafa</div>
+        <div class="retr">Nina</div>
+        <div class="retr trava">&#128274;<br>Em breve</div>
+      </div>
+      <div class="cunha"></div>
+      <div class="podio" style="left:430px;top:586px;width:420px;height:92px"></div>
+      <div class="vivo" style="left:470px;top:60px;width:340px;height:560px">personagem vivo<br>carregado, grande;<br>a cabeça pode passar<br>da moldura</div>
+      <div style="position:absolute;right:48px;top:96px;width:370px">
+        <div class="papel">Professora do dia a dia</div>
+        <div class="nome">Luma</div>
+        <div class="desc">Responde perguntas de todo dia com calma, em frases curtas.</div>
+        <div class="perfil">
+          <div class="ind a"><i></i>Paciência</div><div class="ind b"><i></i>Humor</div><div class="ind c"><i></i>Curiosidade</div>
+        </div>
+        <p class="ficcao">Traços inventados para o jogo, não são dados reais.</p>
+        <div style="display:flex;gap:14px;align-items:center;margin-top:10px">
+          <div class="contador">1<small>/4</small></div>
+          <div class="btn sec">&#9654; Ouvir voz</div>
+        </div>
+      </div>
+      <div class="btn chanfro" style="position:absolute;left:400px;bottom:28px;width:480px;height:68px;font-size:24px">Conversar com Luma</div>
+      <div class="vizinhos"><div class="viz ant">anterior</div><div class="viz prox">próximo</div></div>
+    </div></div>
+    <ul class="nums">
+      <li>Roleta à esquerda: selecionado maior, com anel e seta; slot sem modelo vira cartão "Em breve" com cadeado, sem silhueta.</li>
+      <li>Pódio em CSS (elipse com sombra). Troca por seta, roleta, deslize e teclado, 350 a 450 ms.</li>
+      <li>"Ouvir voz" toca áudio pré-gravado em cache; sem áudio, o botão fica desabilitado e diz por quê. Nunca chama serviço pago.</li>
+    </ul>
+  </div>
+  <div class="moldura"><b>Retrato 540x960</b>
+    <div class="escala-r"><div class="tela retrato pub">
+      <div class="topo" style="font-size:15px"><span>Como funciona</span><span>Ajuda</span></div>
+      <div class="vivo" style="left:90px;top:60px;width:360px;height:470px">personagem vivo</div>
+      <div class="podio" style="left:90px;top:490px;width:360px;height:70px"></div>
+      <div style="position:absolute;left:30px;right:30px;top:580px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end">
+          <div><div class="papel" style="font-size:20px">Professora do dia a dia</div><div class="nome" style="font-size:64px">Luma</div></div>
+          <div class="contador" style="margin:0">1<small>/4</small></div>
+        </div>
+        <div class="desc" style="font-size:16px;max-width:none">Responde perguntas de todo dia com calma.</div>
+        <div class="perfil" style="margin:10px 0 2px;gap:10px">
+          <div class="ind a" style="width:64px"><i style="width:64px;height:64px"></i>Paciência</div><div class="ind b" style="width:64px"><i style="width:64px;height:64px"></i>Humor</div><div class="ind c" style="width:64px"><i style="width:64px;height:64px"></i>Curiosidade</div>
+          <div class="btn sec" style="margin-left:auto;align-self:center;font-size:15px;padding:0 16px">&#9654; Ouvir voz</div>
+        </div>
+      </div>
+      <div class="btn chanfro" style="position:absolute;left:30px;right:30px;bottom:96px;height:64px;font-size:22px">Conversar com Luma</div>
+      <div style="position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center;gap:12px">
+        <div class="retr" style="width:62px;height:62px">Teo</div><div class="retr sel" style="width:72px;height:72px;border-width:3px">Luma</div><div class="retr" style="width:62px;height:62px">Rafa</div><div class="retr" style="width:62px;height:62px">Nina</div><div class="retr trava" style="width:62px;height:62px">&#128274;</div>
+      </div>
+    </div></div>
+    <p class="legenda-wf">Em pé: personagem em cima, cartão no meio, roleta horizontal embaixo, botão acima da roleta.</p>
+  </div>
+</div>
+
+<!-- ======================= C. CONVERSA ======================= -->
+<h2>C. Conversa</h2>
+<div class="linha">
+  <div class="moldura"><b>Paisagem 1280x720</b>
+    <div class="escala-p"><div class="tela paisagem pub">
+      <div class="topo"><span>Luma</span><span>Câmera desligada</span></div>
+      <div class="podio" style="left:70px;top:560px;width:380px;height:80px"></div>
+      <div class="vivo" style="left:100px;top:70px;width:320px;height:520px">mesmo personagem,<br>sem recarregar</div>
+      <div class="quadro" style="left:500px;top:80px;width:740px;height:250px">Quadro (Teo e Rafa): passos,<br>contas e resposta.<br><span style="color:#51607e">Em Luma, esta área é a legenda.</span></div>
+      <div class="balao" style="left:500px;top:360px;width:740px"><span style="color:var(--tinta-suave);font-size:16px;display:block">Você disse</span>Por que o céu é azul?</div>
+      <div class="legenda" style="left:500px;right:40px;text-align:left;top:480px;font-size:24px">Legenda do que o personagem está dizendo, sempre visível.</div>
+      <div class="estados" style="left:500px;bottom:112px"><span>ocioso</span><span class="on">ouvindo</span><span>pensando</span><span>falando</span><span>voz de reserva</span><span>erro</span></div>
+      <div class="barra"><div class="mais">+</div><div class="modo"><b class="on">Guiada</b><b>Livre</b></div><div class="campo">Escreva aqui ou use o microfone</div><div class="mic">&#127908;</div><div class="env">&#8593;</div></div>
+    </div></div>
+    <ul class="nums">
+      <li>Barra de comando inferior: "+" abre menu, seletor Guiada ou Livre, campo, microfone e enviar.</li>
+      <li>Estados visíveis: ocioso, ouvindo, pensando, falando, erro, voz de reserva. Câmera ligada aparece no topo.</li>
+      <li>Camada de contraste atrás de qualquer texto sobre a cena 3D.</li>
+    </ul>
+  </div>
+  <div class="moldura"><b>Retrato 540x960</b>
+    <div class="escala-r"><div class="tela retrato pub">
+      <div class="topo" style="font-size:15px"><span>Luma</span><span>Câmera desligada</span></div>
+      <div class="vivo" style="left:100px;top:56px;width:340px;height:420px">personagem vivo</div>
+      <div class="camada" style="top:430px"></div>
+      <div class="legenda" style="top:470px;font-size:22px">Legenda do que o personagem está dizendo.</div>
+      <div class="quadro" style="left:24px;right:24px;top:560px;height:150px;font-size:16px">Quadro, quando houver.</div>
+      <div class="estados" style="left:24px;right:24px;bottom:118px;font-size:12px"><span>ocioso</span><span class="on">ouvindo</span><span>pensando</span><span>falando</span></div>
+      <div class="barra" style="height:84px"><div class="mais">+</div><div class="modo" style="font-size:14px"><b class="on" style="padding:8px 12px">Guiada</b><b style="padding:8px 12px">Livre</b></div><div style="flex:1"></div><div class="mic">&#127908;</div><div class="env">&#8593;</div></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ======================= D. CONSOLE ======================= -->
+<h2>D. Console do operador (claro, modo Operate)</h2>
+<div class="linha">
+  <div class="moldura"><b>Paisagem 1280x720</b>
+    <div class="escala-p"><div class="tela paisagem con">
+      <div class="painel" style="left:16px;top:16px;bottom:16px;width:250px">
+        <h3>Professores 3D</h3>
+        <div class="abas"><b class="on">Cena</b><b>Ativos</b></div>
+        <div class="item">Câmera</div><div class="item">Luz principal</div><div class="item">Luz de apoio</div>
+        <div class="item on">Personagem: Luma</div><div class="item">Fundo</div>
+        <div style="position:absolute;left:14px;right:14px;bottom:14px" class="campo-c"><span>Buscar personagem</span><span>Ctrl K</span></div>
+      </div>
+      <div class="trilha" style="left:300px;top:24px"><span>Arquivo</span><span class="on">Dados</span><span>Voz</span><span>Perfil</span><span>Animações</span><span>Salvar</span></div>
+      <div class="vivo" style="left:390px;top:90px;width:300px;height:520px">prévia viva do<br>personagem selecionado</div>
+      <div class="ferr" style="left:290px;top:78px;flex-direction:column"><span class="on">&#9654;</span><span>&#8635;</span><span>&#9633;</span></div>
+      <div class="lic" style="left:300px;right:360px;bottom:30px"><b>Licença lida do arquivo:</b> uso por todos, comercial permitido. Decisão: permitido. Se a licença não permitir o uso previsto, o botão Salvar fica bloqueado e o motivo aparece aqui.</div>
+      <div class="painel" style="right:16px;top:16px;bottom:16px;width:330px">
+        <div class="abas" style="font-size:12px"><b class="on">Cena</b><b>Animações</b><b>Vozes</b><b>Orçamento</b><b>Armaz.</b></div>
+        <h3>Luz</h3>
+        <div class="mini"><div>estilo 1</div><div>estilo 2</div></div>
+        <h3>Fundo</h3>
+        <div class="campo-c"><span>14315F</span><span>100 %</span></div>
+        <h3>Enquadramento</h3>
+        <div class="campo-c"><span>Distância 1,7 m</span><span>Altura 0,05</span></div>
+        <h3>Perfil de jogo (ficção)</h3>
+        <div class="campo-c"><span>Paciência 3</span><span>1 a 5</span></div>
+        <div class="btn" style="background:var(--c-tinta);min-height:44px;border-radius:12px;font-size:15px;width:100%">Salvar nos dados</div>
+      </div>
+    </div></div>
+    <ul class="nums">
+      <li>Estende o painel de configurações que já existe: galeria de animações, laboratório de vozes, medidor de custo e armazenamento viram abas, sem reescrever.</li>
+      <li>Cadastro: arrastar um .vrm, ver prévia, ler licença e metadados, preencher os dados e salvar. O personagem novo aparece na roleta.</li>
+    </ul>
+  </div>
+  <div class="moldura"><b>Retrato 540x960</b>
+    <div class="escala-r"><div class="tela retrato con">
+      <div class="painel" style="left:12px;right:12px;top:12px;height:52px;padding:8px"><div class="abas" style="margin:0"><b class="on">Cena</b><b>Ativos</b><b>Props</b></div></div>
+      <div class="vivo" style="left:90px;top:80px;width:360px;height:400px">prévia viva</div>
+      <div class="lic" style="left:12px;right:12px;top:492px">Licença lida do arquivo: permitido.</div>
+      <div class="painel" style="left:12px;right:12px;top:560px;bottom:12px">
+        <div class="abas" style="font-size:12px"><b class="on">Cena</b><b>Animações</b><b>Vozes</b><b>Orçam.</b><b>Armaz.</b></div>
+        <h3>Fundo</h3><div class="campo-c"><span>14315F</span><span>100 %</span></div>
+        <h3>Enquadramento</h3><div class="campo-c"><span>Distância 1,7 m</span><span>Altura 0,05</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+</body>
+</html>

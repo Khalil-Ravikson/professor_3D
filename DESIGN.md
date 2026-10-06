@@ -54,3 +54,47 @@ Os textos sobre fundo seguem contraste AA. O "?" de número não conferido usa l
 Gradiente roxo, brilho neon, vidro/blur, borda colorida lateral, emoji como ícone (os ícones são SVG de traço único), grade de três cartões iguais, easing com quique.
 
 Verificação: `npx impeccable@4.1.0 detect index.html comparar-lipsync.html` sem achados (01/10/2026, antes e depois do P6).
+
+---
+
+# Fase 5: direção proposta (aguarda aprovação dos wireframes em `wireframes/index.html`)
+
+Tudo abaixo é proposta. Enquanto o dono não aprovar, vale o que está acima.
+
+## Leitura das referências
+- **Seletor (01):** leva a estrutura: roleta vertical com o selecionado maior e com anel, personagem grande sobre pódio, nome enorme com rótulo de papel apagado, três indicadores, botão largo chanfrado, cartões dos vizinhos. Não leva névoa violeta, translucidez, marca, texto nem arte.
+- **Editor claro (02):** leva a árvore da cena à esquerda, propriedades à direita, barra flutuante, barra de comando embaixo. É a base do console do operador.
+- **Estúdio escuro (03):** só a estrutura (trilha de etapas, abas de expressão e animação, ficha do personagem). Violeta e brilho ficam de fora: é o que a regra I1 proíbe.
+
+## Paleta (medida nas imagens, ajustada por contraste)
+| Papel | Valor | Origem e ajuste |
+|---|---|---|
+| Fundo, topo | `#0c1c3e` | amostrado (01) |
+| Fundo, meio | `#14315f` | entre o topo e o meio amostrado (`#24518a`), mais escuro para o texto branco ficar acima de 10:1 |
+| Fundo, base | `#1d4175` | idem, 10,17:1 com branco |
+| Texto | `#ffffff` | 12,85:1 sobre o fundo do meio |
+| Texto suave | `#aab6d3` | 5,01:1 sobre a base, o pior caso |
+| **Acento (botão)** | `#e0224a` | o coral amostrado (`#ff2c59`) dava **3,65:1** com texto branco, abaixo do AA; este dá 4,67:1 |
+| Acento (anel, foco) | `#ff4d6d` | só para linha sobre o fundo escuro: 5,22:1 no topo |
+| Perfil 1, 2, 3 | `#f2c230`, `#3fbf6a`, `#35b6d6` | amostrado amarelo, verde e ciano, **sem o neon** (`#ffea44`, `#43fd4c`, `#49fffb`), chapados |
+| Pódio | `#e1e2e7` | amostrado (01) |
+| Console | `#f6f6f6` fundo, `#ffffff` cartão, `#1a1a1a` texto, `#4d4d4d` suave, `#e3e3e3` linha | amostrado (02); um acento quente `#c9531f` |
+
+Um acento só (o coral) no público. O tema por personagem varia **o matiz do fundo** dentro da família azul e o acento, vindos dos dados; os três indicadores são iguais para todos.
+
+## Tipografia
+**Proposta: manter Baloo 2 (nomes e botões) e Atkinson Hyperlegible (texto e números).** Motivo: já são as fontes do projeto, a Baloo é arredondada e amigável para criança de 5 a 14 anos, e a Atkinson foi desenhada para legibilidade e já serve Teo e Rafa. A referência usa uma neo-grotesca tipo Inter; copiar isso seria seguir a referência por seguir. JetBrains Mono fica só no quadro.
+
+**Problema real:** hoje as três vêm do Google Fonts por rede (`index.html`). Num totem sem internet o texto cai para a fonte do sistema. A fase 5 pede fontes locais. Isso exige **baixar os arquivos** (OFL, pacotes `@fontsource` do npm): fica para uma pergunta ao dono.
+
+## Escala
+- Espaçamento: 4, 8, 12, 16, 24, 32, 48, 72 px.
+- Raios: 12 (campo), 16 (cartão), 22 (barra de comando), pílula. Botão principal com **chanfro de 14 px** (clip-path).
+- Sombras: uma só, curta e sem blur para o pódio; cartões do console com sombra suave de 24 px a 5% de preto. Sem brilho.
+- Alvo de toque: **56 px** no público (era 44), 44 px no console.
+
+## Movimento
+Só `transform` e `opacity`, tudo desligado com `prefers-reduced-motion`.
+- Troca de personagem: deslize e escala, 350 a 450 ms, com fundo, paleta e enquadramento vindos dos dados.
+- Vitrine: crossfade lento entre personagens, sem som.
+- Estados da conversa: troca de cor do chip, sem animação decorativa.
