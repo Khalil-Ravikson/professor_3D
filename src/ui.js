@@ -22,6 +22,7 @@ import { avaliarLicenca } from './licenca.js';
 import { criarVigia, contarRecargas, esquecerRecargas } from './vigia.js';
 import { criarDiagnostico } from './diagnostico.js';
 import { lerMiniatura, gravarMiniatura } from './miniaturas.js';
+import { criarVisualizador } from './visualizador.js';
 import { criarMedidorDeCusto, CAMBIO_PADRAO } from './custo.js';
 import { VERSAO, VERSAO_DATA, VERSAO_MARCO } from './versao.js';
 
@@ -545,6 +546,7 @@ async function trocarPersonagem(p) {
     cena.definirFoco(avatar.posicaoCabeca, p.enquadramento);
     aplicarEnquadramento(false); // na seleção troca para corpo inteiro; o deslize é do canvas, não da câmera
     atualizarSelecao();
+    if (visualizador.ativo) { cena.resetarCamera(0); visualizador.aoTrocarPersonagem(); }
     // Gestos ativos já ficam prontos, para o primeiro aceno não esperar o download.
     await Promise.all(diretor.gestosValidos().flatMap((g) => diretor.clipesDe(g)).map((c) => clipeDoArquivo(c.arquivo, vrm)));
     if (minha !== carga) return;
@@ -1002,6 +1004,63 @@ for (const [campo, chave, normalizar] of [[gt.modelo, 'gt_modelo', (v) => v], [g
     if (config.motor === 'gemini') aplicarConfigVoz();
   });
 }
+
+/* ---------- Visualizador (prompt 06) ---------- */
+// Estende a galeria e a tela do personagem; não reescreve nenhuma das duas.
+const elViz = {
+  barra: $('vizBarra'), nome: $('vizNome'), aviso: $('vizAviso'), entrar: $('vizEntrar'),
+  reset: $('vizReset'), seguir: $('vizSeguir'), telaCheia: $('vizTelaCheia'), anterior: $('vizAnterior'),
+  tocar: $('vizTocar'), proximo: $('vizProximo'), modo: $('vizModo'), vel: $('vizVel'), sair: $('vizSair'),
+};
+const TV = T.visualizador;
+elViz.barra.setAttribute('aria-label', TV.barra);
+for (const [id, rotulo] of [['entrar', TV.entrar], ['reset', TV.resetar], ['anterior', TV.anterior], ['proximo', TV.proximo], ['sair', TV.sair]]) {
+  elViz[id].setAttribute('aria-label', rotulo); elViz[id].title = rotulo;
+}
+elViz.vel.setAttribute('aria-label', TV.velocidade);
+$('galeriaVisualizador').textContent = TV.galeria;
+
+function desenharVisualizador(e) {
+  elViz.seguir.setAttribute('aria-pressed', String(e.seguir));
+  elViz.seguir.setAttribute('aria-label', TV.seguir); elViz.seguir.title = `${TV.seguir} (T)`;
+  const cheia = e.telaCheia || e.telaCheiaCss;
+  elViz.telaCheia.setAttribute('aria-pressed', String(cheia));
+  elViz.telaCheia.setAttribute('aria-label', cheia ? TV.sairTelaCheia : TV.telaCheia); elViz.telaCheia.title = `${cheia ? TV.sairTelaCheia : TV.telaCheia} (F)`;
+  elViz.tocar.setAttribute('aria-pressed', String(e.tocando));
+  elViz.tocar.setAttribute('aria-label', e.tocando ? TV.pausar : TV.tocar); elViz.tocar.title = `${e.tocando ? TV.pausar : TV.tocar} (Espaço)`;
+  elViz.modo.dataset.modo = e.modo;
+  elViz.modo.setAttribute('aria-label', TV.modoRotulo(TV.modo[e.modo])); elViz.modo.title = TV.modoRotulo(TV.modo[e.modo]);
+  elViz.vel.value = String(e.velocidade);
+  elViz.reset.title = `${TV.resetar} (R)`;
+  if (e.ativo && !e.total) elViz.nome.textContent = TV.semClipes;
+}
+
+const visualizador = criarVisualizador({
+  cena, raiz: app, palco: stage, el: elViz, T,
+  avatar: () => avatar,
+  clipesAtivos: () => (catalogo ? aplicarEscolhas(catalogo).filter((c) => c.status === 'ativo' && (!modoInfantil.checked || c.infantilOk)) : []),
+  carregarClipe: (c) => (avatar ? clipeDoArquivo(c.arquivo, avatar.vrm) : Promise.resolve(null)),
+  reduzirMovimento,
+  aoMudar: desenharVisualizador,
+  aoEntrar: () => { silenciar(); },
+});
+elViz.entrar.addEventListener('click', () => visualizador.entrar());
+elViz.reset.addEventListener('click', () => visualizador.resetar());
+elViz.seguir.addEventListener('click', () => visualizador.definirSeguir(!visualizador.estado.seguir));
+elViz.telaCheia.addEventListener('click', () => visualizador.alternarTelaCheia());
+elViz.anterior.addEventListener('click', () => visualizador.anterior());
+elViz.proximo.addEventListener('click', () => visualizador.proximo());
+elViz.tocar.addEventListener('click', () => visualizador.alternar());
+elViz.modo.addEventListener('click', () => visualizador.proximoModo());
+elViz.vel.addEventListener('change', () => visualizador.definirVelocidade(elViz.vel.value));
+elViz.sair.addEventListener('click', () => visualizador.sair());
+// O diálogo avisa que fechou DEPOIS (evento close, que também para a prévia da galeria). Entrar só então,
+// senão o close derrubava a prévia que o visualizador acabou de iniciar.
+$('galeriaVisualizador').addEventListener('click', () => {
+  dlg.addEventListener('close', () => visualizador.entrar({ tocarAgora: true }), { once: true });
+  dlg.close();
+});
+desenharVisualizador(visualizador.estado);
 
 /* ---------- Painel de diagnóstico (só o operador vê) ---------- */
 const elDiag = $('diag'), elDiagErros = $('diagErros'), elCambio = $('diagCambio');
@@ -1497,7 +1556,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     get diretor() { return diretor; },
     licencas,
     registroGestos, pedirGesto, iniciarSessao, encerrarSessao, medidasSessao, definirEstado,
-    diagnostico, custo, vigia, recarregarAvatar, VERSAO, irPara, andar, retratos, definirEtapa, desenharVitrine, get usoGemini() { return usoGemini; },
+    diagnostico, custo, vigia, recarregarAvatar, VERSAO, irPara, andar, retratos, definirEtapa, desenharVitrine, visualizador, get usoGemini() { return usoGemini; },
     get etapa() { return etapa; },
     // Só para testes que não são do fluxo: pula atração, cumprimento e consentimento.
     irParaConversa(mic = 'sim') { sessaoAtiva = true; microfone = mic; definirEtapa('conversa'); },

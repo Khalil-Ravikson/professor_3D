@@ -414,7 +414,14 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
     acaoAtual = null;
     tocarBase(estadoBase || 'idle');
   }
-  mixer.addEventListener('finished', (ev) => { if (previa && ev.action === previa) pararPrevia(); });
+  // Quem toca em sequência (visualizador) quer saber quando o clipe de uma vez acabou.
+  let aoFimPrevia = null;
+  mixer.addEventListener('finished', (ev) => {
+    if (!previa || ev.action !== previa) return;
+    const cb = aoFimPrevia; aoFimPrevia = null;
+    pararPrevia();
+    if (cb) cb();
+  });
 
   return {
     vrm,
@@ -427,18 +434,27 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
         previa.clampWhenFinished = true;
         previa.timeScale = velocidade;
         previa.reset().setEffectiveWeight(1).fadeIn(FADE_S).play();
-        if (acaoAtual) acaoAtual.fadeOut(FADE_S);
+        // O clipe da prévia pode ser o próprio clipe-base (o idle): mixer.clipAction devolve a MESMA ação,
+        // e apagá-la aqui deixava o personagem em T-pose.
+        if (acaoAtual && acaoAtual !== previa) acaoAtual.fadeOut(FADE_S);
         if (gesto) { gesto = null; aoFimGesto = null; }
         acaoAtual = previa;
         mixer.timeScale = 1;
       },
       pausar(sim) { if (previa) mixer.timeScale = sim ? 0 : 1; },
       velocidade(v) { if (previa) previa.timeScale = v; },
-      parar: pararPrevia,
+      parar() { aoFimPrevia = null; pararPrevia(); },
+      aoTerminar(fn) { aoFimPrevia = fn; },
       get ativa() { return !!previa; },
       get tempo() { return previa ? previa.time : 0; },
     },
     atualizar,
+    // Posição da cabeça AGORA no mundo (posicaoCabeca é a do carregamento). Para o rastreamento da câmera.
+    cabecaAgora(alvo) {
+      const osso = hum.getRawBoneNode('head');
+      if (osso) osso.getWorldPosition(alvo); else alvo.copy(posicaoCabeca);
+      return alvo;
+    },
     // Altura real do corpo no mundo, para o enquadramento de corpo inteiro. Mede vértice a vértice
     // (precise), porque a caixa da geometria não acompanha o esqueleto. Cabelo e acessórios entram.
     medidaCorpo() {

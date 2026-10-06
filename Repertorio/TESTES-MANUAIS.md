@@ -50,3 +50,22 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | # | O que fazer | O que precisa acontecer | Resultado |
 |---|---|---|---|
 | 21 | Numa hora em que a máquina esteja livre: `python serve.py 8771` num terminal e `node tools/maratona.mjs 4` em outro. | Ao fim, `relatorios/p9-maratona.json` com `status: completo`, 0 erros, FPS sem queda e heap no mesmo patamar do início. Subida contínua do heap é vazamento. | |
+
+## Visualizador (prompt 06): só o que o teste automático não alcança
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 22 | Na conversa, tocar no ícone do olho (canto superior), depois no ícone de tela cheia. Num notebook ou desktop. | A tela cheia de verdade abre, a barra some depois de 3 s sem mexer o mouse e volta ao mexer. F e Esc também funcionam. | |
+| 23 | No celular ou tablet: girar a câmera com um dedo, aproximar com dois dedos (pinça) e arrastar com dois dedos. | O personagem gira, aproxima e desloca sem a página rolar. O toque nunca escorrega para a página. | |
+| 24 | No celular: dois toques rápidos no personagem. | A câmera volta ao enquadramento padrão em meio segundo, sem salto. | |
+| 25 | No iPhone (Safari): tocar em tela cheia. | O navegador não tem a API; a imagem ocupa a janela inteira e aparece o aviso "Este navegador não tem tela cheia". | |
+| 26 | Com o rastreamento ligado, tocar um clipe que mexe o corpo (giro ou aceno) e olhar. | A câmera acompanha a cabeça com suavidade, sem tremer. Girar à mão pausa o rastreamento por 3 s. | |
+| 27 | Pelo painel do operador, galeria, "Abrir no visualizador", e deixar o loop rodar uns minutos em "todos". | Passa de clipe em clipe com a transição suave de 0,3 s, sem o personagem ficar parado em T. | |
+
+## Gemini TTS: ouvir (decide a escolha de voz)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 28 | Ouvir os `.wav` de `relatorios/voz/audio/`, principalmente a frase `nomes` (Maranhão, UEMA, Imperatriz, Caxias) e as com estilo. | Dizer qual voz e qual modelo soam melhor em português do Brasil e se a pronúncia dos nomes está aceitável. A qualidade não foi avaliada por mim. | |
+| 29 | Nas configurações, escolher "Gemini TTS" no motor de voz e conversar com um personagem. | A fala sai com a voz escolhida; o selo mostra "Voz: Gemini"; "Voz Gemini hoje" mostra falas, caracteres e reais no diagnóstico. | |
+

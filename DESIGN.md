@@ -98,3 +98,8 @@ Só `transform` e `opacity`, tudo desligado com `prefers-reduced-motion`.
 - Troca de personagem: deslize e escala, 350 a 450 ms, com fundo, paleta e enquadramento vindos dos dados.
 - Vitrine: crossfade lento entre personagens, sem som.
 - Estados da conversa: troca de cor do chip, sem animação decorativa.
+
+## Visualizador: Design Read
+
+Modo Experience: o personagem lidera e os controles recuam. Variância 3, movimento 3 (só a barra: 0,3 s em `opacity` e `transform`, desligado com `prefers-reduced-motion`), densidade 4. Uma barra só, em cartão sólido, com ícones de traço desenhados no próprio SVG, alvos de 56 px e o botão de tocar como único elemento na cor de ação. Em tela cheia a barra some depois de 3 s parada e volta ao mexer.
+

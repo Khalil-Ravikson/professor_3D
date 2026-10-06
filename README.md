@@ -103,6 +103,21 @@ Onde conseguir `.vrm`:
 - **Boca:** segue o áudio que está tocando. O padrão pega o formato da vogal do wLipSync e a abertura do volume. Dá para trocar em Configurações → Movimento da boca.
 - **Comparar os métodos:** `comparar-lipsync.html` mostra o mesmo áudio em três avatares lado a lado.
 
+### Visualizador de personagem
+
+Na conversa, o ícone do olho (canto superior direito) abre o visualizador; no painel do operador, a galeria tem o botão "Abrir no visualizador", que já começa tocando os clipes ligados.
+
+| O que | Como |
+|---|---|
+| Girar, aproximar, deslocar | mouse (arrastar, roda, botão direito) ou toque (um dedo gira, pinça aproxima, dois dedos deslocam) |
+| Voltar a câmera | botão, duplo clique, duplo toque ou **R**. Volta ao `enquadramento` do personagem em 0,5 s |
+| Seguir a cabeça | botão ou **T**. Girar à mão pausa por 3 s |
+| Tela cheia | botão ou **F**. A barra some depois de 3 s sem mexer. Sem a API (iPhone), a imagem ocupa a janela e avisa |
+| Loop | repetir um, todos em sequência ou aleatório; **Espaço** toca ou pausa; **setas** trocam de clipe; velocidade de 0,5x a 1,5x |
+| Sair | botão X ou **Esc** |
+
+Só entram os clipes `ativos` do catálogo (e, no modo infantil, os marcados "ok para criança"). Com "reduzir movimento" do sistema o loop começa pausado.
+
 ### Como mexer nos clipes
 
 O catálogo é `assets/animations/animacoes.json`. Cada clipe tem `id`, `arquivo`, `descricao`, `casoDeUso`, `loop`, `duracao`, `intensidade` (1 a 3), `infantilOk`, `origem`, `licenca` e `status` (`ativo`, `desligado`, `lacuna`, `procedural`). A seção `estados` liga cada estado ou gesto a um id de clipe, ou a uma lista (o diretor alterna). `null` é lacuna: o estado cai para o `idle` e o gesto é ignorado.
