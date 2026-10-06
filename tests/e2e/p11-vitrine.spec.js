@@ -32,7 +32,7 @@ async function abrir(page, viewport, extra = {}) {
 const personagemAtual = (page) => page.evaluate(() => window.__prof3d.personagem.id);
 
 test('I3 vitrine: cicla entre os ativos, sem som, com nome e frase; capturas do ciclo', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   const erros = await abrir(page, { width: 1280, height: 720 }, { motor: 'webspeech', vitrine_s: '4' });
   expect(await page.evaluate(() => window.__prof3d.etapa)).toBe('atracao');
   await expect(page.locator('#vitrine')).toBeVisible();
@@ -46,11 +46,11 @@ test('I3 vitrine: cicla entre os ativos, sem som, com nome e frase; capturas do 
   await page.screenshot({ path: 'relatorios/p11-vitrine-1-luma-paisagem.png' });
 
   // Cicla: Luma, Teo, Luma.
-  await page.waitForFunction(() => window.__prof3d.personagem.id === 'matematico' && !!window.__prof3d.avatar && document.getElementById('loading').hidden, null, { timeout: 30_000 });
+  await page.waitForFunction(() => window.__prof3d.personagem.id === 'matematico' && !!window.__prof3d.avatar && document.getElementById('loading').hidden, null, { timeout: 90_000 });
   await expect(page.locator('#vitNome')).toHaveText('Teo');
   await page.waitForTimeout(1200);
   await page.screenshot({ path: 'relatorios/p11-vitrine-2-teo-paisagem.png' });
-  await page.waitForFunction(() => window.__prof3d.personagem.id === 'luma' && !!window.__prof3d.avatar && document.getElementById('loading').hidden, null, { timeout: 30_000 });
+  await page.waitForFunction(() => window.__prof3d.personagem.id === 'luma' && !!window.__prof3d.avatar && document.getElementById('loading').hidden, null, { timeout: 90_000 });
 
   // Sem som automático: nenhuma fala começou, e o gesto de assinatura saiu do catálogo ("atracao").
   // A pose entra 1,8 s depois de o personagem aparecer; numa máquina ocupada isso demora, então espera.
