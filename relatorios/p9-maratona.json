@@ -1,19 +1,19 @@
 {
-  "status": "rodando",
-  "comecou": "2026-10-06T16:20:01.507Z",
-  "terminou": "2026-10-06T16:21:16.489Z",
+  "status": "interrompido pelo dono",
+  "comecou": "2026-10-06T16:23:38.394Z",
+  "terminou": "2026-10-06T16:32:08.414Z",
   "horasPedidas": 4,
-  "horasRodadas": 0.02,
+  "horasRodadas": 0.14,
   "geminiReal": false,
-  "sessoes": 7,
-  "perguntas": 21,
+  "sessoes": 49,
+  "perguntas": 147,
   "erros": 0,
   "listaDeErros": [],
   "heapMb": {
-    "primeira": 34.3,
-    "ultima": 34.7,
-    "maior": 34.7,
-    "menor": 34.3
+    "primeira": 34.2,
+    "ultima": 35,
+    "maior": 38.1,
+    "menor": 32.2
   },
   "fps": {
     "primeira": 60.3,
@@ -32,20 +32,20 @@
   "recargasDoVigia": 0,
   "amostras": [
     {
-      "t": "2026-10-06T16:20:11.899Z",
+      "t": "2026-10-06T16:23:49.959Z",
       "minuto": 0,
       "sessoes": 1,
       "perguntas": 3,
       "fps": 60.3,
       "erros": 0,
-      "heapMb": 34.3,
+      "heapMb": 34.2,
       "geometrias": 7,
       "texturas": 17,
-      "quadros": 553,
+      "quadros": 509,
       "contextoPerdido": false,
       "latencia": {
-        "perguntaMs": 17,
-        "falaMs": 18,
+        "perguntaMs": 16,
+        "falaMs": 17,
         "amostras": 3
       },
       "gasto": {
@@ -68,7 +68,7 @@
       "recargasDoVigia": 0
     },
     {
-      "t": "2026-10-06T16:21:13.473Z",
+      "t": "2026-10-06T16:24:51.612Z",
       "minuto": 1,
       "sessoes": 7,
       "perguntas": 21,
@@ -77,11 +77,11 @@
       "heapMb": 34.7,
       "geometrias": 7,
       "texturas": 17,
-      "quadros": 4247,
+      "quadros": 4204,
       "contextoPerdido": false,
       "latencia": {
-        "perguntaMs": 15,
-        "falaMs": 15,
+        "perguntaMs": 16,
+        "falaMs": 16,
         "amostras": 21
       },
       "gasto": {
@@ -102,6 +102,259 @@
         "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
       },
       "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:25:53.743Z",
+      "minuto": 2,
+      "sessoes": 13,
+      "perguntas": 39,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 36.7,
+      "geometrias": 1,
+      "texturas": 3,
+      "quadros": 7930,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 16,
+        "falaMs": 16,
+        "amostras": 30
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 39,
+        "entrada": 70200,
+        "saida": 7020,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 70200,
+          "saida": 7020,
+          "respostas": 39
+        },
+        "usd": 0.1685,
+        "reais": 0.87,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:26:55.286Z",
+      "minuto": 3,
+      "sessoes": 19,
+      "perguntas": 57,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 36.8,
+      "geometrias": 1,
+      "texturas": 3,
+      "quadros": 11623,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 16,
+        "falaMs": 16,
+        "amostras": 30
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 57,
+        "entrada": 102600,
+        "saida": 10260,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 102600,
+          "saida": 10260,
+          "respostas": 57
+        },
+        "usd": 0.2462,
+        "reais": 1.27,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:27:57.421Z",
+      "minuto": 4,
+      "sessoes": 25,
+      "perguntas": 75,
+      "fps": 60.7,
+      "erros": 0,
+      "heapMb": 32.2,
+      "geometrias": 2,
+      "texturas": 4,
+      "quadros": 15348,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 16,
+        "falaMs": 16,
+        "amostras": 30
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 75,
+        "entrada": 135000,
+        "saida": 13500,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 135000,
+          "saida": 13500,
+          "respostas": 75
+        },
+        "usd": 0.324,
+        "reais": 1.68,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:28:59.558Z",
+      "minuto": 5,
+      "sessoes": 31,
+      "perguntas": 93,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 38.1,
+      "geometrias": 1,
+      "texturas": 3,
+      "quadros": 19076,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 15,
+        "falaMs": 16,
+        "amostras": 30
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 93,
+        "entrada": 167400,
+        "saida": 16740,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 167400,
+          "saida": 16740,
+          "respostas": 93
+        },
+        "usd": 0.4018,
+        "reais": 2.08,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:30:01.007Z",
+      "minuto": 6,
+      "sessoes": 37,
+      "perguntas": 111,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 37.9,
+      "geometrias": 1,
+      "texturas": 3,
+      "quadros": 22763,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 16,
+        "falaMs": 16,
+        "amostras": 30
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 111,
+        "entrada": 199800,
+        "saida": 19980,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 199800,
+          "saida": 19980,
+          "respostas": 111
+        },
+        "usd": 0.4795,
+        "reais": 2.48,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:31:03.867Z",
+      "minuto": 7,
+      "sessoes": 43,
+      "perguntas": 129,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 34.9,
+      "geometrias": 7,
+      "texturas": 17,
+      "quadros": 26486,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 16,
+        "falaMs": 16,
+        "amostras": 30
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 129,
+        "entrada": 232200,
+        "saida": 23220,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 232200,
+          "saida": 23220,
+          "respostas": 129
+        },
+        "usd": 0.5573,
+        "reais": 2.88,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
+    },
+    {
+      "t": "2026-10-06T16:32:05.407Z",
+      "minuto": 8,
+      "sessoes": 49,
+      "perguntas": 147,
+      "fps": 60.3,
+      "erros": 0,
+      "heapMb": 35,
+      "geometrias": 7,
+      "texturas": 17,
+      "quadros": 30179,
+      "contextoPerdido": false,
+      "latencia": {
+        "perguntaMs": 15,
+        "falaMs": 15,
+        "amostras": 30
+      },
+      "gasto": {
+        "dia": "2026-10-06",
+        "respostas": 147,
+        "entrada": 264600,
+        "saida": 26460,
+        "pensamento": 0,
+        "sessao": {
+          "entrada": 264600,
+          "saida": 26460,
+          "respostas": 147
+        },
+        "usd": 0.635,
+        "reais": 3.28,
+        "semPreco": [],
+        "cambio": 5.17,
+        "fonte": "ai.google.dev/gemini-api/docs/pricing, consultada em 06/10/2026"
+      },
+      "recargasDoVigia": 0
     }
-  ]
+  ],
+  "nota": "Pedido de 4 h do P9 cortado em 9 minutos por decisao do dono. Os numeros abaixo valem para o que rodou. O numero de geometrias e texturas muda com o personagem em cena (Luma 7/17, Rafa 2/4, Teo e Nina 1/3) e nao indica vazamento; o que mede vazamento e o heap."
 }

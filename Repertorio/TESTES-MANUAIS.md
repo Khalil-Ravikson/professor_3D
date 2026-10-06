@@ -44,3 +44,9 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 18 | Conferir o painel com a chave real do Gemini depois de umas 20 perguntas. | "Gasto hoje" mostra valor em reais, e a cotação do dólar está atualizada. | |
 | 19 | Olhar a tela do público com o totem de pé, a 1 m de distância. | A legenda do que o personagem fala é legível e nenhum texto fica apagado sobre o fundo. | |
 | 20 | Navegar só pelo teclado (Tab e Enter), sem tocar na tela. | Dá para começar a conversa, mexer no volume e enviar uma pergunta escrita. O anel de foco é visível em todos. | |
+
+## P9, teste de longa duração (pendente)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 21 | Numa hora em que a máquina esteja livre: `python serve.py 8771` num terminal e `node tools/maratona.mjs 4` em outro. | Ao fim, `relatorios/p9-maratona.json` com `status: completo`, 0 erros, FPS sem queda e heap no mesmo patamar do início. Subida contínua do heap é vazamento. | |

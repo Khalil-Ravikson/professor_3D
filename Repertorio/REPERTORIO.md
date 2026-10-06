@@ -278,6 +278,8 @@ Formato: `AAAA-MM-DD | o que testou | resultado | decisão`
 
 - 2026-10-06 | skills do P9 | a skill `impeccable` disponível nesta máquina traz só o `SKILL.md`, sem `scripts/` nem `reference/`: `impeccable context`, `harden`, `audit` e `optimize` não rodam como comandos. O detector é outro programa, o pacote npm `impeccable@4.1.0`, e esse roda | o trabalho de `harden` e `audit` foi feito à mão (contexto WebGL, vigia, tela de erro, contraste medido, alvos de toque, foco por teclado) e cada item virou teste. Detector: `npx impeccable detect index.html src --json` devolveu `[]`
 
+- 2026-10-06 | maratona do P9 (`node tools/maratona.mjs`), sessões simuladas em sequência, Gemini simulado, 1080x1920, GPU D3D11 | 9 minutos rodados dos 240 pedidos (o dono mandou parar): 49 sessões, 147 perguntas, 0 erros, 60,3 fps em todas as amostras, heap de 34,2 MB no início e 35,0 no fim, variando entre 32,2 e 38,1 conforme o personagem em cena. Geometrias e texturas mudam com o modelo (Luma 7/17, Rafa 2/4, Teo e Nina 1/3), então oscilação ali não é vazamento | o item "4 horas contínuas" fica **NÃO TESTADO**: 9 minutos não pegam vazamento lento. Para fechar, rodar `node tools/maratona.mjs 4` numa hora em que a máquina esteja livre
+
 ---
 
 ## 13. Referências visuais (direção, não cópia)
