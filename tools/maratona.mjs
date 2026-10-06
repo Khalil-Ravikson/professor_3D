@@ -159,7 +159,13 @@ while (Date.now() < FIM && !encerrando) {
       const outros = await page.evaluate(() => window.__prof3d.disponiveis);
       const alvo = outros[sessoes / 10 % outros.length];
       await page.evaluate((id) => window.__prof3d.trocarPersonagem(window.__prof3d.buscarPersonagem(id)), alvo);
-      await page.waitForFunction(() => !!window.__prof3d.avatar, null, { timeout: 120_000 });
+      // Esperar só por `avatar` não serve: ele ainda é o antigo nos primeiros milissegundos
+      // da troca. A tela de carga sumir é o sinal de que o novo modelo está montado.
+      await page.waitForTimeout(300);
+      await page.waitForFunction(
+        () => !!window.__prof3d.avatar && document.getElementById('loading').hidden,
+        null, { timeout: 120_000 },
+      );
     }
   } catch (e) {
     erros.push({ t: new Date().toISOString(), tipo: 'maratona', msg: String(e).slice(0, 300) });
