@@ -8,6 +8,8 @@
 // Conferência: todo número de uma linha do quadro precisa ter vindo do enunciado ou de
 // uma chamada a calcular(). Número que não veio de lá aparece mascarado no quadro.
 
+import { T } from './strings.pt-BR.js';
+
 const MARCADOR = /^\s*(?:[-*#>]+\s*)*\**\s*\[?\s*(fala|quadro)\s*\]?\s*\**\s*:\s*\**\s*/i;
 const LIMITE_PREFIXO = 24; // depois disso sem marcador, a linha é tratada como fala
 
@@ -178,7 +180,7 @@ export function criarQuadro(raiz) {
       const s = document.createElement('span');
       s.className = 'nao-conferido';
       s.textContent = '?';
-      s.title = 'Número que não veio da calculadora nem do enunciado';
+      s.title = T.quadro.naoConferido;
       c.append(s);
     }
     li.append(c);

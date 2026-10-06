@@ -57,6 +57,9 @@ export const T = {
       acao: 'Recomeçar',
     },
   },
+  quadro: {
+    naoConferido: 'Número que não veio da calculadora nem do enunciado',
+  },
   volume: {
     mudo: 'sem som',
     mudar: 'Desligar o som',
