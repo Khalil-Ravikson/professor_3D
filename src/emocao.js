@@ -20,7 +20,7 @@ const semAcento = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(
 // Marca completa: [emo:nome]. Qualquer coisa que comece com "[emo" e não feche entra na limpeza de segurança.
 const MARCA = /\[emo:\s*([^\]\s]*)\s*\]\s*/gi;
 // Só a marca (e uma palavra depois do ":"): nunca o resto da frase, para uma marca sem "]" não engolir fala.
-const SOLTA = /\[\s*emo(?::\s*\p{L}*)?\]?\s*/giu;
+const SOLTA = /\[\s*emo(?:\s*:\s*\p{L}*)?\s*\]?\s*/giu;
 
 export function normalizarEmocao(nome) {
   const n = semAcento(String(nome || '').trim());

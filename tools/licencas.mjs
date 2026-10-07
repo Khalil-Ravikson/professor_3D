@@ -71,6 +71,7 @@ const FONTES = [
 const vendor = [
   ['src/vendor/mixamo (exemplo do three-vrm v3.5.5)', 'MIT, pixiv Inc.'],
   ['assets/mediapipe/face_landmarker.task (modelo do MediaPipe)', 'Apache-2.0'],
+  ['assets/vendor/mediapipe/modelos/ (pose_landmarker lite e full, hand_landmarker; MediaPipe, float16, baixados em 07/10/2026)', 'licença do modelo [CONFERIR]: a documentação do MediaPipe não a informa'],
   ['assets/vad/ (voz mãos-livres, ver assets/vad/CREDITS.md): @ricky0123/vad-web 0.0.31 (ISC) e onnxruntime-web 1.22.0 (MIT)', 'ISC e MIT'],
   ['assets/vad/silero_vad_legacy.onnx (modelo Silero VAD)', 'MIT declarada pelo repositório do Silero; texto da licença não vem no pacote [CONFERIR]'],
   ['Xenova/multilingual-e5-small (embeddings do RAG, baixado do Hugging Face no navegador, não fica no repositório)', 'licença do modelo [CONFERIR] na página do modelo antes de publicar'],

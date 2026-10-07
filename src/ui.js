@@ -16,6 +16,7 @@ import { criarBoca } from './lipsync.js';
 import { PERSONAGENS, buscarPersonagem, aplicarAjustes } from './characters.js';
 import { criarQuadro, criarLeitorMarcado, separarFalaEQuadro } from './board.js';
 import { calcular, DECLARACAO_CALCULAR } from './calcular.js';
+import { criarRastreadorCorpo } from './corpo/rastreador.js';
 import { criarCamera, criarPresenca, criarDetectorSorriso, FiltroOneEuro } from './camera.js';
 import { perguntarEmFluxo, ErroGemini, MODELO_PADRAO } from './brain.js';
 import { criarVoz } from './tts/index.js';
@@ -587,6 +588,7 @@ async function trocarPersonagem(p) {
     if (minha !== carga) { descartarVrm(vrm); return; }
     registrarChecklist(p.nome, checarVrm(vrm, bytes));
     avatar = montarAvatar(vrm, cena, { bases, tetoBoca: p.tetoBoca, fixarNoLugar });
+  avatar.definirSobreposicao((dt) => corpo.aplicar(dt)); // rastreamento do corpo por cima do clipe (prompt 7)
     cena.definirFoco(avatar.posicaoCabeca, efetivo(p).enquadramento);
     aplicarEnquadramento(false); // na seleção troca para corpo inteiro; o deslize é do canvas, não da câmera
     atualizarSelecao();
@@ -1406,6 +1408,50 @@ $('galeriaVisualizador').addEventListener('click', () => {
 });
 desenharVisualizador(visualizador.estado);
 
+/* ---------- Rastreamento do corpo (prompt 7, V5): braços e tronco, só com a câmera ligada por ação explícita ---------- */
+const TC = T.corpo;
+const elCorpo = { ligar: $('corpoLigar'), estado: $('corpoEstado'), bracos: $('corpoBracos'), tronco: $('corpoTronco'), espelho: $('corpoEspelho'), qual: $('corpoQualidade'), recal: $('corpoRecalibrar'), gravar: $('corpoGravar'), arq: $('corpoRepetirArq'), stats: $('corpoStats'), imitar: $('vizImitar') };
+$('corpoPrivacidade').textContent = TC.privacidade; $('corpoLigarR').textContent = TC.imitar; $('corpoBracosR').textContent = TC.bracos; $('corpoTroncoR').textContent = TC.tronco;
+$('corpoEspelhoR').textContent = TC.espelho; $('corpoQualidadeR').textContent = TC.qualidade; elCorpo.qual.options[0].textContent = TC.leve; elCorpo.qual.options[1].textContent = TC.equilibrada;
+elCorpo.recal.textContent = TC.recalibrar; elCorpo.gravar.textContent = TC.gravar; $('corpoRepetirR').textContent = TC.repetir;
+elCorpo.imitar.setAttribute('aria-label', TC.imitar); elCorpo.imitar.title = TC.imitar;
+elCorpo.bracos.checked = ler('corpo_bracos', 'sim') === 'sim'; elCorpo.tronco.checked = ler('corpo_tronco', 'sim') === 'sim';
+elCorpo.espelho.checked = ler('corpo_espelho', 'sim') === 'sim'; elCorpo.qual.value = ler('corpo_qualidade', 'leve');
+function desenharCorpo(e) {
+  const ligado = !['desligado', 'erro'].includes(e.estado);
+  elCorpo.ligar.checked = ligado; elCorpo.imitar.setAttribute('aria-pressed', String(ligado));
+  const f = TC.estados[e.estado];
+  elCorpo.estado.textContent = e.estado === 'erro' ? f(e.motivo) : (e.aviso ? `${f} ${e.aviso}` : f);
+  elCorpo.stats.textContent = ligado ? TC.stats(corpo.stats) : '';
+}
+const corpo = criarRastreadorCorpo({
+  obterAvatar: () => avatar,
+  config: { espelho: elCorpo.espelho.checked, qualidade: elCorpo.qual.value, pesos: { bracos: elCorpo.bracos.checked ? 1 : 0, tronco: elCorpo.tronco.checked ? 1 : 0 } },
+  aoEstado: desenharCorpo,
+});
+setInterval(() => { if (corpo.ligado) desenharCorpo({ estado: corpo.estado }); }, 1000);
+const alternarCorpo = () => (corpo.ligado ? corpo.desligar() : corpo.ligar({ fonteVideo: camera.video }));
+elCorpo.ligar.addEventListener('change', alternarCorpo);
+elCorpo.imitar.addEventListener('click', alternarCorpo);
+for (const [el, chave, parte] of [[elCorpo.bracos, 'corpo_bracos', 'bracos'], [elCorpo.tronco, 'corpo_tronco', 'tronco']]) {
+  el.addEventListener('change', () => { gravar(chave, el.checked ? 'sim' : 'nao'); corpo.configurar({ pesos: { [parte]: el.checked ? 1 : 0 } }); });
+}
+elCorpo.espelho.addEventListener('change', () => { gravar('corpo_espelho', elCorpo.espelho.checked ? 'sim' : 'nao'); corpo.configurar({ espelho: elCorpo.espelho.checked }); });
+elCorpo.qual.addEventListener('change', () => { gravar('corpo_qualidade', elCorpo.qual.value); corpo.configurar({ qualidade: elCorpo.qual.value }); if (corpo.ligado) { corpo.desligar(); corpo.ligar({ fonteVideo: camera.video }); } });
+elCorpo.recal.addEventListener('click', () => corpo.recalibrar());
+elCorpo.gravar.addEventListener('click', () => {
+  if (!corpo.gravando) { corpo.gravarInicio(); elCorpo.gravar.textContent = TC.pararGravar; return; }
+  const texto = corpo.gravarFim(); elCorpo.gravar.textContent = TC.gravar;
+  const url = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = 'sessao-landmarks.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+elCorpo.arq.addEventListener('change', async () => {
+  const f = elCorpo.arq.files[0]; elCorpo.arq.value = '';
+  if (!f) return;
+  try { corpo.repetir(await f.text()); } catch (e) { console.warn('[corpo] sessão recusada:', e); elCorpo.estado.textContent = TC.sessaoInvalida; }
+});
+desenharCorpo({ estado: 'desligado' });
+
 /* ---------- Painel de diagnóstico (só o operador vê) ---------- */
 const elDiag = $('diag'), elDiagErros = $('diagErros'), elCambio = $('diagCambio');
 let timerDiag = null;
@@ -1731,7 +1777,7 @@ dlg.addEventListener('toggle', () => { if (dlg.open) desenharRag(); });
 /* ---------- Console do operador (I5): abas e cena ---------- */
 const ABA_DE = {
   Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena', Orçamento: 'orcamento', 'Modo evento': 'evento', 'Base de conhecimento': 'personagem',
-  Câmera: 'sessao', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
+  Câmera: 'sessao', 'Rastreamento do corpo': 'sessao', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
   'Armazenamento e uso offline': 'armazenamento', Licenças: 'armazenamento',
 };
 const elAbas = $('abas');
@@ -2251,7 +2297,7 @@ $('fecharCreditos').addEventListener('click', () => $('creditos').close());
 // Gancho para testes automatizados e inspeção no console; só existe com ?debug na URL.
 if (new URLSearchParams(location.search).has('debug')) {
   window.__prof3d = {
-    cena, historicos, trocarPersonagem, buscarPersonagem, voz, mesa, config, boca, quadro, camera, camCfg,
+    corpo, cena, historicos, trocarPersonagem, buscarPersonagem, voz, mesa, config, boca, quadro, camera, camCfg,
     get presente() { return presenca.presente; },
     get ultimaLeitura() { return ultimaLeitura; },
     get ajustes() { return ajustes; },

@@ -680,6 +680,7 @@
           <svg class="m-aleatorio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h3l11 12h4M3 18h3l3-3.5M14 9l3-3h4M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>
         </button>
         <select id="vizVel" class="viz-vel"><option value="0.5">0.5x</option><option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select>
+        <button type="button" id="vizImitar" class="viz-btn" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M5 9l7 2 7-2M12 11v5m0 0l-3 5m3-5l3 5"/></svg></button>
         <span class="viz-sep" aria-hidden="true"></span>
         <button type="button" id="vizSair" class="viz-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
@@ -964,6 +965,20 @@
     <label class="check"><input type="checkbox" id="camSorriso" checked> Sorrir de volta</label>
     <label class="check"><input type="checkbox" id="camEspelho"> Modo espelho (o avatar imita o rosto)</label>
     <p class="hint" id="camEstado" role="status">Câmera desligada.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Rastreamento do corpo</legend>
+    <p class="hint" id="corpoPrivacidade"></p>
+    <label class="check"><input type="checkbox" id="corpoLigar"> <span id="corpoLigarR"></span></label>
+    <p class="hint" id="corpoEstado" role="status" aria-live="polite"></p>
+    <label class="check"><input type="checkbox" id="corpoBracos" checked> <span id="corpoBracosR"></span></label>
+    <label class="check"><input type="checkbox" id="corpoTronco" checked> <span id="corpoTroncoR"></span></label>
+    <label class="check"><input type="checkbox" id="corpoEspelho" checked> <span id="corpoEspelhoR"></span></label>
+    <label for="corpoQualidade" id="corpoQualidadeR"></label>
+    <select id="corpoQualidade"><option value="leve"></option><option value="equilibrada"></option></select>
+    <div class="actions"><button class="btn ghost" id="corpoRecalibrar" type="button"></button><button class="btn ghost" id="corpoGravar" type="button"></button><label class="btn ghost" for="corpoRepetirArq" id="corpoRepetirR"></label><input type="file" id="corpoRepetirArq" accept="application/json,.json" hidden></div>
+    <p class="hint" id="corpoStats"></p>
   </fieldset>
 
   <fieldset>

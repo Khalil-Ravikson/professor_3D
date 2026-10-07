@@ -26,6 +26,7 @@ Gerado por `node tools/licencas.mjs`. Não edite à mão: rode o script de novo.
 | wlipsync | 1.3.1 | hospedado em assets/vendor/ | MIT |  |
 | src/vendor/mixamo (exemplo do three-vrm v3.5.5) |  | copiado no código | MIT, pixiv Inc. |  |
 | assets/mediapipe/face_landmarker.task (modelo do MediaPipe) |  | copiado no código | Apache-2.0 |  |
+| assets/vendor/mediapipe/modelos/ (pose_landmarker lite e full, hand_landmarker; MediaPipe, float16, baixados em 07/10/2026) |  | copiado no código | licença do modelo [CONFERIR]: a documentação do MediaPipe não a informa |  |
 | assets/vad/ (voz mãos-livres, ver assets/vad/CREDITS.md): @ricky0123/vad-web 0.0.31 (ISC) e onnxruntime-web 1.22.0 (MIT) |  | copiado no código | ISC e MIT |  |
 | assets/vad/silero_vad_legacy.onnx (modelo Silero VAD) |  | copiado no código | MIT declarada pelo repositório do Silero; texto da licença não vem no pacote [CONFERIR] |  |
 | Xenova/multilingual-e5-small (embeddings do RAG, baixado do Hugging Face no navegador, não fica no repositório) |  | copiado no código | licença do modelo [CONFERIR] na página do modelo antes de publicar |  |

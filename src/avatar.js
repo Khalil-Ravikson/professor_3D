@@ -340,6 +340,7 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
   const LIMITE_CABECA = 0.6; // rad
   const limitar = (v) => Math.max(-LIMITE_CABECA, Math.min(LIMITE_CABECA, v));
 
+  let sobreposicao = null;
   function atualizar(dt, t, { estado = 'idle', visemas = null } = {}) {
     if (!gesto && !previa) tocarBase(BASE_DO_ESTADO[estado] || 'idle');
     else estadoBase = BASE_DO_ESTADO[estado] || 'idle';
@@ -425,6 +426,8 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
       em.setValue('happy', Math.max(feliz, emoAtual.happy));
       for (const k of ['relaxed', 'surprised', 'sad']) if (emoTem[k]) em.setValue(k, emoAtual[k]);
     }
+    // Rastreamento do corpo (prompt 7): por cima do clipe, antes de o VRM propagar os ossos. Ordem: mixer, sobreposição, vrm.update.
+    if (sobreposicao) sobreposicao(dt);
     vrm.update(dt);
   }
 
@@ -474,6 +477,7 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
       get tempo() { return previa ? previa.time : 0; },
     },
     atualizar,
+    definirSobreposicao(fn) { sobreposicao = fn; },
     // Posição da cabeça AGORA no mundo (posicaoCabeca é a do carregamento). Para o rastreamento da câmera.
     cabecaAgora(alvo) {
       const osso = hum.getRawBoneNode('head');

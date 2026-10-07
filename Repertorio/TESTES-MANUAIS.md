@@ -141,3 +141,18 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 64 | Com chave do ElevenLabs: `ELEVENLABS_API_KEY=... npm run proxy`, preencher o `voiceId` e repetir. | A voz entra no relatório com custo em reais; o plano gratuito basta para o teste (limite de caracteres). | |
 | 65 | Exportar do NaturalReader os MP3 das 13 frases e importar com `npm run importar-voz -- lote`. | A voz importada aparece como candidata (`rotulo`) e entra no relatório. | |
 
+## V5, rastreamento do corpo (precisa da webcam)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 66 | Engrenagem, aba Sessão, "Imitar meus movimentos". Permitir a câmera e ficar de frente, de corpo inteiro ou da cintura para cima, em pose neutra por 2 segundos. | Estado vai de "Ligando" a "Fique em pose neutra" e a "Rastreando". A linha de estado mostra quadros por segundo e o atraso em ms. | |
+| 67 | Com Espelho ligado, levantar a SUA mão direita. | O braço do personagem que aparece do lado DIREITO da tela levanta. Se levantar o outro, o eixo está trocado: me diga. | |
+| 68 | Desligar o Espelho e repetir. | Agora levanta o braço do lado ESQUERDO da tela (o personagem age como uma pessoa de frente para você). | |
+| 69 | Abrir os braços de lado, levantar à frente, cruzar os braços. | Os braços acompanham sem tremer demais; o cruzamento não atravessa o peito; a cabeça e o rosto seguem no módulo da câmera. | |
+| 70 | Girar os ombros e inclinar o tronco. | O tronco acompanha pouco, no máximo cerca de 20 graus. | |
+| 71 | Sair de quadro e voltar. | Em cerca de 300 ms os braços voltam ao clipe e depois voltam a acompanhar, sem salto. O estado mostra "Perdi o corpo". | |
+| 72 | Recalibrar em pose torta e depois reta. | A postura calibrada vira o zero do tronco. | |
+| 73 | Desligar. | A luz da câmera apaga; nenhum arquivo de vídeo foi criado. | |
+| 74 | Gravar números da sessão, mexer os braços por 10 s, Parar e baixar, depois Repetir esse arquivo. | O personagem repete o movimento sem a câmera. Me mande o arquivo se algo estiver errado. | |
+| 75 | Anotar quadros por segundo e atraso mostrados, com Leve e com Equilibrada. | Meta: atraso abaixo de 150 ms. Me diga os números e a placa de vídeo. | |
+

@@ -4,30 +4,15 @@
 // Inferência limitada (padrão 15/s) e pausada com a aba oculta.
 
 // MediaPipe hospedado em assets/vendor/mediapipe/ (tasks-vision 1.0.1, só a variante wasm com SIMD; ver assets/vendor/CREDITS.md).
-const URL_TASKS = new URL('assets/vendor/mediapipe/vision_bundle.mjs', location.href).href;
-const URL_WASM = new URL('assets/vendor/mediapipe/wasm', location.href).href;
+const urlTasks = () => new URL('assets/vendor/mediapipe/vision_bundle.mjs', location.href).href; // preguiçoso: o módulo também roda no Node (testes)
+const urlWasm = () => new URL('assets/vendor/mediapipe/wasm', location.href).href;
 const URL_MODELO = 'assets/mediapipe/face_landmarker.task'; // float16/1, do bucket oficial mediapipe-models
 
 /* ---------- Partes puras (testadas em tests/unit/camera.test.js) ---------- */
 
 // Filtro One Euro (Casiez et al., 2012): suaviza tremor parado sem atrasar movimento rápido.
-export class FiltroOneEuro {
-  constructor({ minCutoff = 1.0, beta = 0.02, dCutoff = 1.0 } = {}) {
-    Object.assign(this, { minCutoff, beta, dCutoff });
-    this.x = null; this.dx = 0; this.t = null;
-  }
-  static alfa(cutoff, dt) { const tau = 1 / (2 * Math.PI * cutoff); return 1 / (1 + tau / dt); }
-  filtrar(valor, tSeg) {
-    if (this.x === null) { this.x = valor; this.t = tSeg; return valor; }
-    const dt = Math.max(1e-3, tSeg - this.t);
-    this.t = tSeg;
-    const dxBruto = (valor - this.x) / dt;
-    this.dx += FiltroOneEuro.alfa(this.dCutoff, dt) * (dxBruto - this.dx);
-    const cutoff = this.minCutoff + this.beta * Math.abs(this.dx);
-    this.x += FiltroOneEuro.alfa(cutoff, dt) * (valor - this.x);
-    return this.x;
-  }
-}
+import { FiltroOneEuro } from './filtro-one-euro.js';
+export { FiltroOneEuro };
 
 // Ângulos da cabeça (radianos) a partir da matriz 4x4 coluna-maior do MediaPipe.
 export function angulosDaMatriz(m) {
@@ -98,8 +83,8 @@ export function criarCamera({ aoMudar, aoLeitura, fps = 15 }) {
 
   async function prepararModelo() {
     if (landmarker) return;
-    const { FilesetResolver, FaceLandmarker } = await import(URL_TASKS);
-    const fileset = await FilesetResolver.forVisionTasks(URL_WASM);
+    const { FilesetResolver, FaceLandmarker } = await import(urlTasks());
+    const fileset = await FilesetResolver.forVisionTasks(urlWasm());
     const opcoes = (delegate) => ({
       baseOptions: { modelAssetPath: URL_MODELO, delegate },
       runningMode: 'VIDEO', numFaces: 1,
@@ -126,6 +111,7 @@ export function criarCamera({ aoMudar, aoLeitura, fps = 15 }) {
 
   return {
     get ligada() { return ligada; },
+    get video() { return ligada ? video : null; }, // o rastreamento do corpo reaproveita este vídeo quando a câmera do rosto já está ligada
     get delegado() { return delegado; },
     // fonte: MediaStream opcional (testes usam um canvas.captureStream()); padrão: webcam.
     async ligar({ fonte } = {}) {

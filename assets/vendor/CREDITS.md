@@ -17,6 +17,10 @@ o mesmo caminho e subindo `CDN` em `sw.js` (o service worker guarda esta pasta n
 | `mediapipe/` (`vision_bundle.mjs`, `wasm/vision_wasm_internal.js`, `wasm/vision_wasm_internal.wasm`) | `@mediapipe/tasks-vision@1.0.1/` (só a variante com SIMD; a sem SIMD, 11,3 MB, não foi baixada) | Apache-2.0 | 155 KB, 323 KB e 11,76 MB |
 | `transformers/` (`transformers.min.js`, `ort-wasm-simd-threaded.jsep.mjs`, `ort-wasm-simd-threaded.jsep.wasm`) | `@huggingface/transformers@3.8.1/dist/` (o runtime ONNX vem no mesmo `dist/`) | Apache-2.0 (transformers.js); o runtime é o onnxruntime-web 1.22.0-dev, MIT | 888 KB, 44 KB e 21,6 MB |
 
+| `mediapipe/modelos/` (`pose_landmarker_lite.task`, `pose_landmarker_full.task`, `hand_landmarker.task`) | `https://storage.googleapis.com/mediapipe-models/` (caminhos `pose_landmarker/.../float16/latest/` e `hand_landmarker/hand_landmarker/float16/latest/`, URLs da documentação oficial do MediaPipe), baixados em 07/10/2026 com autorização do dono. Como é `latest`, o conteúdo pode mudar; o SHA-256 de hoje está abaixo | **[CONFERIR]** a licença do modelo (a documentação das páginas de Pose e Hand não a informa) | 5,78 MB, 9,40 MB e 7,82 MB |
+
+SHA-256 (início) dos modelos baixados: lite `59929e1d1ee95287`, full `4eaa5eb7a9836522`, hand `fbc2a30080c3c557`.
+
 Fora daqui, ainda na jsDelivr: `kokoro-js@1.2.1` (só o motor opcional "Kokoro no navegador", inglês). Os **pesos dos modelos** (Whisper, E5, Kokoro) continuam no Hugging Face e ficam no cache do navegador depois da primeira vez.
 
 Mudanças em relação ao original:

@@ -110,6 +110,7 @@ test('P9 modo calmo recusa gesto amplo e sobrevive ao recarregar', async ({ page
   test.skip(!amplo, 'o catálogo não tem gesto de intensidade maior que 1');
 
   await page.click('#gear');
+  await page.click('#abas button[data-aba="animacoes"]'); // o modo calmo mora na aba Animações do console do operador
   await page.check('#modoCalmo');
   await page.click('#closeSettings');
 

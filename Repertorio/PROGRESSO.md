@@ -33,3 +33,5 @@ O `MEGA-PROMPT-MESTRE.md` manda executar os cinco prompts em ordem. Feitos: 1 (b
 Nunca `git add -A` quando houver `.vrm` na pasta. Adicionar por caminho.
 
 **Bibliotecas locais (07/10/2026):** as bibliotecas da CDN (Three.js, three-vrm, wLipSync, mathjs, MediaPipe e transformers.js com o ONNX) estão em `assets/vendor/`; só o kokoro-js (opcional, inglês) segue na CDN. O wLipSync passou a funcionar sob a CSP (antes caía em RMS). Três testes e2e antigos falham independentemente disso.
+
+**Prompt 7, V5 (07/10/2026):** rastreamento de braços e tronco feito (núcleo, worker, adaptador, painel e gravador/repetidor de números), verificado com landmarks sintéticos e no Chromium; **ao vivo com webcam: NÃO TESTADO** (itens 66 a 75 do roteiro manual). Faltam V1 a V4 (tela Photo Booth, entrada de Luma e Teo, expressões, foto e vídeo) e V6 (mãos e dedos, movimento do corpo, gestos). V1 e V2 pedem sua aprovação (wireframes e atribuição da entrada).

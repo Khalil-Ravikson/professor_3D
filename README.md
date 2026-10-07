@@ -166,6 +166,17 @@ Roda, nesta ordem: detector anti-slop, testes unitários, política de seguranç
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Rastreamento do corpo (braços e tronco)
+
+- **Desligado por padrão.** Engrenagem, aba **Sessão**, "Rastreamento do corpo", ou o botão do boneco na barra do visualizador. Só liga a câmera quando você pede; nenhum quadro é guardado, gravado ou enviado (o worker fecha cada imagem logo depois de usar e só devolve números); ao desligar, as tracks e o worker param.
+- **Como funciona:** o Pose Landmarker do MediaPipe (modelos locais em `assets/vendor/mediapipe/modelos/`) roda num worker; os 33 pontos de mundo são filtrados (One Euro) e viram rotações dos ossos humanoides normalizados do VRM **por direção** (não por posição), lidas do repouso do próprio modelo (braço em T ou em A, VRM 0.x com x e z invertidos). Entra por cima do clipe, entre `mixer.update` e `vrm.update`, com peso por parte do corpo (braços e tronco), queda gradual em 300 ms quando a confiança cai e volta suave.
+- **Calibração:** ao ligar, "Fique em pose neutra por 2 segundos". O botão Recalibrar repete.
+- **Espelho** (padrão): a sua mão direita move o braço que aparece do lado direito da tela. Desligado, o personagem age como uma pessoa de frente para você.
+- **Qualidade:** Leve (pose lite, 5,8 MB) ou Equilibrada (pose full, 9,4 MB). Se a inferência passar do orçamento do quadro, a taxa cai para 15 e depois 10 por segundo, com aviso.
+- **Gravar e repetir (só números):** o painel grava os pontos (nunca vídeo) num JSON e repete o arquivo no mesmo caminho do ao vivo. Serve para regressão e para você me mandar uma sessão curta para ajuste.
+- **Ainda não feito (marco V6):** mãos e dedos, deslocamento do corpo, gestos que disparam clipes (aceno, mão levantada, joinha) e pernas experimentais.
+- **Verificação:** `node tools/medir-rastreamento.mjs` (pipeline do worker com a imagem do próprio avatar) e `node tools/verificar-corpo.mjs` (sessão sintética de números, capturas antes e depois e ligar e desligar com a câmera falsa). Sem webcam real, o rastreamento ao vivo fica **NÃO TESTADO**: o roteiro do dono está em `Repertorio/TESTES-MANUAIS.md`.
+
 ## Painel do operador: onde fica cada coisa
 
 Engrenagem do app: **Cena**, **Orçamento** (teto, modelo reserva, modo econômico, endereço do proxy), **Base de conhecimento**, **Modo evento** (modo livre ou guiada, limites de sessão, fila, pacote de áudio, avisos), **Armazenamento** e **Modo totem**. Fora do app: `laboratorio-vozes.html` (vozes) e `python serve.py` para servir. Linha de comando: `npm run ingest`, `npm run conhecimento`, `npm run guiada`, `npm run proxy`, `npm run orcamento`, `npm run importar-voz`.
