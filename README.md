@@ -166,6 +166,25 @@ Roda, nesta ordem: detector anti-slop, testes unitários, política de seguranç
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Modo evento
+
+Engrenagem, aba **Evento**.
+
+- **Dois modos:** conversa livre (Gemini, base e voz) ou **demonstração guiada**: perguntas e respostas prontas, sem Gemini, sem custo e sem internet. As respostas guiadas **só entram depois de você aprová-las**:
+  1. `node tools/guiada.mjs gerar luma ARQUIVO.md` copia os blocos "Pergunta: ... Resposta-base: ..." de um documento que já está em `knowledge/luma/`, com a fonte dele, e grava `knowledge/luma/guiada.json` com **todos `aprovado: false`**. O script nunca aprova sozinho nem escreve resposta.
+  2. `node tools/guiada.mjs listar luma` mostra cada item; leia as respostas.
+  3. `node tools/guiada.mjs aprovar luma --todos` (ou `--ids 1,2,3`) aprova.
+  4. `npm run conhecimento` leva os aprovados para `knowledge/index.json`. Na tela, aparecem no máximo 8 como botões (mais que isso é parede de opções): aprove só os que quer mostrar.
+- **Política de sessão:** "Perguntas por sessão" e "Minutos por sessão" (0 = sem limite). Ao chegar a um limite, a fala em curso termina, o personagem se despede e a sessão acaba. O motivo aparece nos avisos.
+- **Fila visível:** o operador soma e tira pessoas; a tela de atração mostra "N pessoas na fila".
+- **Pacote de áudio:** "Gerar áudio das respostas guiadas" sintetiza com a voz Kokoro e guarda em disco; depois toca mesmo com o servidor de voz fora do ar. **Só voz gratuita**: com a voz paga o botão recusa.
+- **Escada de falhas** (cada degrau avisa o operador, com o ponto vermelho na engrenagem e a lista "Avisos do evento", e a conversa continua):
+  1. Voz paga cai ou estoura o teto: Kokoro.
+  2. Gemini falha, estoura a cota, fica lento (sem nenhum texto em 12 s) ou recusa a chave: modelo reserva (8 s) e depois a resposta pronta da base, com a fonte, mais a voz Kokoro.
+  3. Internet cai: demonstração guiada com as respostas prontas (e o campo de texto some); volta sozinha quando a internet volta.
+  4. Kokoro cai: voz do navegador, com aviso.
+- **Botão de emergência:** o "Modo econômico" da aba Orçamento (só voz Kokoro e respostas prontas).
+
 ## Orçamento, teto e proxy local
 
 - **Teto acumulado:** engrenagem, aba Orçamento, "Teto de gasto (R$)" (padrão R$ 50). O gasto de texto e o da voz Gemini paga somam num teto só, que **atravessa os dias**. Aos 80% a engrenagem ganha um ponto de aviso; no teto, o app passa sozinho ao **modo econômico** (voz Kokoro e resposta pronta da base, sem chamar o Gemini) e a criança vê só "agora só consigo responder o que já está pronto". "Modo econômico" também é um botão de emergência na mesma aba. O preço vem da tabela do diagnóstico (editável, com o câmbio).

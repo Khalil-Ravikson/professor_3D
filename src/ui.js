@@ -7,6 +7,7 @@ import { listarMovimentos, salvarMovimento, apagarMovimento, idDoNome, medirClip
 import { carregarCatalogo, aplicarEscolhas, gravarEscolha } from './animacoes.js';
 import { criarDiretor, removerMarcas, instrucaoGestos, ESTADOS_BASE } from './gestos.js';
 import { instrucaoEmocao } from './emocao.js';
+import { criarPoliticaSessao, itensAprovados } from './evento.js';
 import { criarEmbeddings, MODELO_EMB } from './rag/embeddings.js';
 import { criarRag } from './rag/rag.js';
 import { instrucaoRag, fontesCitadas } from './rag/prompt.js';
@@ -37,6 +38,15 @@ const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
 const micBtn = $('mic'), stopBtn = $('stop'), form = $('form'), input = $('text');
 const elEstadoChip = $('estadoChip'), tentarBtn = $('tentarDeNovo');
+// Modo evento (U6)
+const politica = criarPoliticaSessao();
+let redeCaiu = typeof navigator !== 'undefined' && navigator.onLine === false;
+let guiadasDoPersonagem = [];   // itens da demonstração guiada que o dono aprovou, para o personagem atual
+let alertaEvento = false, alertaOrcamento = false;
+const avisosEvento = [];
+const MAX_CHIPS_GUIADOS = 8; // mais que isso é parede de opções
+const LENTO_MS = 12000;       // sem nenhum texto do modelo principal depois disso: plano de reserva
+const LENTO_RESERVA_MS = 8000; // o reserva tem menos tempo: no pior caso a criança espera 20 s antes da resposta pronta
 let maosLivresAtivo = false, maosLivresPausado = false; // pausado: a pessoa apertou o microfone, então vale o apertar para falar nesta sessão
 // RAG (R4). O modelo de embeddings só baixa quando o operador pede "Preparar a base" e há documentos.
 const rag = criarRag({ embeddings: criarEmbeddings({ aoProgresso: (pct) => { const e = document.getElementById('ragEstado'); if (e) e.textContent = T.rag.baixandoModelo(pct); } }) });
@@ -540,6 +550,7 @@ async function trocarPersonagem(p) {
   micBtn.setAttribute('aria-label', T.avatar.falar(p.nome));
   if (etapa === 'atracao') definirEtapa('atracao'); // o convite usa o nome do personagem
   renderizarAtalhos(p.atalhos);
+  carregarGuiadas(p).then(atualizarChips);
   voz.resolverMotor(p.voz);
   const hist = historicoDe(p.id);
   const ultima = [...hist].reverse().find((m) => m.role === 'assistant');
@@ -621,6 +632,20 @@ function mostrarQuadroDe(p, hist) {
 
 
 
+async function carregarGuiadas(p) {
+  try { guiadasDoPersonagem = itensAprovados(await rag.guiadasDe(p.id)); } catch (e) { console.warn('[evento] guiadas não carregaram:', e); guiadasDoPersonagem = []; }
+}
+// Na demonstração guiada, com respostas aprovadas, os atalhos viram as perguntas guiadas (resposta pronta, sem Gemini).
+function atualizarChips() {
+  if (!personagem) return;
+  if (app.dataset.modo === 'guiada' && guiadasDoPersonagem.length) {
+    $('chips').replaceChildren(...guiadasDoPersonagem.slice(0, MAX_CHIPS_GUIADOS).map((g, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.dataset.guiada = String(i); b.textContent = g.pergunta; b.title = g.pergunta;
+      return b;
+    }));
+  } else renderizarAtalhos(personagem.atalhos);
+}
 function renderizarAtalhos(atalhos) {
   $('chips').replaceChildren(...atalhos.map((a) => {
     const b = document.createElement('button');
@@ -636,7 +661,7 @@ const voz = criarVoz({
   mudoInicial: config.mudo,
   aoMudarMesa: (m) => mostrarVolume(m),
   aoComecarFala: () => { falando = true; if (marcaPergunta) marcaPergunta.aoPrimeiraFala(); definirEstado('speaking'); },
-  aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); avancarDepoisDaFala(); },
+  aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); avancarDepoisDaFala(); verificarPolitica(); },
   aoFimFrase: () => liberarGesto(),
   // Gesto marcado pelo LLM numa sentença: pedido no instante em que essa sentença começa a tocar.
   aoInicioFrase: (gestos, emocao) => {
@@ -684,8 +709,11 @@ const boca = criarBoca({ ctx: voz.ctx, analisador: voz.analisador, saida: voz.sa
 
 // Selo no palco + linha de estado nas configurações.
 let ultimoMotorVoz = null; // só para o painel de diagnóstico, que não pode ter efeito colateral
+let ultimoAvisoVoz = null;
 function mostrarStatusVoz({ motor, aviso, servidor }) {
   ultimoMotorVoz = motor;
+  if (aviso && aviso !== ultimoAvisoVoz) avisarOperador(aviso);
+  ultimoAvisoVoz = aviso || null;
   atualizarOuvir(); // sem personagem ainda, ela sai na primeira linha
   const s = servidor || {};
   const natural = motor && motor.id === 'webspeech' && motor.temNatural;
@@ -876,15 +904,27 @@ function iniciarSessao(origem) {
   if (sessaoAtiva || !personagem || !avatar || ocupado) return false;
   sessaoAtiva = true;
   app.dataset.sessao = 'ativa';
+  politica.iniciar();
   definirEtapa('cumprimento');
   acenarEFalar('cumprimento', origem, efetivo(personagem).oiPresenca);
   tocarInatividade();
   return true;
 }
 
+// Limite de perguntas ou de tempo: a sessão termina com a despedida normal, depois de a fala em curso acabar.
+function verificarPolitica() {
+  if (!sessaoAtiva || ocupado || falando) return;
+  const e = politica.estado();
+  if (!e.motivo) return;
+  avisarOperador(e.motivo === 'turnos' ? T.evento.aviso.limiteTurnos : T.evento.aviso.limiteTempo);
+  encerrarSessao('limite-' + e.motivo);
+}
+setInterval(verificarPolitica, 5000);
+
 function encerrarSessao(origem) {
   if (!sessaoAtiva || !personagem) return false;
   sessaoAtiva = false;
+  politica.parar();
   maosLivresPausado = false;
   app.dataset.sessao = 'encerrada';
   clearTimeout(timerInatividade);
@@ -961,6 +1001,7 @@ async function perguntarAoPersonagem(q) {
   q = (q || '').trim();
   if (!q || ocupado || !personagem) return;
   ultimaFalha = null;
+  politica.contarTurno();
   if (!sessaoAtiva) { sessaoAtiva = true; app.dataset.sessao = 'ativa'; }
   if (etapa !== 'conversa') definirEtapa('conversa');
   tocarInatividade();
@@ -1022,20 +1063,33 @@ async function perguntarAoPersonagem(q) {
       }
       return motivo === 'orcamento' ? T.orcamento.semBase : T.resposta.semInternet;
     };
-    const chamar = (modeloUsado) => perguntarEmFluxo({
-      apiKey, proxy: proxyUrl(), modelo: modeloUsado, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(rg.resultados) : ''), historico: hist.slice(-9), signal: ctl.signal,
-      temperatura: ef.temperatura, limitePalavras: ef.limitePalavras,
-      ferramentas: Object.fromEntries((ef.ferramentas || []).filter((n) => FERRAMENTAS[n]).map((n) => [n, FERRAMENTAS[n]])),
-      aoChamada: (nome, args, resultado) => {
-        if (nome !== 'calcular' || ctl.signal.aborted) return;
-        contas.push(resultado);
-        quadro.adicionarConta(resultado);
-      },
-      aoTexto: (pedaco) => { marca.aoPrimeiroTexto(); return leitor ? leitor.adicionar(pedaco) : falar(pedaco); },
-      aoUso: (uso) => custo.somar(modeloUsado, uso),
-    });
+    // Se o Gemini não mandar nenhum texto em limiteMs, desiste e segue a cadeia. Atividade (texto ou ferramenta) zera a espera.
+    const chamar = (modeloUsado, limiteMs = LENTO_MS) => {
+      const sub = new AbortController();
+      let lento = false, timer = null;
+      const cancelar = () => sub.abort();
+      ctl.signal.addEventListener('abort', cancelar, { once: true });
+      const armar = () => { clearTimeout(timer); timer = setTimeout(() => { lento = true; sub.abort(); }, limiteMs); };
+      armar();
+      return perguntarEmFluxo({
+        apiKey, proxy: proxyUrl(), modelo: modeloUsado, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(rg.resultados) : ''), historico: hist.slice(-9), signal: sub.signal,
+        temperatura: ef.temperatura, limitePalavras: ef.limitePalavras,
+        ferramentas: Object.fromEntries((ef.ferramentas || []).filter((n) => FERRAMENTAS[n]).map((n) => [n, FERRAMENTAS[n]])),
+        aoChamada: (nome, args, resultado) => {
+          armar();
+          if (nome !== 'calcular' || ctl.signal.aborted) return;
+          contas.push(resultado);
+          quadro.adicionarConta(resultado);
+        },
+        aoTexto: (pedaco) => { clearTimeout(timer); marca.aoPrimeiroTexto(); return leitor ? leitor.adicionar(pedaco) : falar(pedaco); },
+        aoUso: (uso) => custo.somar(modeloUsado, uso),
+      }).catch((e) => {
+        if (lento && !ctl.signal.aborted) { avisarOperador(T.evento.aviso.lento); throw new ErroGemini(504, 'sem resposta em ' + limiteMs + ' ms'); }
+        throw e;
+      }).finally(() => { clearTimeout(timer); ctl.signal.removeEventListener('abort', cancelar); });
+    };
     // Falha que vale tentar o reserva ou a resposta pronta: cota, servidor fora, queda de rede. Nunca depois de já ter falado.
-    const tentavel = (e) => !falado && e.name !== 'AbortError' && (e instanceof ErroGemini ? [429, 500, 502, 503, 504].includes(e.status) : true);
+    const tentavel = (e) => !falado && e.name !== 'AbortError' && (e instanceof ErroGemini ? [401, 403, 429, 500, 502, 503, 504].includes(e.status) : true);
     const tetoDoProxy = (e) => e instanceof ErroGemini && e.status === 429 && /teto/i.test(e.detalhe || '');
     if (modoEconomicoAtivo()) {
       texto = prontaDaBase('orcamento');
@@ -1053,13 +1107,15 @@ async function perguntarAoPersonagem(q) {
         if (!tentavel(e1)) throw e1;
         const reserva = modeloReserva();
         try {
-          if (tetoDoProxy(e1) || !reserva || reserva === config.modelo) throw e1;
+          if ([401, 403].includes(e1.status)) avisarOperador(T.evento.aviso.chaveRecusada);
+          if (tetoDoProxy(e1) || [401, 403].includes(e1.status) || !reserva || reserva === config.modelo) throw e1; // a mesma chave recusada ou o mesmo teto valem para o reserva
           console.warn(`[gemini] ${config.modelo} falhou (${e1.status || e1.message}); tentando o reserva ${reserva}`);
-          texto = await chamar(reserva);
-          console.info('[orcamento] ' + T.orcamento.reservaUsada);
+          texto = await chamar(reserva, LENTO_RESERVA_MS);
+          avisarOperador(T.evento.aviso.reserva);
         } catch (e2) {
           if (!tentavel(e2) || !(rgBruto && rgBruto.confiante)) throw e2;
           console.warn('[gemini] reserva também falhou; resposta pronta da base:', e2);
+          avisarOperador(T.evento.aviso.pronta);
           texto = prontaDaBase('falha');
           falar(texto);
         }
@@ -1112,6 +1168,25 @@ tentarBtn.addEventListener('click', () => {
   if (q) perguntarAoPersonagem(q);
 });
 
+// Demonstração guiada (U6): resposta pronta e aprovada, sem Gemini, sem custo e sem internet. O áudio vem do disco quando já foi gerado.
+async function responderGuiada(item) {
+  if (!item || ocupado || !personagem) return;
+  ultimaFalha = null;
+  politica.contarTurno();
+  if (!sessaoAtiva) { sessaoAtiva = true; app.dataset.sessao = 'ativa'; }
+  if (etapa !== 'conversa') definirEtapa('conversa');
+  tocarInatividade();
+  const quem = personagem, ef = efetivo(quem);
+  silenciar();
+  elHeard.textContent = T.estado.voce(item.pergunta);
+  elAnswer.textContent = item.resposta;
+  elFontes.textContent = T.rag.fontes([item.fonte || T.evento.guiadaResposta]); elFontes.hidden = false;
+  const marca = diagnostico.marcarPergunta(); marca.aoPrimeiroTexto();
+  await voz.preSintetizar(item.resposta, ef.voz); // lê do disco ou sintetiza (só voz gratuita), para tocar na hora
+  if (personagem !== quem) return;
+  voz.falarTexto(item.resposta, ef.voz);
+}
+
 /* ---------- Ouvido ---------- */
 const ouvido = criarOuvido({
   // Mãos-livres: falar por cima do personagem corta a fala e a requisição na hora e passa a ouvir.
@@ -1137,8 +1212,16 @@ function aplicarModo(m) {
   elModo.guiada.setAttribute('aria-pressed', String(guiada));
   elModo.livre.setAttribute('aria-pressed', String(!guiada));
   if (guiada && ouvido.gravando) ouvido.cancelar();
+  atualizarChips();
 }
-function trocarModo(m) { gravar('modo_conversa', m); aplicarModo(m); }
+function trocarModo(m) { gravar('modo_conversa', m); reaplicarModo(); }
+// O modo evento "guiada" e a falta de internet forçam a demonstração guiada, sem mexer na preferência da pessoa.
+const eventoModo = () => ler('evento_modo', 'livre');
+const guiadaForcada = () => eventoModo() === 'guiada' || redeCaiu;
+function reaplicarModo() {
+  aplicarModo(guiadaForcada() || ler('modo_conversa', 'livre') === 'guiada' ? 'guiada' : 'livre');
+  elModo.livre.disabled = guiadaForcada();
+}
 
 function fecharMenu({ foco = false } = {}) {
   if (elMais.menu.hidden) return;
@@ -1188,7 +1271,7 @@ function iniciarBarra() {
   document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.mais-caixa')) fecharMenu(); });
   elModo.guiada.addEventListener('click', () => trocarModo('guiada'));
   elModo.livre.addEventListener('click', () => trocarModo('livre'));
-  aplicarModo(ler('modo_conversa', 'livre') === 'guiada' ? 'guiada' : 'livre');
+  reaplicarModo();
 }
 
 iniciarBarra();
@@ -1205,7 +1288,9 @@ micBtn.addEventListener('click', () => {
 stopBtn.addEventListener('click', () => { if (abortCtl) abortCtl.abort(); silenciar(); estadoOcioso(); });
 $('chips').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
-  voz.preparar(); perguntarAoPersonagem(b.dataset.q);
+  voz.preparar();
+  if (b.dataset.guiada !== undefined) responderGuiada(guiadasDoPersonagem[Number(b.dataset.guiada)]);
+  else perguntarAoPersonagem(b.dataset.q);
 });
 form.addEventListener('submit', (e) => { e.preventDefault(); voz.preparar(); const v = input.value; input.value = ''; perguntarAoPersonagem(v); });
 
@@ -1397,9 +1482,21 @@ function desenharDiagnostico() {
 function situacaoOrcamento() { return situacaoDoTeto(custo.resumo().acumuladoReais, tetoReais()); }
 function modoEconomicoAtivo() { return economicoManual() || situacaoOrcamento().nivel === 'estourou'; }
 let avisouOrcamento = null;
+function pintarAlerta() { $('gear').dataset.alerta = alertaOrcamento || alertaEvento ? 'sim' : 'nao'; }
+// Cada degrau da escada de falhas avisa o operador e a conversa continua. O ponto da engrenagem some quando o painel abre.
+function avisarOperador(mensagem) {
+  const t = new Date().toISOString().slice(11, 19);
+  if (avisosEvento[0] && avisosEvento[0].mensagem === mensagem) return; // não repete o mesmo aviso em fila
+  avisosEvento.unshift({ t, mensagem });
+  if (avisosEvento.length > 20) avisosEvento.pop();
+  alertaEvento = true; pintarAlerta();
+  console.warn('[evento] ' + mensagem);
+  if (typeof desenharAvisosEvento === 'function') desenharAvisosEvento();
+}
 function atualizarAlertaOrcamento() {
   const s = situacaoOrcamento();
-  $('gear').dataset.alerta = s.nivel === 'aviso' || s.nivel === 'estourou' ? 'sim' : 'nao';
+  alertaOrcamento = s.nivel === 'aviso' || s.nivel === 'estourou';
+  pintarAlerta();
   if (s.nivel !== avisouOrcamento && (s.nivel === 'aviso' || s.nivel === 'estourou')) {
     console.warn('[orcamento] ' + (s.nivel === 'estourou' ? T.orcamento.estourou : T.orcamento.aviso(Math.round(s.pct * 100))));
   }
@@ -1429,6 +1526,7 @@ function abrirConfiguracoes() {
 // Painel não modal não fecha com Esc sozinho.
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && dlg.open && dlg.dataset.encaixado === 'sim') dlg.close(); });
 $('gear').addEventListener('click', () => {
+  alertaEvento = false; pintarAlerta();
   abrirConfiguracoes();
   desenharDiagnostico();
   clearInterval(timerDiag);
@@ -1630,7 +1728,7 @@ dlg.addEventListener('toggle', () => { if (dlg.open) desenharRag(); });
 
 /* ---------- Console do operador (I5): abas e cena ---------- */
 const ABA_DE = {
-  Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena', Orçamento: 'orcamento', 'Base de conhecimento': 'personagem',
+  Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena', Orçamento: 'orcamento', 'Modo evento': 'evento', 'Base de conhecimento': 'personagem',
   Câmera: 'sessao', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
   'Armazenamento e uso offline': 'armazenamento', Licenças: 'armazenamento',
 };
@@ -1727,6 +1825,67 @@ $('cenaRestaurar').addEventListener('click', () => {
 });
 aj.sel.addEventListener('change', preencherCena);
 dlg.addEventListener('toggle', () => { if (dlg.open) { preencherCena(); mostrarAba(ler('aba_operador', 'cena')); } });
+
+/* ---------- Modo evento (U6): campos do operador, fila, pacote de áudio e rede ---------- */
+const EV = T.evento;
+const elEv = {
+  dica: $('evDica'), modo: $('evModo'), guiadaEstado: $('evGuiadaEstado'), turnos: $('evTurnos'), minutos: $('evMinutos'),
+  filaN: $('evFilaN'), mais: $('evFilaMais'), menos: $('evFilaMenos'), pacote: $('evPacote'), pacoteStatus: $('evPacoteStatus'), avisos: $('evAvisos'), fila: $('fila'),
+};
+$('evDica').textContent = EV.dica; $('evModoR').textContent = EV.modo; $('evTurnosR').textContent = EV.turnos; $('evMinutosR').textContent = EV.minutos;
+$('evFilaR').textContent = EV.fila; $('evAvisosR').textContent = EV.avisos; $('evPacoteDica').textContent = EV.pacoteDica;
+elEv.mais.textContent = EV.filaMais; elEv.menos.textContent = EV.filaMenos; elEv.pacote.textContent = EV.pacote;
+elEv.modo.options[0].textContent = EV.modoLivre; elEv.modo.options[1].textContent = EV.modoGuiada;
+elEv.modo.value = eventoModo(); elEv.turnos.value = ler('ev_turnos', '0'); elEv.minutos.value = ler('ev_minutos', '0');
+const aplicarPolitica = () => politica.configurar(Number(ler('ev_turnos', '0')), Number(ler('ev_minutos', '0')) * 60);
+aplicarPolitica();
+elEv.modo.addEventListener('change', () => { gravar('evento_modo', elEv.modo.value); reaplicarModo(); });
+elEv.turnos.addEventListener('input', () => { gravar('ev_turnos', String(Math.max(0, Number(elEv.turnos.value) || 0))); aplicarPolitica(); });
+elEv.minutos.addEventListener('input', () => { gravar('ev_minutos', String(Math.max(0, Number(elEv.minutos.value) || 0))); aplicarPolitica(); });
+
+// Fila visível: o operador conta; a tela de atração mostra.
+const filaN = () => Math.max(0, Number(ler('fila', '0')) || 0);
+function desenharFila() {
+  const n = filaN();
+  elEv.filaN.textContent = String(n);
+  elEv.fila.hidden = n === 0; elEv.fila.textContent = n ? EV.filaTexto(n) : '';
+}
+elEv.mais.addEventListener('click', () => { gravar('fila', String(filaN() + 1)); desenharFila(); });
+elEv.menos.addEventListener('click', () => { gravar('fila', String(Math.max(0, filaN() - 1))); desenharFila(); });
+desenharFila();
+
+function desenharAvisosEvento() {
+  elEv.avisos.replaceChildren(...(avisosEvento.length ? avisosEvento : [{ t: '', mensagem: EV.semAvisos }]).slice(0, 8).map((a) => {
+    const li = document.createElement('li'); li.textContent = a.t ? `${a.t} ${a.mensagem}` : a.mensagem; return li;
+  }));
+}
+function desenharEvento() {
+  elEv.guiadaEstado.textContent = guiadasDoPersonagem.length ? EV.guiadaTem(guiadasDoPersonagem.length) : EV.guiadaSem;
+  desenharAvisosEvento();
+}
+dlg.addEventListener('toggle', () => { if (dlg.open) desenharEvento(); });
+
+// Pacote de áudio: só voz gratuita. Sintetiza (ou lê do disco) cada resposta guiada aprovada de cada personagem.
+elEv.pacote.addEventListener('click', async () => {
+  if (config.motor === 'gemini') { elEv.pacoteStatus.textContent = EV.pacotePaga; return; }
+  const itens = [];
+  for (const p of disponiveis) for (const g of itensAprovados(await rag.guiadasDe(p.id))) itens.push([p, g]);
+  if (!itens.length) { elEv.pacoteStatus.textContent = EV.pacoteSem; return; }
+  elEv.pacote.disabled = true;
+  let feitos = 0;
+  for (const [p, g] of itens) {
+    const ok = await voz.preSintetizar(g.resposta, efetivo(p).voz);
+    if (ok) feitos++;
+    elEv.pacoteStatus.textContent = EV.pacoteProgresso(feitos, itens.length);
+  }
+  elEv.pacoteStatus.textContent = EV.pacotePronto(feitos);
+  elEv.pacote.disabled = false;
+});
+
+// Rede: cai, volta. Sem internet o app passa sozinho à demonstração guiada e avisa o operador.
+window.addEventListener('offline', () => { redeCaiu = true; avisarOperador(EV.aviso.semRede); reaplicarModo(); });
+window.addEventListener('online', () => { redeCaiu = false; avisarOperador(EV.aviso.redeVoltou); reaplicarModo(); });
+if (redeCaiu) { avisosEvento.unshift({ t: new Date().toISOString().slice(11, 19), mensagem: EV.aviso.semRede }); }
 
 /* ---------- Orçamento (U5): campos do operador ---------- */
 const O = T.orcamento;

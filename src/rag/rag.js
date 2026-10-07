@@ -106,6 +106,8 @@ export function criarRag({ embeddings, aoStatus = () => {}, raiz = 'knowledge' }
       if (!tema || !tema.padrao) return false;
       return new RegExp(tema.padrao, 'i').test(semAcento(pergunta));
     },
+    // Itens da demonstração guiada que o dono aprovou (knowledge/index.json, gerado por tools/knowledge.mjs).
+    async guiadasDe(pid) { return (((await lerLista()).guiadas || {})[pid]) || []; },
     // Depois de mudar documentos e rodar tools/knowledge.mjs: relê a lista na próxima verificação.
     esquecerLista() { listaCache = null; },
     estado: (pid) => estado.get(pid) || { documentos: 0, indexados: 0, pendentes: [] },

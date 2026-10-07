@@ -121,3 +121,13 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 54 | Colocar um teto de R$ 1 no proxy (`TETO_REAIS=1`) e perguntar até passar. | A resposta seguinte vem em modo econômico, sem tela de erro, e a engrenagem mostra o aviso. | |
 | 55 | Conferir 30 perguntas reais e anotar o gasto do proxy; comparar com `npm run orcamento -- --turnos 30 --sessoes-dia 1` (informando `--entrada` e `--saida` medidos). | Previsto e medido na mesma ordem de grandeza. Me diga os números para eu fechar a tabela. | |
 
+## U6, modo evento
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 56 | Rodar `node tools/guiada.mjs gerar luma uema-18-banco-de-perguntas-e-respostas-para-rag.md`, ler com `listar`, aprovar só os itens que servem (`--ids ...`) e rodar `npm run conhecimento`. | Em Evento, "Modo da conversa: demonstração guiada": os botões são as perguntas aprovadas (até 8), a resposta é falada e mostra a fonte. | |
+| 57 | Com o Kokoro ligado, Evento, "Gerar áudio das respostas guiadas". Depois pare o Kokoro (`docker stop kokoro`) e toque uma resposta guiada. | Toca mesmo com o servidor de voz fora do ar. | |
+| 58 | Desligar o wifi com a conversa livre aberta. | Os botões viram os guiados, o campo de texto some, o ponto vermelho aparece na engrenagem e o aviso "Sem internet" fica na lista. Ao religar, volta ao normal. | |
+| 59 | Evento: 3 perguntas por sessão e 2 minutos. Conversar até estourar cada limite. | O personagem se despede depois da fala em curso e o motivo aparece nos avisos. | |
+| 60 | Soma 3 pessoas na fila pelo painel e deixa a tela de atração. | Aparece "3 pessoas na fila". | |
+

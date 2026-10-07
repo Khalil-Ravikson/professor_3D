@@ -15,12 +15,18 @@ const soVerificar = process.argv.includes('--verificar');
 let problemas = 0;
 const personagens = {};
 const temas = {};
+const guiadas = {}; // demonstração guiada: só os itens que o dono aprovou (tools/guiada.mjs)
 const META = new Set(['RAG', 'TTS', 'PDF', 'FAQ']); // siglas de instrução do documento, não do assunto
 const MIN_OCORRENCIAS = 2;
 
 if (!existsSync(RAIZ)) { console.log('Sem pasta knowledge/: nada a validar.'); process.exit(0); }
 for (const pasta of readdirSync(RAIZ).filter((n) => statSync(join(RAIZ, n)).isDirectory())) {
   const arquivos = readdirSync(join(RAIZ, pasta)).filter((n) => /\.(md|txt)$/i.test(n)).sort();
+  const gj = join(RAIZ, pasta, 'guiada.json');
+  if (existsSync(gj)) {
+    const itens = (JSON.parse(readFileSync(gj, 'utf8')).itens || []).filter((i) => i.aprovado === true).map(({ pergunta, resposta, fonte }) => ({ pergunta, resposta, fonte }));
+    if (itens.length) { guiadas[pasta] = itens; console.log(`${pasta}: ${itens.length} itens da demonstração guiada aprovados.`); }
+  }
   if (!arquivos.length) { console.log(`${pasta}: sem documentos (personagem fica sem base de conhecimento).`); continue; }
   let trechosTotal = 0, palavras = 0;
   const siglas = new Map();
@@ -45,5 +51,5 @@ for (const pasta of readdirSync(RAIZ).filter((n) => statSync(join(RAIZ, n)).isDi
   }
   console.log(`${pasta}: ${arquivos.length} documentos, ${trechosTotal} trechos, ${palavras} palavras.`);
 }
-if (!soVerificar && !problemas) writeFileSync(join(RAIZ, 'index.json'), JSON.stringify({ personagens, temas }, null, 2) + '\n');
+if (!soVerificar && !problemas) writeFileSync(join(RAIZ, 'index.json'), JSON.stringify({ personagens, temas, guiadas }, null, 2) + '\n');
 process.exit(problemas ? 1 : 0);
