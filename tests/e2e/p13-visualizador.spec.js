@@ -321,6 +321,7 @@ test('visualizador: trocar de personagem com ele aberto não vaza memória nem c
 test('visualizador: a galeria do operador abre o visualizador tocando os clipes ligados', async ({ page }) => {
   await abrir(page);
   await page.click('#gear');
+  await page.click('#abas button[data-aba="animacoes"]'); // a galeria mora na aba Animações do console do operador
   await expect(page.locator('#galeriaVisualizador')).toHaveText('Abrir no visualizador');
   await page.click('#galeriaVisualizador');
   await expect(page.locator('#settings')).not.toBeVisible();
