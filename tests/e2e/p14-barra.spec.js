@@ -24,8 +24,8 @@ for (const [nome, vp] of [['paisagem', { width: 1280, height: 720 }], ['retrato'
     const erros = await abrir(page, vp);
     await expect(page.locator('#barra')).toBeVisible();
     await expect(page.locator('#maisBtn')).toHaveAttribute('aria-label', 'Mais opções');
-    await expect(page.locator('#modoGuiada')).toHaveText('Guiada');
-    await expect(page.locator('#modoLivre')).toHaveText('Livre');
+    await expect(page.locator('#modoGuiada')).toHaveText('Sugestões');
+    await expect(page.locator('#modoLivre')).toHaveText('Perguntar');
     await expect(page.locator('#modoLivre')).toHaveAttribute('aria-pressed', 'true');
     for (const id of ['maisBtn', 'modoGuiada', 'modoLivre']) {
       const b = await page.locator('#' + id).boundingBox();
@@ -198,3 +198,16 @@ test('sair do personagem: "Escolher outro personagem" limpa a conversa e volta �
   await expect(page.locator('#text')).toHaveValue('');
   await expect(page.locator('#maisMenu')).toBeHidden();
 });
+
+for (const [nome, vp] of [['paisagem', { width: 1280, height: 720 }], ['retrato', { width: 540, height: 960 }], ['totem', { width: 1080, height: 1920 }]]) {
+  test(`I4 o menu "+" cabe inteiro na tela (${nome}), sem ser cortado`, async ({ page }) => {
+    await abrir(page, vp);
+    await page.click('#maisBtn');
+    const m = await page.locator('#maisMenu').boundingBox();
+    expect(m.x).toBeGreaterThanOrEqual(0);
+    expect(m.y).toBeGreaterThanOrEqual(0);
+    expect(m.x + m.width).toBeLessThanOrEqual(vp.width);
+    expect(m.y + m.height).toBeLessThanOrEqual(vp.height);
+    for (const b of await page.locator('#maisMenu button').all()) await expect(b).toBeInViewport({ ratio: 1 });
+  });
+}

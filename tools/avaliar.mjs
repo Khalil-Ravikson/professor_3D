@@ -79,6 +79,12 @@ etapa('Detector anti-slop', 'nenhum padrão de interface genérica no HTML e no 
 etapa('Testes unitários', 'frases, gestos, quadro, câmera, licença, áudio, vigia, custo e contraste',
   () => rodar('node', ['--test', '--test-force-exit', 'tests/unit/*.test.js']));
 
+etapa('Política de segurança (CSP)', 'o hash do importmap na Content-Security-Policy confere com o index.html',
+  () => rodar('node', ['tools/csp.mjs', '--verificar']));
+
+etapa('Banco de perguntas e detector de frases proibidas', '20 perguntas por personagem e o detector pegando o que promete (sem chamar o Gemini; as respostas reais exigem --gastar em avaliar-respostas)',
+  () => rodar('node', ['tools/avaliar-respostas.mjs']));
+
 etapa('Licenças', 'modelos, clipes e dependências; falha com AGPL, GPL, licença desconhecida ou arquivo proibido no git',
   () => rodar('node', ['tools/licencas.mjs']));
 

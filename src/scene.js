@@ -1,14 +1,38 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-export function criarLuzes(scene) {
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xb7c6d8, 1.6));
-  const principal = new THREE.DirectionalLight(0xffffff, 1.8);
-  principal.position.set(1.2, 2.5, 2.5);
-  scene.add(principal);
-  const contra = new THREE.DirectionalLight(0xffe2c8, 0.8);
-  contra.position.set(-2, 1.5, -1.5);
-  scene.add(contra);
+// Rig de luz de três pontos, definido nos dados do personagem (campo `luz` de characters.js):
+// principal suave, preenchimento frio e recorte quente no cabelo. O ambiente (hemisfério) completa.
+// Os valores padrão são os que o app já usava; um personagem só muda o que declarar.
+export const LUZ_PADRAO = {
+  ambiente: { ceu: '#ffffff', chao: '#b7c6d8', intensidade: 1.6 },
+  principal: { cor: '#ffffff', intensidade: 1.8, pos: [1.2, 2.5, 2.5] },
+  preenchimento: { cor: '#bcd2ff', intensidade: 0, pos: [-2, 1, 2] },
+  recorte: { cor: '#ffe2c8', intensidade: 0.8, pos: [-2, 1.5, -1.5] },
+};
+
+export function criarLuzes(scene, dados = null) {
+  const luzes = {
+    ambiente: new THREE.HemisphereLight(0xffffff, 0xb7c6d8, 1.6),
+    principal: new THREE.DirectionalLight(0xffffff, 1.8),
+    preenchimento: new THREE.DirectionalLight(0xbcd2ff, 0),
+    recorte: new THREE.DirectionalLight(0xffe2c8, 0.8),
+  };
+  for (const l of Object.values(luzes)) scene.add(l);
+  luzes.aplicar = (d) => aplicarLuz(luzes, d);
+  luzes.aplicar(dados);
+  return luzes;
+}
+
+// Mistura o que o personagem declara com o padrão, ponto a ponto.
+export function aplicarLuz(luzes, dados) {
+  const m = (k) => ({ ...LUZ_PADRAO[k], ...((dados && dados[k]) || {}) });
+  const amb = m('ambiente');
+  luzes.ambiente.color.set(amb.ceu); luzes.ambiente.groundColor.set(amb.chao); luzes.ambiente.intensity = amb.intensidade;
+  for (const k of ['principal', 'preenchimento', 'recorte']) {
+    const v = m(k);
+    luzes[k].color.set(v.cor); luzes[k].intensity = v.intensidade; luzes[k].position.set(...v.pos);
+  }
 }
 
 // A câmera fica um pouco abaixo do foco e mira mais abaixo ainda (desvioAlvo),
@@ -31,7 +55,7 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 50);
-  criarLuzes(scene);
+  const luzes = criarLuzes(scene);
 
   const foco = new THREE.Vector3(0, 1.5, 0);
   let distancia = 1.7;
@@ -195,6 +219,25 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
     if (!animar) { pular = true; aplicarAlvo(0); }
   }
 
+  // ---------- Qualidade adaptativa (R1) ----------
+  // Guiada por FPS medido: cai um degrau do pixel ratio depois de 3 s abaixo de 30 fps e sobe um depois de
+  // 10 s acima de 55. O pixel ratio é o que mais pesa na GPU de um totem; sombra e bloom ainda não existem
+  // na cena, então não há o que cortar depois dele.
+  const DEGRAUS = [2, 1.5, 1, 0.75];
+  const teto = Math.min(devicePixelRatio || 1, 2);
+  let degrau = 0, autoQualidade = false, baixo = 0, alto = 0, marcaQ = performance.now(), quadrosQ = 0;
+  const aplicarDegrau = () => { renderer.setPixelRatio(Math.min(teto, DEGRAUS[degrau])); enquadrar(); };
+  function passoQualidade() {
+    if (!autoQualidade || contextoPerdido || document.hidden) { marcaQ = performance.now(); quadrosQ = quadros; return; }
+    const agora = performance.now();
+    if (agora - marcaQ < 1000) return;
+    const fps = ((quadros - quadrosQ) * 1000) / (agora - marcaQ);
+    marcaQ = agora; quadrosQ = quadros;
+    if (fps < 30) { baixo++; alto = 0; } else if (fps > 55) { alto++; baixo = 0; } else { baixo = 0; alto = 0; }
+    if (baixo >= 3 && degrau < DEGRAUS.length - 1) { degrau++; baixo = 0; aplicarDegrau(); console.info(`[cena] qualidade reduzida: pixel ratio ${Math.min(teto, DEGRAUS[degrau])} (${fps.toFixed(0)} fps)`); }
+    if (alto >= 10 && degrau > 0) { degrau--; alto = 0; aplicarDegrau(); console.info(`[cena] qualidade restaurada: pixel ratio ${Math.min(teto, DEGRAUS[degrau])}`); }
+  }
+
   const atualizadores = new Set();
   const relogio = new THREE.Clock();
   // Marca de cada quadro: alimenta o contador de FPS e o vigia do laço.
@@ -208,6 +251,7 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
       for (const fn of atualizadores) fn(dt, t);
       aplicarAlvo(dt);
       passoOrbita(dt);
+      passoQualidade();
       renderer.render(scene, camera);
     });
   }
@@ -238,6 +282,11 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
     get orbitaAtiva() { return !!orbita; },
     get orbita() { return orbita; },
     // Onde o reset deixa a câmera: para o teste e para o painel.
+    luzes,
+    definirLuz(dados) { luzes.aplicar(dados); },
+    // Liga ou desliga o ajuste automático. Desligar devolve o pixel ratio cheio.
+    qualidadeAuto(ligada) { autoQualidade = !!ligada; baixo = alto = 0; if (!autoQualidade && degrau !== 0) { degrau = 0; aplicarDegrau(); } },
+    get qualidade() { return { degrau, pixelRatio: Math.min(teto, DEGRAUS[degrau]), automatica: autoQualidade }; },
     alvoPadrao() { calcularAlvo(); return { posicao: alvoPos.clone(), olhar: alvoOlhar.clone() }; },
     get modoCorpo() { return !!corpo; },
     aoAtualizar(fn) { atualizadores.add(fn); return () => atualizadores.delete(fn); },

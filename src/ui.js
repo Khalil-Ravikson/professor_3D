@@ -6,6 +6,8 @@ import {
 import { listarMovimentos, salvarMovimento, apagarMovimento, idDoNome, medirClipe, avisosDasMedidas } from './movimentos.js';
 import { carregarCatalogo, aplicarEscolhas, gravarEscolha } from './animacoes.js';
 import { criarDiretor, removerMarcas, instrucaoGestos, ESTADOS_BASE } from './gestos.js';
+import { instrucaoEmocao } from './emocao.js';
+import { registrarSW, aplicarAtualizacao, pedirPersistencia, usoEcota, tamanhosPorCategoria, apagarCategoria, prontoOffline, baixarParaOffline, formatarBytes, temServiceWorker } from './armazenamento.js';
 import { criarBoca } from './lipsync.js';
 import { PERSONAGENS, buscarPersonagem, aplicarAjustes } from './characters.js';
 import { criarQuadro, criarLeitorMarcado, separarFalaEQuadro } from './board.js';
@@ -31,7 +33,8 @@ import { VERSAO, VERSAO_DATA, VERSAO_MARCO } from './versao.js';
 const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
 const micBtn = $('mic'), stopBtn = $('stop'), form = $('form'), input = $('text');
-const elEstadoChip = $('estadoChip');
+const elEstadoChip = $('estadoChip'), tentarBtn = $('tentarDeNovo');
+let ultimaFalha = null; // a pergunta que não foi respondida, para o botão Tentar de novo
 const dlg = $('settings'), keyInput = $('key'), voiceSel = $('voiceSel');
 const motorSel = $('motorSel'), urlInput = $('urlKokoro'), modeloInput = $('modelo');
 const elStatusVoz = $('statusVoz'), elSeloVoz = $('seloVoz'), bocaSel = $('bocaSel');
@@ -125,6 +128,8 @@ function definirEstado(s, texto) {
   elEstadoChip.textContent = T.barra.estados[s] || '';
   elEstadoChip.dataset.estado = s;
   stopBtn.hidden = !(s === 'speaking' || s === 'thinking');
+  if ((s === 'idle' || s === 'listening') && avatar) avatar.definirEmocao('neutro'); // a emoção acaba junto com a fala
+  tentarBtn.hidden = !(s === 'error' && ultimaFalha);
   if (s === 'idle') micBtn.disabled = false;
 }
 
@@ -188,11 +193,18 @@ function aplicarPaleta(p) {
 const maiuscula = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 function mostrarErroAvatar(titulo, caminho, motivo = '') {
-  $('erroTitulo').textContent = titulo;
   $('erroCaminho').textContent = caminho;
-  $('erroArquivo').hidden = !!motivo;
   $('erroMotivo').hidden = !motivo;
   $('erroMotivo').textContent = motivo;
+  // Com motivo próprio (ex.: licença) a mensagem fica como veio. Arquivo ausente: a criança lê um aviso com saída,
+  // e o texto técnico, com o caminho, vai para um bloco que só o adulto abre.
+  $('erroTitulo').textContent = motivo ? titulo : T.avatar.criancaTitulo;
+  $('erroAjuda').hidden = !!motivo;
+  $('erroAjuda').textContent = T.avatar.criancaAjuda;
+  $('erroArquivo').hidden = !!motivo;
+  $('erroArquivo').open = false;
+  $('erroResumo').textContent = T.avatar.paraOAdulto;
+  $('erroTecnico').firstChild.textContent = `${titulo} Coloque o arquivo em `;
   $('erroAvatar').hidden = false;
 }
 
@@ -508,7 +520,8 @@ async function trocarPersonagem(p) {
   atualizarSelecao(); // texto, perfil e roleta mudam na hora; o modelo chega depois
   atualizarTitulo();
   gravar('personagem', p.id);
-  aplicarPaleta(p.paleta);
+  aplicarPaleta(efetivo(p).paleta);
+  cena.definirLuz(efetivo(p).luz);
   document.title = `${p.nome} 3D`;
   micBtn.setAttribute('aria-label', T.avatar.falar(p.nome));
   if (etapa === 'atracao') definirEtapa('atracao'); // o convite usa o nome do personagem
@@ -549,7 +562,7 @@ async function trocarPersonagem(p) {
     if (minha !== carga) { descartarVrm(vrm); return; }
     registrarChecklist(p.nome, checarVrm(vrm, bytes));
     avatar = montarAvatar(vrm, cena, { bases, tetoBoca: p.tetoBoca, fixarNoLugar });
-    cena.definirFoco(avatar.posicaoCabeca, p.enquadramento);
+    cena.definirFoco(avatar.posicaoCabeca, efetivo(p).enquadramento);
     aplicarEnquadramento(false); // na seleção troca para corpo inteiro; o deslize é do canvas, não da câmera
     atualizarSelecao();
     if (visualizador.ativo) { cena.resetarCamera(0); visualizador.aoTrocarPersonagem(); }
@@ -612,7 +625,10 @@ const voz = criarVoz({
   aoTerminarFala: () => { falando = false; if (!ocupado) estadoOcioso(); liberarGesto(); tocarInatividade(); avancarDepoisDaFala(); },
   aoFimFrase: () => liberarGesto(),
   // Gesto marcado pelo LLM numa sentença: pedido no instante em que essa sentença começa a tocar.
-  aoInicioFrase: (gestos) => { for (const g of gestos) pedirGesto(g, 'llm', { naFronteira: true }); },
+  aoInicioFrase: (gestos, emocao) => {
+    if (emocao && avatar) avatar.definirEmocao(emocao);
+    for (const g of gestos) pedirGesto(g, 'llm', { naFronteira: true });
+  },
   aoPalavra: () => { if (boca) boca.marcarPalavra(); },
   aoStatus: mostrarStatusVoz,
   aoMudarVozesSistema: (vozes, manual) => {
@@ -867,6 +883,7 @@ function encerrarSessao(origem) {
 // Nada da conversa anterior pode sobrar para a próxima pessoa: histórico, quadro, microfone aberto, menu e legenda.
 // O microfone importa: sem cancelar, o reconhecimento termina depois e abre uma pergunta nova em cima da vitrine.
 function limparConversa() {
+  ultimaFalha = null;
   ouvido.cancelar();
   for (const h of historicos.values()) h.length = 0;
   quadro.limpar('');
@@ -927,10 +944,11 @@ window.addEventListener('blur', largarToque);
 async function perguntarAoPersonagem(q) {
   q = (q || '').trim();
   if (!q || ocupado || !personagem) return;
+  ultimaFalha = null;
   if (!sessaoAtiva) { sessaoAtiva = true; app.dataset.sessao = 'ativa'; }
   if (etapa !== 'conversa') definirEtapa('conversa');
   tocarInatividade();
-  if (!apiKey) { definirEstado('idle', T.estado.semChave); dlg.showModal(); return; }
+  if (!apiKey) { definirEstado('idle', T.estado.semChave); abrirConfiguracoes(); return; }
   const quem = personagem;
   const marca = diagnostico.marcarPergunta();
   marcaPergunta = marca;
@@ -962,7 +980,7 @@ async function perguntarAoPersonagem(q) {
     : null;
   try {
     const texto = await perguntarEmFluxo({
-      apiKey, modelo: config.modelo, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []), historico: hist.slice(-9), signal: ctl.signal,
+      apiKey, modelo: config.modelo, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao(), historico: hist.slice(-9), signal: ctl.signal,
       temperatura: ef.temperatura, limitePalavras: ef.limitePalavras,
       ferramentas: Object.fromEntries((ef.ferramentas || []).filter((n) => FERRAMENTAS[n]).map((n) => [n, FERRAMENTAS[n]])),
       aoChamada: (nome, args, resultado) => {
@@ -978,7 +996,7 @@ async function perguntarAoPersonagem(q) {
     falaTurno.finalizar();
     if (personagem !== quem) { hist.pop(); return; }
     if (!texto) { hist.pop(); elAnswer.textContent = T.resposta.vazia; return; }
-    hist.push({ role: 'assistant', content: texto.replace(/\[gesto:[^\]]*\]\s*/gi, ''), contas });
+    hist.push({ role: 'assistant', content: texto.replace(/\[(gesto|emo):[^\]]*\]\s*/gi, ''), contas });
     elAnswer.textContent = removerMarcas(limparParaFala(falado)).trim() || separarFalaEQuadro(hist[hist.length - 1].content).fala;
   } catch (e) {
     hist.pop();
@@ -996,12 +1014,23 @@ async function perguntarAoPersonagem(q) {
     } else {
       elAnswer.textContent = T.resposta.semInternet;
     }
+    // O erro vira estado de verdade (sinal "Problema") e a pergunta fica guardada para o botão Tentar de novo.
+    ultimaFalha = q;
+    definirEstado('error');
   } finally {
     ocupado = false;
     if (abortCtl === ctl) abortCtl = null;
     if (!voz.emTurno && personagem === quem && app.dataset.state === 'thinking') estadoOcioso();
   }
 }
+
+tentarBtn.textContent = T.estado.tentarDeNovo;
+tentarBtn.addEventListener('click', () => {
+  const q = ultimaFalha;
+  ultimaFalha = null;
+  estadoOcioso();
+  if (q) perguntarAoPersonagem(q);
+});
 
 /* ---------- Ouvido ---------- */
 const ouvido = criarOuvido({
@@ -1252,6 +1281,8 @@ function desenharDiagnostico() {
     [D.gpu, r.gpu ? D.gpuValor(r.gpu.geometrias, r.gpu.texturas) : D.semDados, false],
     [D.respostaGemini, r.latencia.perguntaMs === null ? D.semMedida : D.ms(r.latencia.perguntaMs, r.latencia.amostras), false],
     [D.ateFala, r.latencia.falaMs === null ? D.semMedida : D.ms(r.latencia.falaMs), false],
+    [D.qualidade, D.qualidadeValor(cena.qualidade.pixelRatio, cena.qualidade.automatica), cena.qualidade.degrau > 0],
+    [D.vozAgora, personagem ? D.vozAgoraValor(personagem.nome, ultimoMotorVoz && ultimoMotorVoz.id === 'gemini' ? ((efetivo(personagem).voz.gemini && efetivo(personagem).voz.gemini.voz) || config.gemini.voz) : efetivo(personagem).voz.id, (ultimoMotorVoz && ultimoMotorVoz.id) || 'escolhendo') : D.semDados, false],
     [D.vozGemini, usoGemini.chamadas ? D.vozGeminiValor(usoGemini.chamadas, usoGemini.chars.toLocaleString('pt-BR'), (usoGemini.usd * g.cambio).toFixed(4), medianaDe(usoGemini.latencias)) : D.vozGeminiNenhuma, false],
     [D.respostasHoje, D.respostasValor(g.respostas, g.sessao.respostas), false],
     [D.tokensHoje, D.tokensValor(n(g.entrada), n(g.saida + g.pensamento)), false],
@@ -1290,8 +1321,17 @@ $('diagContexto').addEventListener('click', () => {
   dlg.close();
 });
 
+const telaLargaParaPainel = matchMedia('(min-width: 1000px)');
+function abrirConfiguracoes() {
+  // Em tela larga o painel encaixa à direita e não bloqueia a cena (ela é a prévia); em tela estreita é modal.
+  const encaixar = telaLargaParaPainel.matches;
+  dlg.dataset.encaixado = encaixar ? 'sim' : 'nao';
+  if (encaixar) dlg.show(); else dlg.showModal();
+}
+// Painel não modal não fecha com Esc sozinho.
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && dlg.open && dlg.dataset.encaixado === 'sim') dlg.close(); });
 $('gear').addEventListener('click', () => {
-  dlg.showModal();
+  abrirConfiguracoes();
   desenharDiagnostico();
   clearInterval(timerDiag);
   timerDiag = setInterval(desenharDiagnostico, 1000);
@@ -1389,7 +1429,7 @@ for (const [id, chave] of [['camCumprimentar', 'cumprimentar'], ['camSorriso', '
 /* ---------- Configurações por personagem ---------- */
 const aj = {
   sel: $('ajPersonagem'), persona: $('ajPersona'), limite: $('ajLimite'), tempPadrao: $('ajTempPadrao'),
-  temp: $('ajTemp'), tempValor: $('ajTempValor'), voz: $('ajVoz'), vel: $('ajVel'), velValor: $('ajVelValor'),
+  temp: $('ajTemp'), tempValor: $('ajTempValor'), voz: $('ajVoz'), vozGemini: $('ajVozGemini'), vel: $('ajVel'), velValor: $('ajVelValor'),
 };
 aj.sel.replaceChildren(...PERSONAGENS.map((p) => {
   const o = document.createElement('option'); o.value = p.id; o.textContent = p.nome; return o;
@@ -1405,6 +1445,7 @@ function preencherAjustes() {
   aj.temp.disabled = aj.tempPadrao.checked;
   aj.tempValor.textContent = aj.tempPadrao.checked ? 'padrão' : Number(aj.temp.value).toFixed(1);
   aj.voz.value = ef.voz.id;
+  aj.vozGemini.value = (ef.voz.gemini && ef.voz.gemini.voz) || '';
   aj.vel.value = ef.voz.speed;
   aj.velValor.textContent = Number(ef.voz.speed).toFixed(2);
   const vozes = (voz.statusServidor.vozes || []).filter((v) => /^p[fm]_/.test(v)).concat((voz.statusServidor.vozes || []).filter((v) => !/^p[fm]_/.test(v)));
@@ -1421,6 +1462,8 @@ function salvarAjustes() {
   const temp = aj.tempPadrao.checked ? null : Number(aj.temp.value);
   if (temp !== base.temperatura) a.temperatura = temp;
   if (aj.voz.value.trim() && aj.voz.value.trim() !== base.voz.id) a.vozId = aj.voz.value.trim();
+  const gv = aj.vozGemini.value.trim();
+  if (gv && gv !== ((base.voz.gemini && base.voz.gemini.voz) || '')) a.vozGemini = gv;
   const vel = Number(aj.vel.value);
   if (Math.abs(vel - base.voz.speed) > 1e-9) a.vozSpeed = vel;
   if (Object.keys(a).length) ajustes[base.id] = a; else delete ajustes[base.id];
@@ -1431,7 +1474,7 @@ function salvarAjustes() {
 }
 
 aj.sel.addEventListener('change', preencherAjustes);
-for (const el of [aj.persona, aj.limite, aj.temp, aj.voz, aj.vel]) el.addEventListener('input', salvarAjustes);
+for (const el of [aj.persona, aj.limite, aj.temp, aj.voz, aj.vozGemini, aj.vel]) el.addEventListener('input', salvarAjustes);
 aj.tempPadrao.addEventListener('change', salvarAjustes);
 $('ajRestaurar').addEventListener('click', () => {
   delete ajustes[aj.sel.value];
@@ -1443,6 +1486,185 @@ dlg.addEventListener('toggle', () => {
   if (personagem) aj.sel.value = personagem.id;
   preencherAjustes();
 });
+
+/* ---------- Console do operador (I5): abas e cena ---------- */
+const ABA_DE = {
+  Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena',
+  Câmera: 'sessao', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
+  'Armazenamento e uso offline': 'armazenamento', Licenças: 'armazenamento',
+};
+const elAbas = $('abas');
+const fieldsets = [...dlg.querySelectorAll('fieldset')];
+const abaDe = (fs) => { const l = fs.querySelector('legend'); return ABA_DE[(l && l.textContent.trim()) || ''] || 'sessao'; };
+function mostrarAba(nome) {
+  gravar('aba_operador', nome);
+  for (const fs of fieldsets) fs.hidden = abaDe(fs) !== nome;
+  for (const b of elAbas.querySelectorAll('button')) b.setAttribute('aria-selected', String(b.dataset.aba === nome));
+}
+elAbas.setAttribute('aria-label', T.console.rotuloAbas);
+for (const [id, rotulo] of Object.entries(T.console.abas)) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.aba = id; b.textContent = rotulo; b.setAttribute('role', 'tab');
+  b.addEventListener('click', () => mostrarAba(id));
+  elAbas.append(b);
+}
+
+// Cena: luz, fundo e enquadramento do personagem escolhido em "Personagem". Só o que difere do padrão fica guardado.
+const C = T.console;
+const cena_ = {
+  luz: { ambiente: $('cenaLuzAmbiente'), principal: $('cenaLuzPrincipal'), preenchimento: $('cenaLuzPreenchimento'), recorte: $('cenaLuzRecorte') },
+  f1: $('cenaFundo1'), f2: $('cenaFundo2'), dist: $('cenaDistancia'), alt: $('cenaAltura'), aviso: $('cenaFundoAviso'),
+};
+$('cenaLegenda').textContent = C.cenaLegenda; $('cenaDica').textContent = C.cenaDica;
+$('cenaLuzTitulo').textContent = C.luz; $('cenaFundoTitulo').textContent = C.fundo; $('cenaEnqTitulo').textContent = C.enquadramento;
+$('cenaLuzAmbienteR').textContent = C.luzAmbiente; $('cenaLuzPrincipalR').textContent = C.luzPrincipal;
+$('cenaLuzPreenchimentoR').textContent = C.luzPreenchimento; $('cenaLuzRecorteR').textContent = C.luzRecorte;
+$('cenaFundo1R').textContent = C.fundoTopo; $('cenaFundo2R').textContent = C.fundoBase;
+$('cenaDistanciaR').textContent = C.distancia; $('cenaAlturaR').textContent = C.altura;
+$('cenaRestaurar').textContent = C.restaurarCena;
+
+const LUZ_BASE = { ambiente: 1.6, principal: 1.8, preenchimento: 0, recorte: 0.8 };
+const luzBaseDe = (p, k) => ((p.luz || {})[k] || {}).intensidade ?? LUZ_BASE[k];
+function luminancia(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const razaoContraste = (a, b) => { const x = luminancia(a), y = luminancia(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+
+function preencherCena() {
+  const base = buscarPersonagem(aj.sel.value), ef = efetivo(base);
+  for (const [k, el] of Object.entries(cena_.luz)) { el.value = (ef.luz && ef.luz[k] && ef.luz[k].intensidade) ?? luzBaseDe(base, k); $(`cenaLuz${k[0].toUpperCase()}${k.slice(1)}V`).textContent = Number(el.value).toFixed(2); }
+  cena_.f1.value = ef.paleta.fundo1; cena_.f2.value = ef.paleta.fundo2; cena_.aviso.textContent = '';
+  cena_.dist.value = ef.enquadramento.distancia; cena_.alt.value = ef.enquadramento.altura;
+  $('cenaDistanciaV').textContent = Number(cena_.dist.value).toFixed(2); $('cenaAlturaV').textContent = Number(cena_.alt.value).toFixed(2);
+}
+
+function salvarCena() {
+  const base = buscarPersonagem(aj.sel.value);
+  const a = { ...(ajustes[base.id] || {}) };
+  const luz = {};
+  for (const [k, el] of Object.entries(cena_.luz)) if (Math.abs(Number(el.value) - luzBaseDe(base, k)) > 1e-9) luz[k] = { intensidade: Number(el.value) };
+  if (Object.keys(luz).length) a.luz = luz; else delete a.luz;
+  const fundo = {};
+  const tinta = base.paleta.tinta || '#ffffff';
+  const r = Math.min(razaoContraste(tinta, cena_.f1.value), razaoContraste(tinta, cena_.f2.value));
+  if (r < 4.5) {
+    cena_.aviso.textContent = C.fundoAviso(r.toFixed(1).replace('.', ','));
+    cena_.f1.value = (a.fundo && a.fundo.fundo1) || base.paleta.fundo1; cena_.f2.value = (a.fundo && a.fundo.fundo2) || base.paleta.fundo2;
+  } else {
+    cena_.aviso.textContent = '';
+    if (cena_.f1.value !== base.paleta.fundo1) fundo.fundo1 = cena_.f1.value;
+    if (cena_.f2.value !== base.paleta.fundo2) fundo.fundo2 = cena_.f2.value;
+    if (Object.keys(fundo).length) a.fundo = fundo; else delete a.fundo;
+  }
+  const enq = {};
+  if (Math.abs(Number(cena_.dist.value) - base.enquadramento.distancia) > 1e-9) enq.distancia = Number(cena_.dist.value);
+  if (Math.abs(Number(cena_.alt.value) - base.enquadramento.altura) > 1e-9) enq.altura = Number(cena_.alt.value);
+  if (Object.keys(enq).length) a.enquadramento = enq; else delete a.enquadramento;
+  if (Object.keys(a).length) ajustes[base.id] = a; else delete ajustes[base.id];
+  gravarJSON('ajustes_personagens', ajustes);
+  // Ao vivo, se for o personagem em cena.
+  if (personagem && personagem.id === base.id) {
+    const ef = efetivo(base);
+    aplicarPaleta(ef.paleta); cena.definirLuz(ef.luz);
+    if (avatar) { cena.definirFoco(avatar.posicaoCabeca, ef.enquadramento); aplicarEnquadramento(true); }
+  }
+  preencherCena();
+}
+for (const el of [...Object.values(cena_.luz), cena_.f1, cena_.f2, cena_.dist, cena_.alt]) el.addEventListener('input', salvarCena);
+$('cenaRestaurar').addEventListener('click', () => {
+  const a = { ...(ajustes[aj.sel.value] || {}) };
+  delete a.luz; delete a.fundo; delete a.enquadramento;
+  if (Object.keys(a).length) ajustes[aj.sel.value] = a; else delete ajustes[aj.sel.value];
+  gravarJSON('ajustes_personagens', ajustes);
+  if (personagem && personagem.id === aj.sel.value) {
+    const ef = efetivo(personagem);
+    aplicarPaleta(ef.paleta); cena.definirLuz(ef.luz);
+    if (avatar) { cena.definirFoco(avatar.posicaoCabeca, ef.enquadramento); aplicarEnquadramento(true); }
+  }
+  preencherCena();
+});
+aj.sel.addEventListener('change', preencherCena);
+dlg.addEventListener('toggle', () => { if (dlg.open) { preencherCena(); mostrarAba(ler('aba_operador', 'cena')); } });
+
+/* ---------- Modo totem (R6) ---------- */
+// Tela cheia no primeiro toque (o navegador só deixa dentro de um gesto), engrenagem escondida e sem menu de contexto.
+// O operador volta pelo canto superior direito (pressão de 3 s) ou por Ctrl+Shift+O.
+const elTotem = { caixa: $('totemModo'), rotulo: $('totemRotulo'), dica: $('totemDica'), ponto: $('opPonto') };
+elTotem.rotulo.textContent = T.totem.rotulo; elTotem.dica.textContent = T.totem.dica; elTotem.ponto.setAttribute('aria-label', T.totem.ponto);
+const totemLigado = () => ler('totem', 'nao') === 'sim';
+function aplicarTotem() { app.dataset.totem = totemLigado() ? 'sim' : 'nao'; elTotem.caixa.checked = totemLigado(); }
+elTotem.caixa.addEventListener('change', () => { gravar('totem', elTotem.caixa.checked ? 'sim' : 'nao'); aplicarTotem(); });
+aplicarTotem();
+document.addEventListener('pointerdown', () => {
+  if (totemLigado() && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch((e) => console.warn('[totem] tela cheia negada:', e));
+  }
+});
+document.addEventListener('contextmenu', (e) => { if (totemLigado() && !dlg.open) e.preventDefault(); });
+let timerPonto = null;
+const abrirOperador = () => { if (!dlg.open) $('gear').click(); }; // o clique da engrenagem também liga o diagnóstico ao vivo
+elTotem.ponto.addEventListener('pointerdown', () => { clearTimeout(timerPonto); timerPonto = setTimeout(abrirOperador, 3000); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) elTotem.ponto.addEventListener(ev, () => clearTimeout(timerPonto));
+document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') { e.preventDefault(); abrirOperador(); } });
+
+/* ---------- Armazenamento e uso offline (R3) ---------- */
+let swEsperando = null;
+const elSto = {
+  dica: $('stoDica'), lista: $('stoLista'), perm: $('stoPermanente'), atuTexto: $('stoAtualizacaoTexto'), atu: $('stoAtualizar'),
+  persTitulo: $('stoPersonagensTitulo'), pers: $('stoPersonagens'), apBin: $('stoApagarBin'), apLib: $('stoApagarLib'), apTudo: $('stoApagarTudo'), status: $('stoStatus'),
+};
+const SA = T.armazenamento;
+elSto.dica.textContent = SA.dica; elSto.persTitulo.textContent = SA.personagens;
+elSto.apBin.textContent = SA.apagarBinarios; elSto.apLib.textContent = SA.apagarBibliotecas; elSto.apTudo.textContent = SA.apagarTudo;
+elSto.perm.textContent = SA.pedirPermanente; elSto.atu.textContent = SA.atualizar;
+
+// O que um personagem precisa para abrir sem internet: o modelo e os clipes ativos.
+const arquivosDe = (p) => [p.arquivoVrm, ...(catalogo ? aplicarEscolhas(catalogo).filter((c) => c.status === 'ativo').map((c) => c.arquivo) : [])];
+
+async function desenharArmazenamento() {
+  const [u, t, offline] = await Promise.all([usoEcota(), tamanhosPorCategoria(), prontoOffline(disponiveis.map((p) => p.arquivoVrm))]);
+  const linhas = [
+    [SA.uso, u.usado === null ? SA.semDado : SA.usoValor(formatarBytes(u.usado), formatarBytes(u.cota))],
+    [SA.permanente, u.persistente === null ? SA.semDado : u.persistente ? SA.permanenteSim : SA.permanenteNao],
+    [SA.shell, formatarBytes(t.shell)], [SA.binarios, formatarBytes(t.binarios)], [SA.bibliotecas, formatarBytes(t.bibliotecas)],
+  ];
+  elSto.lista.replaceChildren(...linhas.flatMap(([n, v]) => {
+    const dt = document.createElement('dt'); dt.textContent = n;
+    const dd = document.createElement('dd'); dd.textContent = v; return [dt, dd];
+  }));
+  elSto.perm.hidden = u.persistente === true;
+  elSto.atuTexto.textContent = `${SA.atualizacao}: ${swEsperando ? SA.nova : SA.atualizado}`;
+  elSto.atu.hidden = !swEsperando;
+  elSto.pers.replaceChildren(...disponiveis.map((p) => {
+    const li = document.createElement('li');
+    const nome = document.createElement('span'); nome.textContent = `${p.nome}: ${offline[p.arquivoVrm] ? SA.pronto : SA.naoPronto}`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost'; b.textContent = SA.baixar;
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        await baixarParaOffline(arquivosDe(p), (n, total) => { elSto.status.textContent = SA.baixando(n, total); });
+        elSto.status.textContent = SA.baixou;
+      } catch (e) { console.warn('[armazenamento] download offline:', e); elSto.status.textContent = SA.falhou(e.message); }
+      b.disabled = false;
+      desenharArmazenamento();
+    });
+    li.append(nome, b); return li;
+  }));
+  if (!temServiceWorker()) elSto.status.textContent = SA.semServiceWorker;
+  else if (DEBUG) elSto.status.textContent = SA.emDebug;
+}
+elSto.perm.addEventListener('click', async () => { elSto.status.textContent = (await pedirPersistencia()) ? '' : SA.pediuNegado; desenharArmazenamento(); });
+elSto.atu.addEventListener('click', () => aplicarAtualizacao(swEsperando));
+for (const [botao, categoria] of [[elSto.apBin, 'binarios'], [elSto.apLib, 'bibliotecas'], [elSto.apTudo, 'tudo']]) {
+  botao.addEventListener('click', async () => { elSto.status.textContent = SA.apagou(await apagarCategoria(categoria)); desenharArmazenamento(); });
+}
+dlg.addEventListener('toggle', () => { if (dlg.open) desenharArmazenamento(); });
+
+// Registro do worker. Com ?debug fica desligado: os testes e a depuração não podem ver código guardado.
+if (!DEBUG) registrarSW(VERSAO, { aoNova: (reg) => { swEsperando = reg; if (dlg.open) desenharArmazenamento(); } });
+// Pedir armazenamento permanente no primeiro toque da pessoa (precisa de um gesto do usuário).
+document.addEventListener('pointerdown', () => { if (!DEBUG) pedirPersistencia(); }, { once: true });
 
 /* ---------- Galeria de animações (painel) ---------- */
 // O operador vê cada clipe tocando no personagem atual, liga ou desliga e marca "ok para criança".
@@ -1724,6 +1946,8 @@ const checagens = await Promise.all(PERSONAGENS.map(async (p) => [p, await verif
 for (const [p, versao] of checagens) if (versao && !p.emBreve) { disponiveis.push(p); versoes.set(p.id, versao); }
 renderizarSelecao();
 cena.iniciar();
+// Qualidade adaptativa por FPS. Com ?debug fica desligada, para as medições não mudarem sozinhas (qualidade_auto=sim liga).
+cena.qualidadeAuto(!DEBUG || ler('qualidade_auto', 'nao') === 'sim');
 vigia.iniciar();
 
 if (!disponiveis.length) {

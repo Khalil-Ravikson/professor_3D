@@ -10,9 +10,11 @@
 // enquadramento: distancia = câmera até a cabeça, em metros;
 //                altura = deslocamento vertical do foco a partir do osso head.
 // voz: { motor, id (voz Kokoro; aceita mistura "pm_alex(1)+pm_santa(1)"), speed,
-//        genero ('f' | 'm', escolhe a voz do sistema: Francisca/Antonio no Edge) }.
+//        genero ('f' | 'm', escolhe a voz do sistema: Francisca/Antonio no Edge),
+//        gemini: { voz, estilo } voz própria no Gemini TTS; sem isto todos usam a voz global das configurações }.
 // oiPresenca / despedida: frases curtas do cumprimento e da despedida (P4); a fala começa ~300 ms depois do aceno.
 // temperatura: null usa o padrão do modelo. limitePalavras: teto da parte falada.
+// luz: rig de três pontos { ambiente, principal, preenchimento, recorte }; só o que mudar do padrão de scene.js (LUZ_PADRAO).
 // quadro: mostra o quadro de resolução. ferramentas: nomes de funções do Gemini (ver calcular.js).
 // O usuário pode sobrescrever persona, voz, temperatura e limite nas configurações
 // (ver aplicarAjustes); este arquivo continua sendo o padrão.
@@ -65,7 +67,7 @@ export const PERSONAGENS = [
     despedida: 'Tchau! Foi muito bom conversar com você.',
     persona: RULES_LUMA,
     regrasDeSeguranca: 'infantil',
-    voz: { motor: 'kokoro-server', id: 'pf_dora', speed: 0.95, genero: 'f' },
+    voz: { motor: 'kokoro-server', id: 'pf_dora', speed: 0.95, genero: 'f', gemini: { voz: 'Kore' } },
     temperatura: null, // null = padrão do modelo (a Google recomenda 1.0 no Gemini 3)
     limitePalavras: 80,
     quadro: false,
@@ -114,7 +116,7 @@ export const PERSONAGENS = [
       "Se faltar dado, não resolva: faça uma única pergunta, só em FALA. " +
       "Se a pergunta não for de matemática, responda curto em FALA e convide para um problema. " + SEGURANCA_GERAL,
     regrasDeSeguranca: 'geral',
-    voz: { motor: 'kokoro-server', id: 'pm_alex', speed: 0.98, genero: 'm' },
+    voz: { motor: 'kokoro-server', id: 'pm_alex', speed: 0.98, genero: 'm', gemini: { voz: 'Puck' } },
     temperatura: null,
     limitePalavras: 90,
     quadro: true,
@@ -232,7 +234,7 @@ export function buscarPersonagem(id) {
 }
 
 // Campos que o usuário pode ajustar nas configurações.
-export const CAMPOS_AJUSTAVEIS = ['persona', 'temperatura', 'limitePalavras', 'vozId', 'vozSpeed'];
+export const CAMPOS_AJUSTAVEIS = ['persona', 'temperatura', 'limitePalavras', 'vozId', 'vozSpeed', 'vozGemini', 'luz', 'fundo', 'enquadramento'];
 
 // Personagem com os ajustes do usuário por cima. Não altera o objeto original.
 export function aplicarAjustes(p, ajustes) {
@@ -244,6 +246,13 @@ export function aplicarAjustes(p, ajustes) {
     persona: a.persona ?? p.persona,
     temperatura: a.temperatura !== undefined ? a.temperatura : p.temperatura,
     limitePalavras: a.limitePalavras ?? p.limitePalavras,
-    voz: { ...p.voz, id: a.vozId ?? p.voz.id, speed: a.vozSpeed ?? p.voz.speed },
+    // Cena (I5): luz por ponto, as duas cores do fundo e o enquadramento. Só o que o operador mexeu.
+    luz: a.luz ? Object.fromEntries(['ambiente', 'principal', 'preenchimento', 'recorte'].map((k) => [k, { ...((p.luz || {})[k] || {}), ...(a.luz[k] || {}) }])) : p.luz,
+    paleta: a.fundo ? { ...p.paleta, ...a.fundo } : p.paleta,
+    enquadramento: a.enquadramento ? { ...p.enquadramento, ...a.enquadramento } : p.enquadramento,
+    voz: {
+      ...p.voz, id: a.vozId ?? p.voz.id, speed: a.vozSpeed ?? p.voz.speed,
+      ...(a.vozGemini ? { gemini: { ...(p.voz.gemini || {}), voz: a.vozGemini } } : {}),
+    },
   };
 }

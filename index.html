@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-gjlliwAHRwVYs+1LtcaKpoWG0BBtb7bhvF1jK1xfvv4=' https://cdn.jsdelivr.net blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self' blob:; connect-src 'self' https://generativelanguage.googleapis.com https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co http://127.0.0.1:* http://localhost:* blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Luma 3D</title>
 <link rel="icon" href="data:,">
@@ -24,9 +25,10 @@
     --realce: #ffffff; --realce-tinta: #0c1c3e;
     --ok: #3fbf6a;
     /* Avisos (voz de reserva, câmera ligada): iguais em todos os personagens, e por isso fora da paleta deles. */
+    --dlg-tinta: #1f2a44; --dlg-suave: #51607e; --dlg-borda: #cfd8e6; --dlg-linha: #e3e8ef; --dlg-botao: #eef2f8;
     --alerta-fundo: #ffe1c7; --alerta-tinta: #7a2e00; --cam-ativa: #b3261e;
     /* O quadro de resolução é claro, com texto escuro, como o editor de referência. */
-    --quadro-fundo: #ffffff; --quadro-tinta: #14315f; --quadro-suave: #51607e;
+    --quadro-fundo: #ffffff; --quadro-tinta: #14315f; --quadro-suave: var(--dlg-suave);
     --alvo: 44px; --alvo-publico: 56px;
     --fonte: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
   }
@@ -78,12 +80,16 @@
   .aviso-texto { margin: 0; color: var(--tinta-suave); max-width: 32ch; }
   .aviso-quiosque .btn { justify-self: center; }
   .erro-avatar {
-    position: absolute; inset: 0; z-index: 1; display: grid; align-content: center; gap: 8px;
-    padding: 24px; text-align: center;
+    position: absolute; inset: 0; z-index: 2; display: grid; align-content: center; gap: 8px;
+    padding: 24px; text-align: center; pointer-events: none; /* acima do canvas, mas sem barrar o toque no resto */
   }
+  .erro-avatar summary { pointer-events: auto; }
   .erro-avatar p { margin: 0; }
   .erro-titulo { font-size: 1.25rem; font-weight: 800; }
   .erro-detalhe { color: var(--tinta-suave); }
+  .erro-tecnico { justify-self: center; max-width: 46rem; color: var(--tinta-suave); font-size: .95rem; }
+  .erro-tecnico summary { cursor: pointer; min-height: var(--alvo); display: inline-flex; align-items: center; padding: 0 12px; font-weight: 700; }
+  .erro-tecnico[open] p { margin-top: 6px; }
   .erro-avatar code {
     font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .95em;
     background: var(--cartao); padding: 2px 6px; border-radius: 6px; word-break: break-all;
@@ -122,6 +128,13 @@
   .diag dt { color: var(--tinta-suave); }
   .diag dd { margin: 0; font-variant-numeric: tabular-nums; }
   .diag dd[data-alerta="sim"] { color: var(--alerta-tinta); font-weight: 700; }
+  /* Modo totem: sem engrenagem à vista e sem seleção de texto; o operador entra pelo ponto no canto (pressão longa). */
+  .op-ponto { display: none; position: absolute; top: 0; right: 0; width: 72px; height: 72px; z-index: 3; background: none; border: 0; padding: 0; }
+  [data-totem="sim"] .op-ponto { display: block; }
+  [data-totem="sim"] .gear { display: none; }
+  [data-totem="sim"] { user-select: none; -webkit-user-select: none; }
+  .sto-personagens { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+  .sto-personagens li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--alvo); }
   .diag-erros { list-style: none; margin: 10px 0 0; padding: 0; font-size: .8rem; color: var(--tinta-suave); }
   .diag-erros li { padding: 3px 0; border-top: 1px solid #0001; font-family: ui-monospace, monospace; }
   .volume {
@@ -140,7 +153,7 @@
   @media (max-width: 720px) { .volume input[type=range] { width: 70px; } .volume output { display: none; } }
   dialog input[type=text], dialog input[type=url] {
     width: 100%; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px;
-    border: 2px solid #cfd8e6; background: #fff; color: #1f2a44;
+    border: 2px solid var(--dlg-borda); background: #fff; color: var(--dlg-tinta);
   }
   [data-state="listening"] .dot { background: var(--acao); animation: pulse 1s infinite; }
   [data-state="thinking"] .dot { background: var(--realce); }
@@ -171,6 +184,11 @@
     min-height: var(--alvo); background: var(--cartao); color: var(--tinta);
   }
   .stop[hidden] { display: none; }
+  .tentar {
+    font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 0 18px; cursor: pointer;
+    min-height: var(--alvo-publico); background: var(--acao); color: var(--acao-tinta);
+  }
+  .tentar[hidden] { display: none; }
   .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
   .chip {
     flex: 0 0 auto; font: inherit; font-weight: 700; font-size: .95rem; color: var(--tinta);
@@ -197,12 +215,12 @@
     border-radius: 12px; min-height: var(--alvo-publico); padding: 0 14px; cursor: pointer;
   }
   .mais-menu button:hover, .mais-menu button:focus-visible { background: var(--fundo-2); }
-  .modo { flex: 0 0 auto; display: flex; padding: 4px; gap: 4px; background: var(--cartao); border-radius: 16px; }
+  .modo { flex: 0 0 auto; display: flex; padding: 0; gap: 0; background: var(--cartao); border-radius: 16px; overflow: hidden; }
   .modo button {
     font: inherit; font-weight: 800; color: var(--tinta-suave); background: none; border: 0; border-radius: 12px;
-    min-height: calc(var(--alvo-publico) - 8px); padding: 0 14px; cursor: pointer;
+    min-height: var(--alvo-publico); padding: 0 16px; cursor: pointer;
   }
-  .modo button[aria-pressed="true"] { background: var(--acao); color: var(--acao-tinta); }
+  .modo button[aria-pressed="true"] { background: var(--acao); color: var(--acao-tinta); border-radius: 16px; }
   [data-modo="guiada"] .barra form.typed, [data-modo="guiada"] .mic { display: none; }
   /* Sinal de estado: cor + palavra, nunca só cor. */
   .estado-chip {
@@ -215,8 +233,17 @@
   .estado-chip[data-estado="listening"]::before, .legenda-lista li[data-estado="listening"]::before { background: var(--acao); }
   .estado-chip[data-estado="thinking"]::before, .legenda-lista li[data-estado="thinking"]::before { background: var(--realce); }
   .estado-chip[data-estado="speaking"]::before, .legenda-lista li[data-estado="speaking"]::before { background: var(--tinta); }
-  .estado-chip[data-estado="error"]::before, .legenda-lista li[data-estado="error"]::before { background: var(--alerta-tinta); }
-  .legenda { background: var(--cartao); border-radius: 16px; padding: 10px 16px; }
+  .estado-chip[data-estado="error"]::before, .legenda-lista li[data-estado="error"]::before { background: var(--alerta-fundo); }
+  /* Anel claro: a cor sozinha não basta contra o fundo escuro em todas as paletas (a ação do Teo dá 2,9:1). */
+  .estado-chip::before, .legenda-lista li::before { box-shadow: 0 0 0 2px var(--tinta); }
+  .legenda { background: var(--cartao); border-radius: 16px; padding: 10px 16px; animation: surge .18s cubic-bezier(.16, 1, .3, 1) both; }
+  .mais-menu { animation: surge .16s cubic-bezier(.16, 1, .3, 1) both; transform-origin: bottom left; }
+  @keyframes surge { from { opacity: 0; transform: translateY(6px); } }
+  /* A bolinha muda de cor com suavidade: o estado novo se explica sozinho, sem salto. */
+  .estado-chip::before { transition: background-color .2s ease-out; }
+  /* Resposta ao toque: encolhe um pouco enquanto o dedo está em cima. */
+  .barra-btn:active, .modo button:active, .chip:active, .typed button:active { transform: scale(.96); }
+  .barra-btn, .modo button, .chip, .typed button { transition: transform .1s ease-out, background-color .15s ease-out; }
   .legenda[hidden] { display: none; }
   .legenda-tit { margin: 0 0 6px; font-weight: 800; }
   .legenda-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -230,7 +257,7 @@
     font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 0 16px; cursor: pointer;
     min-height: var(--alvo); background: var(--realce); color: var(--realce-tinta);
   }
-  .btn.ghost { background: #eef2f8; color: #1f2a44; }
+  .btn.ghost { background: var(--dlg-botao); color: var(--dlg-tinta); }
   button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
 
   /* Quadro de resolução (Teo, Rafa). JetBrains Mono: 0 com ponto, 1/l/I distintos. */
@@ -250,7 +277,7 @@
   .quadro-linhas li.resposta .quadro-rotulo { color: var(--quadro-tinta); }
   .quadro-linhas li.suposicao .quadro-rotulo::after { content: " (suposição)"; font-weight: 400; }
   .nao-conferido { display: inline-block; min-width: 1.4ch; text-align: center; border-radius: 4px; background: var(--alerta-fundo); color: var(--alerta-tinta); font-weight: 600; }
-  .quadro-contas-bloco h3 { margin: 8px 0 2px; font: 700 .8rem "Baloo 2", system-ui, sans-serif; color: var(--quadro-suave); }
+  .quadro-contas-bloco h2 { margin: 8px 0 2px; font: 700 .8rem "Baloo 2", system-ui, sans-serif; color: var(--quadro-suave); }
   .quadro-contas li { color: var(--quadro-suave); font-size: .85rem; }
   .quadro-contas li.erro { color: var(--cam-ativa); }
   /* Fluxo de sessão (P5): atração, cumprimento, consentimento, conversa, despedida.
@@ -281,7 +308,7 @@
   [data-state="speaking"] .panel > .bubble { display: block; }
   [data-etapa="cumprimento"] .panel > :is(.chips, .barra, .legenda),
   [data-etapa="despedida"] .panel > :is(.chips, .barra, .legenda),
-  [data-etapa="cumprimento"] :is(.mic, .stop, .estado-chip), [data-etapa="despedida"] :is(.mic, .stop, .estado-chip) { display: none; }
+  [data-etapa="cumprimento"] :is(.mic, .stop, .tentar, .estado-chip), [data-etapa="despedida"] :is(.mic, .stop, .tentar, .estado-chip) { display: none; }
   [data-microfone="nao"] .mic { display: none; }
   .usar-voz { font: inherit; font-weight: 700; background: var(--cartao); color: var(--tinta); border: 0; border-radius: 12px; min-height: var(--alvo); padding: 0 14px; cursor: pointer; }
   .usar-voz[hidden] { display: none; }
@@ -289,15 +316,15 @@
 
   dialog {
     border: 0; border-radius: 16px; padding: 18px; width: min(92vw, 480px); max-height: 90vh; overflow-y: auto;
-    color: #1f2a44; background: #fff; font: inherit;
+    color: var(--dlg-tinta); background: #fff; font: inherit;
   }
-  dialog fieldset { border: 0; border-top: 1px solid #e3e8ef; margin: 14px 0 0; padding: 6px 0 0; }
+  dialog fieldset { border: 0; border-top: 1px solid var(--dlg-linha); margin: 14px 0 0; padding: 6px 0 0; }
   dialog legend { font-weight: 800; font-size: 1.05rem; padding: 0; }
   dialog textarea {
     width: 100%; font: .9rem/1.4 ui-monospace, Consolas, monospace; padding: 8px 10px; border-radius: 10px;
-    border: 2px solid #cfd8e6; background: #fff; color: #1f2a44; resize: vertical;
+    border: 2px solid var(--dlg-borda); background: #fff; color: var(--dlg-tinta); resize: vertical;
   }
-  dialog input[type=number] { width: 8em; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px; border: 2px solid #cfd8e6; }
+  dialog input[type=number] { width: 8em; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px; border: 2px solid var(--dlg-borda); }
   dialog input[type=range] { width: 100%; min-height: var(--alvo); }
   dialog label.check { display: flex; gap: 8px; align-items: center; font-weight: 600; min-height: var(--alvo); }
   dialog label.check input { width: 22px; height: 22px; }
@@ -306,9 +333,9 @@
   dialog label { display: block; font-weight: 700; margin: 12px 0 4px; }
   dialog input[type=password], dialog input#envNome, dialog select {
     width: 100%; min-height: var(--alvo); font: inherit; padding: 0 10px; border-radius: 10px;
-    border: 2px solid #cfd8e6; background: #fff; color: #1f2a44;
+    border: 2px solid var(--dlg-borda); background: #fff; color: var(--dlg-tinta);
   }
-  dialog .hint { font-size: .85rem; color: #51607e; margin: 4px 0 0; }
+  dialog .hint { font-size: .85rem; color: var(--dlg-suave); margin: 4px 0 0; }
   dialog .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   dialog .close { margin-top: 16px; width: 100%; }
   .licencas { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; font-size: .9rem; }
@@ -318,24 +345,24 @@
   #creditos .frase-credito { font-weight: 800; margin: 6px 0 0; }
   #creditos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   #creditos li { font-size: .9rem; line-height: 1.35; }
-  #creditos li span { color: #51607e; }
+  #creditos li span { color: var(--dlg-suave); }
   /* Galeria de animações. Durante a prévia o painel encosta à direita e o fundo fica livre para ver o personagem. */
   dialog.espiando { margin: 2vh 2vw 2vh auto; width: min(92vw, 400px); max-height: 96vh; }
   dialog.espiando::backdrop { background: transparent; }
   @media (orientation: portrait) { dialog.espiando { margin: auto 2vw 2vh; width: 96vw; max-height: 45vh; } }
   .galeria { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
-  .galeria li { border: 1px solid #e3e8ef; border-radius: 12px; padding: 10px 12px; }
+  .galeria li { border: 1px solid var(--dlg-linha); border-radius: 12px; padding: 10px 12px; }
   .galeria li[data-status=desligado] { background: #f6f7f9; }
   .galeria .g-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .galeria .g-nome { font-weight: 800; }
-  .galeria .g-meta { font-size: .8rem; color: #51607e; }
+  .galeria .g-meta { font-size: .8rem; color: var(--dlg-suave); }
   .galeria .g-desc { font-size: .85rem; margin: 4px 0 6px; }
   .galeria .g-ctrl { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
   .galeria .g-ctrl button { min-width: var(--alvo); min-height: var(--alvo); padding: 0 12px; }
   .galeria .g-ctrl label { margin: 0; font-weight: 600; }
   .galeria .g-ctrl select { width: auto; }
-  .galeria-lacunas { font-size: .85rem; color: #51607e; margin: 10px 0 0; }
-  dialog button:focus-visible, dialog input:focus-visible, dialog select:focus-visible, dialog textarea:focus-visible { outline: 3px solid #1f2a44; outline-offset: 2px; }
+  .galeria-lacunas { font-size: .85rem; color: var(--dlg-suave); margin: 10px 0 0; }
+  dialog button:focus-visible, dialog input:focus-visible, dialog select:focus-visible, dialog textarea:focus-visible { outline: 3px solid var(--dlg-tinta); outline-offset: 2px; }
 
   /* Totem em retrato: uma coluna. Tela larga: avatar à esquerda; quadro e conversa à direita. */
   .lado { display: contents; }
@@ -539,7 +566,44 @@
     .sel-vizinhos { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { .ret, .viz { transition: none; } }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  /* Reduzir movimento: some o deslocamento e o pulso, mas a cor e a opacidade continuam avisando as mudanças de estado. */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition-property: opacity, background-color, color, border-color !important; transition-duration: .12s !important; }
+    .barra-btn:active, .modo button:active, .chip:active, .typed button:active { transform: none; }
+  }
+
+  /* Alvo público de 56 px (PRODUCT.md): chips, campo, enviar e Guiada/Livre. */
+  .chip, .typed input, .typed button { min-height: var(--alvo-publico); }
+  /* Totem em pé (1080x1920): a mesma tela, lida a 1 m, com letra e alvos maiores. */
+  @media (min-width: 900px) and (min-height: 1400px) {
+    .chip { min-height: 72px; font-size: 1.25rem; padding: 0 26px; }
+    .typed input, .typed button { min-height: 72px; font-size: 1.35rem; }
+    .barra-btn { width: 72px; height: 72px; }
+    .modo button { min-height: 72px; font-size: 1.3rem; padding: 0 22px; }
+    .estado-chip { font-size: 1.2rem; padding: 10px 20px 10px 14px; }
+    .status { font-size: 1.25rem; }
+    .answer { font-size: 1.7rem; }
+    .mais-menu button { min-height: 72px; font-size: 1.3rem; }
+    .mais-menu { min-width: 22rem; }
+    .legenda { font-size: 1.2rem; }
+  }
+
+  /* Console do operador (I5): abas sobre os blocos que já existiam, e painel encaixado à direita em tela larga,
+     com a cena viva ao lado como prévia. Em tela estreita continua a janela de sempre. */
+  .abas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; position: sticky; top: -18px; background: #fff; padding: 8px 0; z-index: 2; border-bottom: 1px solid var(--dlg-linha); }
+  .abas button { font: inherit; font-weight: 700; font-size: .95rem; min-height: var(--alvo); padding: 0 14px; border: 0; border-radius: 10px; cursor: pointer; background: var(--dlg-botao); color: var(--dlg-tinta); }
+  .abas button[aria-selected="true"] { background: var(--dlg-tinta); color: #fff; }
+  dialog#settings fieldset[hidden] { display: none; }
+  .cena-cores { display: flex; gap: 18px; flex-wrap: wrap; }
+  .cena-cores label { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .cena-cores input[type=color] { width: 56px; height: 44px; padding: 2px; border: 2px solid var(--dlg-borda); border-radius: 10px; background: #fff; }
+  @media (min-width: 1000px) {
+    dialog#settings[data-encaixado="sim"] {
+      position: fixed; inset: 0 0 0 auto; margin: 0; height: 100dvh; max-height: 100dvh; width: min(560px, 44vw);
+      border-radius: 0; box-shadow: -10px 0 28px rgba(16, 24, 43, .22);
+    }
+    dialog#settings[data-encaixado="sim"]::backdrop { display: none; }
+  }
 </style>
 <script type="importmap">
 {
@@ -566,14 +630,19 @@
     </div>
     <div class="erro-avatar" id="erroAvatar" role="alert" hidden>
       <p class="erro-titulo" id="erroTitulo"></p>
-      <p class="erro-detalhe" id="erroArquivo">Coloque o arquivo em <code id="erroCaminho"></code> e recarregue a página.</p>
+      <p class="erro-detalhe" id="erroAjuda" hidden></p>
       <p class="erro-detalhe" id="erroMotivo" hidden></p>
+      <details class="erro-tecnico" id="erroArquivo" hidden>
+        <summary id="erroResumo"></summary>
+        <p id="erroTecnico">Coloque o arquivo em <code id="erroCaminho"></code> e recarregue a página.</p>
+      </details>
     </div>
     <div class="aviso-quiosque" id="avisoQuiosque" role="alert" hidden>
       <p class="aviso-titulo" id="avisoTitulo"></p>
       <p class="aviso-texto" id="avisoTexto"></p>
       <button class="btn" id="avisoAcao" type="button" hidden></button>
     </div>
+    <button class="op-ponto" id="opPonto" type="button" tabindex="-1" aria-hidden="true"></button>
     <button class="gear" id="gear" type="button" aria-label="Configurações">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.3 7.3 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
     </button>
@@ -623,7 +692,7 @@
   <section class="quadro" id="quadro" aria-label="Quadro de resolução" data-vazio="sim" hidden>
     <ol class="quadro-linhas" aria-live="polite"></ol>
     <div class="quadro-contas-bloco">
-      <h3>Contas feitas pela calculadora</h3>
+      <h2>Contas feitas pela calculadora</h2>
       <ol class="quadro-contas"></ol>
     </div>
   </section>
@@ -643,9 +712,10 @@
       <p class="answer" id="answer"></p>
     </div>
     <div class="row">
-      <span class="estado-chip" id="estadoChip" data-estado="idle"></span>
-      <p class="status" id="status">Preparando...</p>
+      <span class="estado-chip" id="estadoChip" data-estado="idle" aria-hidden="true"></span>
+      <p class="status" id="status" role="status">Preparando...</p>
       <button class="stop" id="stop" type="button" hidden>Parar</button>
+      <button class="tentar" id="tentarDeNovo" type="button" hidden></button>
       <button class="usar-voz" id="usarVoz" type="button" hidden></button>
       <button class="mic" id="mic" type="button" aria-label="Falar" disabled>
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm7-4a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.08A7 7 0 0 0 19 11z"/></svg>
@@ -719,6 +789,7 @@
 
 <dialog id="settings">
   <h2>Configurações</h2>
+  <div class="abas" id="abas" role="tablist"></div>
 
   <fieldset>
     <legend>Gemini</legend>
@@ -772,6 +843,32 @@
     <p class="hint" id="gtUso" role="status"></p>
   </fieldset>
 
+  <fieldset id="fsCena">
+    <legend id="cenaLegenda"></legend>
+    <p class="hint" id="cenaDica"></p>
+    <p class="hint"><strong id="cenaLuzTitulo"></strong></p>
+    <label for="cenaLuzAmbiente"><span id="cenaLuzAmbienteR"></span>: <output id="cenaLuzAmbienteV" for="cenaLuzAmbiente"></output></label>
+    <input id="cenaLuzAmbiente" type="range" min="0" max="3" step="0.05">
+    <label for="cenaLuzPrincipal"><span id="cenaLuzPrincipalR"></span>: <output id="cenaLuzPrincipalV" for="cenaLuzPrincipal"></output></label>
+    <input id="cenaLuzPrincipal" type="range" min="0" max="3" step="0.05">
+    <label for="cenaLuzPreenchimento"><span id="cenaLuzPreenchimentoR"></span>: <output id="cenaLuzPreenchimentoV" for="cenaLuzPreenchimento"></output></label>
+    <input id="cenaLuzPreenchimento" type="range" min="0" max="2" step="0.05">
+    <label for="cenaLuzRecorte"><span id="cenaLuzRecorteR"></span>: <output id="cenaLuzRecorteV" for="cenaLuzRecorte"></output></label>
+    <input id="cenaLuzRecorte" type="range" min="0" max="2" step="0.05">
+    <p class="hint"><strong id="cenaFundoTitulo"></strong></p>
+    <div class="cena-cores">
+      <label for="cenaFundo1"><span id="cenaFundo1R"></span> <input id="cenaFundo1" type="color"></label>
+      <label for="cenaFundo2"><span id="cenaFundo2R"></span> <input id="cenaFundo2" type="color"></label>
+    </div>
+    <p class="hint" id="cenaFundoAviso" role="status"></p>
+    <p class="hint"><strong id="cenaEnqTitulo"></strong></p>
+    <label for="cenaDistancia"><span id="cenaDistanciaR"></span>: <output id="cenaDistanciaV" for="cenaDistancia"></output></label>
+    <input id="cenaDistancia" type="range" min="0.8" max="3" step="0.05">
+    <label for="cenaAltura"><span id="cenaAlturaR"></span>: <output id="cenaAlturaV" for="cenaAltura"></output></label>
+    <input id="cenaAltura" type="range" min="-0.2" max="0.4" step="0.01">
+    <div class="actions"><button class="btn ghost" id="cenaRestaurar" type="button"></button></div>
+  </fieldset>
+
   <fieldset>
     <legend>Personagem</legend>
     <label for="ajPersonagem">Ajustar</label>
@@ -788,6 +885,10 @@
     <input id="ajVoz" type="text" list="vozesKokoro" spellcheck="false" autocapitalize="off">
     <datalist id="vozesKokoro"></datalist>
     <p class="hint">Aceita mistura, por exemplo pm_alex(1)+pm_santa(1).</p>
+    <label for="ajVozGemini">Voz Gemini (só no motor Gemini TTS)</label>
+    <input id="ajVozGemini" type="text" list="vozesGemini" spellcheck="false" autocapitalize="off">
+    <datalist id="vozesGemini"><option value="Kore"><option value="Puck"></datalist>
+    <p class="hint">Cada personagem tem a sua. Só Kore e Puck foram testadas; outro nome da lista do Gemini também vale. Vazio usa a voz global.</p>
     <label for="ajVel">Velocidade da fala: <output id="ajVelValor" for="ajVel"></output></label>
     <input id="ajVel" type="range" min="0.7" max="1.3" step="0.05">
     <div class="actions"><button class="btn ghost" id="ajRestaurar" type="button">Restaurar o padrão deste personagem</button></div>
@@ -815,6 +916,8 @@
 
   <fieldset>
     <legend>Sessão</legend>
+    <label class="check"><input type="checkbox" id="totemModo"> <span id="totemRotulo"></span></label>
+    <p class="hint" id="totemDica"></p>
     <p class="hint">Cumprimenta com aceno ao começar. Ao encerrar, acena, se despede e apaga a conversa.</p>
     <div class="actions">
       <button class="btn ghost" id="opIniciar" type="button">Iniciar sessão</button>
@@ -850,6 +953,27 @@
     <select id="envUso"></select>
     <div class="actions"><button class="btn" id="envEnviar" type="button">Enviar e testar</button></div>
     <p class="hint" id="envSaida" role="status"></p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Armazenamento e uso offline</legend>
+    <p class="hint" id="stoDica"></p>
+    <dl class="diag" id="stoLista"></dl>
+    <div class="actions">
+      <button class="btn ghost" id="stoPermanente" type="button"></button>
+    </div>
+    <p class="hint" id="stoAtualizacaoTexto"></p>
+    <div class="actions">
+      <button class="btn ghost" id="stoAtualizar" type="button" hidden></button>
+    </div>
+    <p class="hint" id="stoPersonagensTitulo"></p>
+    <ul class="sto-personagens" id="stoPersonagens"></ul>
+    <div class="actions">
+      <button class="btn ghost" id="stoApagarBin" type="button"></button>
+      <button class="btn ghost" id="stoApagarLib" type="button"></button>
+      <button class="btn ghost" id="stoApagarTudo" type="button"></button>
+    </div>
+    <p class="hint" id="stoStatus" role="status"></p>
   </fieldset>
 
   <fieldset>

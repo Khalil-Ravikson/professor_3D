@@ -12,6 +12,7 @@ import { criarWebSpeech } from './webspeech.js';
 import { criarGeminiTts } from './gemini-motor.js';
 import { dividirFrases, limparParaFala, normalizarParaFala } from './frases.js';
 import { extrairGestos } from '../gestos.js';
+import { extrairEmocao } from '../emocao.js';
 import { criarMesa, PAUSA_ENTRE_FRASES_MS } from '../audio.js';
 
 function criarCanal() {
@@ -57,7 +58,8 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
   // Frases fixas (cumprimento, despedida) já sintetizadas: tocam sem esperar o motor.
   // Chave: motor|voz|velocidade|texto. Limite pequeno: são poucas frases por personagem.
   const preSintetizadas = new Map();
-  const chaveFrase = (motor, voz, texto) => `${motor.id}|${voz && voz.id}|${voz && voz.speed}|${texto}`;
+  // A voz do Gemini entra na chave: Luma (Kore) e Teo (Puck) não podem repartir o mesmo áudio guardado.
+  const chaveFrase = (motor, voz, texto) => `${motor.id}|${voz && voz.id}|${voz && voz.gemini && voz.gemini.voz}|${voz && voz.speed}|${texto}`;
 
   function anotar(tipo, dados = {}) {
     registro.push({ t: Math.round(performance.now()), tipo, ...dados });
@@ -137,34 +139,36 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
   }
 
   async function lacoSintese(t) {
-    let n = 0, gestosSobrando = [];
+    let n = 0, gestosSobrando = [], emocaoSobrando = null;
     for (;;) {
       const { valor, fim } = await t.frases.receber();
       if (fim || t.cancelado) break;
       const marcado = extrairGestos(valor);
+      const emo = extrairEmocao(marcado.texto);
       const gestos = gestosSobrando.concat(marcado.gestos);
-      const texto = normalizarParaFala(limparParaFala(marcado.texto)).trim();
+      const emocao = emo.emocao ?? emocaoSobrando;
+      const texto = normalizarParaFala(limparParaFala(emo.texto)).trim();
       // Marca sozinha numa "sentença" vazia vai para a próxima sentença com fala.
-      if (!texto) { gestosSobrando = gestos; continue; }
-      gestosSobrando = [];
+      if (!texto) { gestosSobrando = gestos; emocaoSobrando = emocao; continue; }
+      gestosSobrando = []; emocaoSobrando = null;
       const i = n++;
       const motor = resolverMotor(t.voz);
-      if (motor.direto) { t.audios.enviar({ i, texto, motor, gestos }); continue; }
+      if (motor.direto) { t.audios.enviar({ i, texto, motor, gestos, emocao }); continue; }
       const pronta = preSintetizadas.get(chaveFrase(motor, t.voz, texto));
-      if (pronta) { anotar('sintese-cache', { turno: t.id, i }); t.audios.enviar({ i, texto, buffer: pronta, gestos }); continue; }
+      if (pronta) { anotar('sintese-cache', { turno: t.id, i }); t.audios.enviar({ i, texto, buffer: pronta, gestos, emocao }); continue; }
       anotar('sintese-inicio', { turno: t.id, i, motor: motor.id });
       try {
         const buffer = await motor.sintetizar(texto, t.voz, { signal: t.ctl.signal, ctx });
         if (t.cancelado) break;
         anotar('sintese-fim', { turno: t.id, i, duracao: +buffer.duration.toFixed(2) });
-        t.audios.enviar({ i, texto, buffer, gestos });
+        t.audios.enviar({ i, texto, buffer, gestos, emocao });
       } catch (e) {
         if (t.cancelado || e.name === 'AbortError') { anotar('sintese-abortada', { turno: t.id, i }); break; }
         console.warn(`[voz] ${motor.id} falhou; esta frase vai pela voz do sistema:`, e);
         anotar('sintese-erro', { turno: t.id, i, motor: motor.id });
         if (motor === servidor) { statusServidor = { ok: false, detalhe: 'falhou ao sintetizar' }; resolverMotor(t.voz); }
         if (motor === gemini) { statusGemini = { ok: false, detalhe: e.status ? `HTTP ${e.status}` : 'falhou' }; resolverMotor(t.voz); }
-        t.audios.enviar({ i, texto, motor: sistema, gestos });
+        t.audios.enviar({ i, texto, motor: sistema, gestos, emocao });
       }
     }
     t.audios.fechar();
@@ -179,7 +183,7 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
       // para não somar atraso no fim da fala.
       else { await esperar(t, PAUSA_ENTRE_FRASES_MS); if (t.cancelado) break; }
       anotar('toca-inicio', { turno: t.id, i: item.i });
-      if (item.gestos && item.gestos.length) aoInicioFrase(item.gestos);
+      if ((item.gestos && item.gestos.length) || item.emocao) aoInicioFrase(item.gestos || [], item.emocao);
       if (item.buffer) await tocarBuffer(t, item.buffer, item.texto.slice(0, 40));
       else await item.motor.falar(item.texto, t.voz, { signal: t.ctl.signal, aoPalavra });
       anotar('toca-fim', { turno: t.id, i: item.i, cancelado: !!t.cancelado });

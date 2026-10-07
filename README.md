@@ -149,7 +149,7 @@ npm run avaliar          # tudo, inclusive a medição de desempenho (gasta 3 pe
 npm run avaliar:rapido   # sem a medição de desempenho
 ```
 
-Roda, nesta ordem: detector anti-slop, testes unitários, licenças, animação e gestos, sessão e fluxo, áudio e quiosque, nivelamento de áudio e desempenho. Sobe o servidor na 8771 se ninguém estiver atendendo. Devolve código 1 se qualquer etapa falhar e grava `relatorios/avaliacao.json`.
+Roda, nesta ordem: detector anti-slop, testes unitários, política de segurança (CSP), banco de perguntas, licenças, animação e gestos, sessão e fluxo, áudio e quiosque, nivelamento de áudio e desempenho. Sobe o servidor na 8771 se ninguém estiver atendendo. Devolve código 1 se qualquer etapa falhar e grava `relatorios/avaliacao.json`.
 
 ## Adicionar um personagem
 
@@ -165,6 +165,36 @@ Roda, nesta ordem: detector anti-slop, testes unitários, licenças, animação 
 3. Recarregue. A miniatura é gerada sozinha a partir do modelo.
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
+
+## Uso offline e armazenamento
+
+Depois de uma primeira visita **com internet**, o app abre sem ela: um service worker (`sw.js`) guarda a página, os personagens e as animações, e as bibliotecas da jsDelivr (todas com versão fixa na URL). Ele **nunca** guarda chamadas ao Gemini, ao servidor do Kokoro, POST nem pedido com chave de API. Fica desligado com `?debug`.
+
+- **Painel:** engrenagem, "Armazenamento e uso offline": espaço usado e cota, armazenamento permanente, tamanho por categoria, "Baixar para offline" por personagem (só o personagem que já foi aberto fica pronto sozinho), apagar por categoria ou tudo.
+- **Atualização:** uma versão nova do app instala e **espera**. O painel mostra "Atualizar agora"; nada reinicia no meio de uma conversa.
+- **Limpar o cache:** pelo painel, ou nas ferramentas do navegador (Application, Storage, Clear site data).
+- **Ao trocar um `.vrm`, `.vrma`, fonte ou imagem com o mesmo nome:** suba `BIN` em `sw.js` e `CACHE_BIN` em `src/armazenamento.js`, senão o navegador continua com o arquivo velho.
+- **Limite conhecido:** as bibliotecas ainda vêm da CDN na primeira visita; hospedá-las aqui é uma decisão pendente. O cache de áudio TTS continua só em memória.
+
+## Modo totem e segurança
+
+- **Modo totem** (configurações, Sessão): tela cheia no primeiro toque, engrenagem escondida e menu do botão direito bloqueado. Para voltar: segure o canto superior direito por 3 segundos ou aperte Ctrl+Shift+O.
+- **CSP:** o `index.html` restringe de onde vêm scripts, conexões e imagens aos hosts que o app usa (jsDelivr, Gemini, Hugging Face e o servidor local do Kokoro). O importmap é um script inline, então a política leva o hash dele: depois de mexer no importmap rode `npm run csp`. O `npm run avaliar` confere.
+- **Texto do modelo na tela:** sempre por `textContent`. O único `innerHTML` é um modelo estático da galeria.
+- **Proxy da chave do Gemini:** não implementado. A chave fica no navegador, aceitável para protótipo pessoal; para uso público, ela precisa ir para um servidor.
+
+## Avaliação das respostas
+
+```bash
+npm run avaliar:respostas                      # valida o banco de 20 perguntas por personagem e o detector. Gasto zero.
+node tools/avaliar-respostas.mjs --gastar      # pergunta de verdade (gasta crédito do Gemini)
+```
+
+O detector (`src/frases-proibidas.js`) procura travessão, emoji, markdown, abertura genérica, pergunta repetida, "sou uma IA" sem terem perguntado, pedido de dado pessoal e marca de controle que vazou. As notas de voz, método, concisão e segurança são do dono, na tabela de `relatorios/avaliacao-respostas.md`.
+
+## Expressões
+
+O LLM pode marcar uma frase com `[emo:alegre]` (nomes: neutro, alegre, pensativo, surpreso, curioso, empatico). A marca é tirada antes da voz e da tela e vira uma expressão suave no rosto; nome inválido vira neutro. Respiração e escuta ativa (inclinar a cabeça) precisam de clipes VRMA que ainda não existem.
 
 ## Quiosque: o que acontece quando algo quebra
 

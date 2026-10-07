@@ -20,7 +20,7 @@ Sucesso é a criança entender o que perguntou, sem esperar muito e sem nada que
 O personagem é o produto: corpo 3D, voz em português, aceno de cumprimento e de despedida. Isto é uma leitura minha do que o projeto faz, não uma frase que o dono tenha validado; ajustar se o dono posicionar de outro jeito.
 
 ## Operating Context
-Totem sem ninguém olhando entre uma criança e outra: precisa se recuperar sozinho de falhas (contexto WebGL, laço travado), apagar a conversa ao fim e voltar à atração. Pode ficar sem internet: a escada de falhas do `Repertorio/REPERTORIO.md` (seção 24) cai para respostas e áudios prontos. O gasto tem teto de R$ 200 no total.
+Totem sem ninguém olhando entre uma criança e outra: precisa se recuperar sozinho de falhas (contexto WebGL, laço travado), apagar a conversa ao fim e voltar à atração. Pode ficar sem internet: a escada de falhas do `Repertorio/REPERTORIO.md` (seção 24) cai para respostas e áudios prontos. O gasto parte de R$ 50 (mínimo informado pelo dono em 07/10/2026; pode aumentar).
 
 ## Capabilities and Constraints
 - Só `.vrm` e `.vrma` prontos. Nada de personagem, pose ou cenário criado em código (única exceção prevista: aceno simples, só com aprovação do dono).
@@ -28,7 +28,7 @@ Totem sem ninguém olhando entre uma criança e outra: precisa se recuperar sozi
 - Nenhum fato sobre a UEMA sem fonte oficial atual fornecida pelo dono: horário, contato, valor, data de vestibular.
 - Câmera e microfone desligados por padrão, com consentimento. Nada de nome, escola, gravação de áudio ou de imagem de criança.
 - Chaves pagas nunca no navegador, no chat nem no repositório.
-- Em aberto: modelo do Gemini (3.5 Flash dá R$ 124 por 5.000 respostas, 3.1 Flash-Lite dá R$ 21); motor de voz premium; novo `.vrm` do Teo.
+- Decidido em 07/10/2026: modelo padrão do Gemini é o 3.1 Flash-Lite (R$ 21 por 5.000 respostas projetados, não medidos); o 3.5 Flash daria R$ 124 e não cabe em R$ 50. Em aberto: motor de voz premium (só pré-gravada cabe no orçamento).
 
 ## Brand Commitments
 Identidade **neutra**. Não há material oficial da UEMA: não recriar nem imitar o logotipo. Nada na interface pode sugerir que a pixiv ou o VRoid apoia ou recomenda o evento. Sem travessão (—) em texto de interface e em falas dos personagens, sem abertura genérica, sem enchimento.

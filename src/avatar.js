@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { VRMAnimationLoaderPlugin, VRMLookAtQuaternionProxy, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { criarLuzes, apontarCamera } from './scene.js';
+import { EXPRESSOES, normalizarEmocao } from './emocao.js';
 import { loadMixamoAnimation } from './vendor/mixamo/loadMixamoAnimation.js';
 
 const loader = new GLTFLoader();
@@ -93,11 +94,16 @@ export function descartarVrm(vrm) {
 // HEAD no arquivo. Devolve uma "versão" (tamanho + data) para invalidar a miniatura
 // em cache quando o .vrm for trocado, ou null se o arquivo não existe.
 export async function verificarArquivo(caminho) {
+  const versaoDe = (r) => `${r.headers.get('content-length')}|${r.headers.get('last-modified')}`;
   try {
     const r = await fetch(caminho, { method: 'HEAD' });
-    if (!r.ok) return null;
-    return `${r.headers.get('content-length')}|${r.headers.get('last-modified')}`;
+    return r.ok ? versaoDe(r) : null;
   } catch (e) {
+    // Sem rede (totem offline): o arquivo guardado pelo service worker responde por ele.
+    if (window.caches) {
+      const guardado = await caches.match(new URL(caminho, location.href).href);
+      if (guardado) return versaoDe(guardado);
+    }
     console.warn(`[avatar] não consegui verificar ${caminho}:`, e);
     return null;
   }
@@ -264,6 +270,15 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
     estadoBase = estado;
     trocarPara(acoesBase[estado] || acoesBase.idle);
   }
+  // Emoção (R2): pesos baixos que seguem o alvo com suavidade; só entram as expressões que o modelo tem.
+  const emoAlvo = {}, emoAtual = { happy: 0, relaxed: 0, surprised: 0, sad: 0 };
+  const emoTem = {};
+  if (em) for (const k of Object.keys(emoAtual)) emoTem[k] = !!em.getExpression(k);
+  function definirEmocao(nome) {
+    for (const k of Object.keys(emoAtual)) emoAlvo[k] = 0;
+    for (const [k, w] of Object.entries(EXPRESSOES[normalizarEmocao(nome)] || {})) emoAlvo[k] = w;
+  }
+
   function tocarGesto(clipe, aoFim) {
     if (previa) return false;
     const a = mixer.clipAction(clipe);
@@ -406,7 +421,9 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
         if (tr >= dur) reacao = null;
         feliz = Math.max(feliz, w * 0.8);
       }
-      em.setValue('happy', feliz);
+      for (const k of Object.keys(emoAtual)) emoAtual[k] += ((emoAlvo[k] || 0) - emoAtual[k]) * (1 - Math.exp(-dt / 0.35));
+      em.setValue('happy', Math.max(feliz, emoAtual.happy));
+      for (const k of ['relaxed', 'surprised', 'sad']) if (emoTem[k]) em.setValue(k, emoAtual[k]);
     }
     vrm.update(dt);
   }
@@ -475,6 +492,7 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
     get estadoBase() { return estadoBase; },
     // Toca um gesto de uma vez; aoFim roda quando ele acaba e o corpo volta ao estado-base.
     tocarGesto,
+    definirEmocao,
     get gestoAtivo() { return gesto ? gesto.getClip().name : null; },
     get tempoGesto() { return gesto ? gesto.time : null; },
     // Posição no mundo para onde olhar (rosto do usuário, M6); null volta ao olhar de repouso.

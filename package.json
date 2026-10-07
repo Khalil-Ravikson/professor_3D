@@ -9,7 +9,9 @@
     "test:e2e": "playwright test",
     "test": "node --test \"tests/unit/*.test.js\" && playwright test",
     "avaliar": "node tools/avaliar.mjs",
-    "avaliar:rapido": "node tools/avaliar.mjs --rapido"
+    "avaliar:rapido": "node tools/avaliar.mjs --rapido",
+    "avaliar:respostas": "node tools/avaliar-respostas.mjs",
+    "csp": "node tools/csp.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

@@ -90,3 +90,15 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 33 | Começar uma conversa, passar para o modo escrito e digitar devagar por uns 3 minutos sem enviar. | A sessão não fecha enquanto digita. Parar de mexer por 90 s fecha com a despedida. | |
 | 34 | Na conversa, girar a câmera com o dedo, aproximar com a pinça e dar dois toques rápidos. | Gira e aproxima sem rolar a página; dois toques voltam ao enquadramento em meio segundo. | |
 | 35 | Falar com o microfone aberto e fechar a conversa pelo "+", "Terminar a conversa". | O personagem se despede e o microfone fecha. Nenhuma pergunta nova nasce sozinha. | |
+
+## Prompt 2 e I5 (testes adiados a pedido do dono; nada abaixo foi coberto por teste automático)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 36 | Abrir o app **sem** `?debug`, esperar carregar, recarregar uma vez, desligar a internet e recarregar. | A vitrine aparece, sem erro. (O app já foi conferido assim uma vez em Chromium; falta no totem e no Edge.) | |
+| 37 | Engrenagem, "Armazenamento e uso offline": "Baixar para offline" no Teo, depois apagar "Personagens e animações". | Mostra o progresso, o Teo vira "pronto offline", e a categoria apagada volta a zero. | |
+| 38 | Subir a versão em `src/versao.js`, recarregar. | O painel mostra "Atualizar agora" e nada reinicia sozinho no meio de uma conversa. | |
+| 39 | Ligar "Modo totem" (Sessão), tocar na tela. | Entra em tela cheia, a engrenagem some. Segurar o canto superior direito por 3 s abre as configurações; Ctrl+Shift+O também. | |
+| 40 | Conversar com o Gemini real e prestar atenção no rosto. | Em frases alegres ou de surpresa, expressão suave e volta ao neutro no fim. Nenhuma marca `[emo:...]` aparece na tela nem é falada. | |
+| 41 | Engrenagem, aba "Cena": mexer na luz, nas duas cores do fundo e no enquadramento com o personagem em cena. | Muda na hora; um fundo claro demais mostra o aviso de contraste e não é aplicado; "Restaurar a cena deste personagem" volta ao padrão. | |
+| 42 | `node tools/avaliar-respostas.mjs --gastar` (gasta crédito; subir o teto do AI Studio antes) e preencher as notas em `relatorios/avaliacao-respostas.md`. | 40 respostas sem achado do detector; voz, método, concisão e segurança com nota sua. | |
