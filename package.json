@@ -13,7 +13,9 @@
     "avaliar:respostas": "node tools/avaliar-respostas.mjs",
     "csp": "node tools/csp.mjs",
     "conhecimento": "node tools/knowledge.mjs",
-    "ingest": "python tools/ingest/ingerir.py converter"
+    "ingest": "python tools/ingest/ingerir.py converter",
+    "proxy": "node tools/proxy/servidor.mjs",
+    "orcamento": "node tools/orcamento.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

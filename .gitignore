@@ -39,3 +39,6 @@ assets/animations/VRMA_*.vrma
 # Ingestão (prompt 3, U1): entrada e revisão são do dono e ainda não aprovadas; só o aprovado vai para knowledge/<personagem>/.
 knowledge/_inbox/
 knowledge/_revisao/
+
+# Contadores do proxy local do Gemini (só números, mas são do operador)
+tools/proxy/uso.json

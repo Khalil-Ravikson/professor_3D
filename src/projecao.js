@@ -1,7 +1,7 @@
 // Projeção de gasto do Gemini: quanto custam N respostas, com os tokens MEDIDOS (usageMetadata) quando houver
 // e com a premissa do REPERTORIO 23 quando não houver. Preços vêm de custo.js (texto) e tts/gemini.js (voz).
 // Nada aqui chama a rede. Modelo sem preço na tabela devolve null, nunca um chute.
-import { PRECOS_USD, chaveDoModelo, CAMBIO_PADRAO } from './custo.js';
+import { PRECOS_USD, chaveDoModelo, precoVigente, CAMBIO_PADRAO } from './custo.js';
 import { PRECOS_TTS, TOKENS_POR_SEGUNDO, MUDANCA_DE_PRECO } from './tts/gemini.js';
 
 // REPERTORIO 23 e 30.2: premissas a trocar pelo medido assim que houver respostas reais.
@@ -19,7 +19,7 @@ export function mediaPorResposta(resumo) {
 }
 
 export function usdTexto(modelo, { entrada, saida, pensamento = 0 }) {
-  const p = PRECOS_USD[chaveDoModelo(modelo)];
+  const p = precoVigente(PRECOS_USD[chaveDoModelo(modelo)]);
   if (!p) return null;
   // Pensamento é cobrado como saída.
   return (entrada / 1e6) * p.entrada + ((saida + pensamento) / 1e6) * p.saida;

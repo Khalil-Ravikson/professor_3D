@@ -65,11 +65,13 @@ export function instrucaoDeLimite(limitePalavras) {
 const MAX_RODADAS = 10;
 
 // Uma rodada de streaming. Devolve as partes do modelo como vieram (com thoughtSignature).
-async function rodada({ apiKey, modelo, corpo, signal, aoTexto, aoUso }) {
-  const r = await fetch(URL_BASE + modelo + ':streamGenerateContent?alt=sse', {
+async function rodada({ apiKey, proxy, modelo, corpo, signal, aoTexto, aoUso }) {
+  // Com proxy local (tools/proxy), a chave mora no servidor, e é ele que conta o gasto e aplica o teto. O navegador não manda chave.
+  const url = proxy ? `${proxy.replace(/\/$/, '')}/gemini/${modelo}:streamGenerateContent?alt=sse` : URL_BASE + modelo + ':streamGenerateContent?alt=sse';
+  const r = await fetch(url, {
     method: 'POST',
     signal,
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+    headers: proxy ? { 'content-type': 'application/json' } : { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(corpo),
   });
   if (!r.ok) throw new ErroGemini(r.status, await r.text());
@@ -99,7 +101,7 @@ async function rodada({ apiKey, modelo, corpo, signal, aoTexto, aoUso }) {
 // aoTexto(pedaco): texto conforme chega. aoChamada(nome, args, resultado): depois de cada ferramenta.
 // Devolve o texto bruto de todas as rodadas (com os marcadores FALA:/QUADRO:, se houver).
 export async function perguntarEmFluxo({
-  apiKey, modelo = MODELO_PADRAO, persona, historico, signal, aoTexto,
+  apiKey, proxy = '', modelo = MODELO_PADRAO, persona, historico, signal, aoTexto,
   ferramentas = {}, aoChamada = () => {}, temperatura = null, limitePalavras = null,
   aoUso = null,
 }) {
@@ -126,7 +128,7 @@ export async function perguntarEmFluxo({
       corpo.tools = [{ functionDeclarations: declaracoes }];
       if (i === MAX_RODADAS - 1) corpo.toolConfig = { functionCallingConfig: { mode: 'NONE' } };
     }
-    const { partes, texto } = await rodada({ apiKey, modelo, corpo, signal, aoTexto, aoUso });
+    const { partes, texto } = await rodada({ apiKey, proxy, modelo, corpo, signal, aoTexto, aoUso });
     total += texto;
     const chamadas = partes.filter((p) => p.functionCall);
     if (!chamadas.length) break;

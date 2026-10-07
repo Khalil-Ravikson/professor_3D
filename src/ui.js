@@ -28,7 +28,7 @@ import { criarVigia, contarRecargas, esquecerRecargas } from './vigia.js';
 import { criarDiagnostico } from './diagnostico.js';
 import { lerMiniatura, gravarMiniatura } from './miniaturas.js';
 import { criarVisualizador } from './visualizador.js';
-import { criarMedidorDeCusto, CAMBIO_PADRAO } from './custo.js';
+import { criarMedidorDeCusto, CAMBIO_PADRAO, situacaoDoTeto } from './custo.js';
 import { projetar, mediaPorResposta } from './projecao.js';
 import { chaveDoModelo } from './custo.js';
 import { VERSAO, VERSAO_DATA, VERSAO_MARCO } from './versao.js';
@@ -68,6 +68,12 @@ const config = {
   mudo: ler('mudo', 'nao') === 'sim',
 };
 
+// Orçamento (U5): teto acumulado, modelo reserva, modo econômico e proxy local. Lidos na hora, para valer sem recarregar.
+const tetoReais = () => Math.max(0, Number(ler('teto_reais', '50')) || 0);
+const modeloReserva = () => ler('modelo_reserva', 'gemini-2.5-flash-lite').trim();
+const economicoManual = () => ler('modo_economico', 'nao') === 'sim';
+const proxyUrl = () => ler('proxy_url', '').trim();
+
 /* ---------- Gemini TTS: uso do dia e telemetria ---------- */
 // O gasto de voz fica separado do de texto (custo.js): são modelos, preços e tetos diferentes.
 const hojeISO = () => new Date().toISOString().slice(0, 10);
@@ -95,6 +101,7 @@ config.gemini = {
     usoGemini.latencias.push(m.totalMs);
     if (usoGemini.latencias.length > 50) usoGemini.latencias.shift();
     gravarJSON('voz_gemini', usoGemini);
+    custo.somarExtra(m.usd || 0); // a voz paga entra no mesmo teto acumulado
     console.info(`[voz-gemini] ${m.modelo} ${m.voz}: ${m.chars} caracteres, ${m.totalMs} ms para ${m.segundos} s de áudio (${m.tokensSaida} tokens, R$ ${((m.usd || 0) * custo.resumo().cambio).toFixed(5)})`);
     if (typeof desenharUsoGemini === 'function') desenharUsoGemini();
   },
@@ -175,7 +182,7 @@ const custo = criarMedidorDeCusto({
   estadoInicial: lerJSON('custo', null),
   cambio: Number(ler('cambio', String(CAMBIO_PADRAO))),
   precos: lerJSON('precos', null),
-  aoMudar: () => { gravarJSON('custo', custo.estado); desenharDiagnostico(); },
+  aoMudar: () => { gravarJSON('custo', custo.estado); desenharDiagnostico(); atualizarAlertaOrcamento(); },
 });
 
 // Vigia do laço de renderização. Num totem sem ninguém olhando, tela congelada só
@@ -957,7 +964,7 @@ async function perguntarAoPersonagem(q) {
   if (!sessaoAtiva) { sessaoAtiva = true; app.dataset.sessao = 'ativa'; }
   if (etapa !== 'conversa') definirEtapa('conversa');
   tocarInatividade();
-  if (!apiKey) { definirEstado('idle', T.estado.semChave); abrirConfiguracoes(); return; }
+  if (!apiKey && !proxyUrl() && !modoEconomicoAtivo()) { definirEstado('idle', T.estado.semChave); abrirConfiguracoes(); return; }
   const quem = personagem;
   const marca = diagnostico.marcarPergunta();
   marcaPergunta = marca;
@@ -974,12 +981,13 @@ async function perguntarAoPersonagem(q) {
   const ctl = new AbortController();
   abortCtl = ctl;
   // Base de conhecimento (R4): só consulta quando o índice deste personagem está pronto. Falha na busca não derruba a pergunta.
-  let rg = null;
+  let rg = null, rgBruto = null; // rgBruto: o resultado da busca antes da regra do modo complemento, para a resposta pronta
   let regraDoTema = false; // pergunta do assunto da base: só pode ser respondida com ela
   if (rag.pronto(quem.id)) {
     try {
       rg = await rag.consultar(quem.id, q);
       regraDoTema = await rag.ehDoTema(quem.id, q);
+      rgBruto = rg;
     } catch (e) { console.warn('[rag] consulta falhou, segue sem a base:', e); }
     // Modo complemento: a base só entra quando a pergunta cita termos do assunto dela (regex derivado dos documentos, em
     // knowledge/index.json). Semelhança alta sozinha não basta: "por que o céu é azul?" passou do limiar com um trecho da UEMA.
@@ -1003,13 +1011,19 @@ async function perguntarAoPersonagem(q) {
     : null;
   try {
     let texto;
-    if (rg && !rg.confiante) {
-      // A base não cobre a pergunta: resposta pronta, sem chamar o Gemini (custo zero) e sem inventar.
+    // Resposta pronta da base (U5/U6): sem chamar o Gemini. Usa o trecho mais próximo, com a fonte, só se a busca for confiante.
+    const prontaDaBase = (motivo) => {
       marca.aoPrimeiroTexto();
-      texto = regraDoTema ? T.rag.naoSeiTema(quem.nome) : T.rag.naoSei(quem.nome);
-      falar(texto);
-    } else texto = await perguntarEmFluxo({
-      apiKey, modelo: config.modelo, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(rg.resultados) : ''), historico: hist.slice(-9), signal: ctl.signal,
+      if (rgBruto && rgBruto.confiante && rgBruto.resultados.length) {
+        rg = rgBruto;
+        const t0 = rgBruto.resultados[0];
+        const palavras = t0.texto.split(/\s+/);
+        return palavras.length > 50 ? palavras.slice(0, 50).join(' ') + '.' : t0.texto;
+      }
+      return motivo === 'orcamento' ? T.orcamento.semBase : T.resposta.semInternet;
+    };
+    const chamar = (modeloUsado) => perguntarEmFluxo({
+      apiKey, proxy: proxyUrl(), modelo: modeloUsado, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(rg.resultados) : ''), historico: hist.slice(-9), signal: ctl.signal,
       temperatura: ef.temperatura, limitePalavras: ef.limitePalavras,
       ferramentas: Object.fromEntries((ef.ferramentas || []).filter((n) => FERRAMENTAS[n]).map((n) => [n, FERRAMENTAS[n]])),
       aoChamada: (nome, args, resultado) => {
@@ -1018,8 +1032,39 @@ async function perguntarAoPersonagem(q) {
         quadro.adicionarConta(resultado);
       },
       aoTexto: (pedaco) => { marca.aoPrimeiroTexto(); return leitor ? leitor.adicionar(pedaco) : falar(pedaco); },
-      aoUso: (uso) => custo.somar(config.modelo, uso),
+      aoUso: (uso) => custo.somar(modeloUsado, uso),
     });
+    // Falha que vale tentar o reserva ou a resposta pronta: cota, servidor fora, queda de rede. Nunca depois de já ter falado.
+    const tentavel = (e) => !falado && e.name !== 'AbortError' && (e instanceof ErroGemini ? [429, 500, 502, 503, 504].includes(e.status) : true);
+    const tetoDoProxy = (e) => e instanceof ErroGemini && e.status === 429 && /teto/i.test(e.detalhe || '');
+    if (modoEconomicoAtivo()) {
+      texto = prontaDaBase('orcamento');
+      falar(texto);
+    } else if (rg && !rg.confiante) {
+      // A base não cobre a pergunta: resposta pronta, sem chamar o Gemini (custo zero) e sem inventar.
+      marca.aoPrimeiroTexto();
+      texto = regraDoTema ? T.rag.naoSeiTema(quem.nome) : T.rag.naoSei(quem.nome);
+      falar(texto);
+    } else {
+      // Cadeia: modelo principal, depois o reserva mais barato, depois a resposta pronta da base.
+      try {
+        texto = await chamar(config.modelo);
+      } catch (e1) {
+        if (!tentavel(e1)) throw e1;
+        const reserva = modeloReserva();
+        try {
+          if (tetoDoProxy(e1) || !reserva || reserva === config.modelo) throw e1;
+          console.warn(`[gemini] ${config.modelo} falhou (${e1.status || e1.message}); tentando o reserva ${reserva}`);
+          texto = await chamar(reserva);
+          console.info('[orcamento] ' + T.orcamento.reservaUsada);
+        } catch (e2) {
+          if (!tentavel(e2) || !(rgBruto && rgBruto.confiante)) throw e2;
+          console.warn('[gemini] reserva também falhou; resposta pronta da base:', e2);
+          texto = prontaDaBase('falha');
+          falar(texto);
+        }
+      }
+    }
     if (leitor) leitor.finalizar();
     for (const f of divisor.finalizar()) falaTurno.adicionar(f);
     falaTurno.finalizar();
@@ -1326,6 +1371,7 @@ function desenharDiagnostico() {
     [D.vozGemini, usoGemini.chamadas ? D.vozGeminiValor(usoGemini.chamadas, usoGemini.chars.toLocaleString('pt-BR'), (usoGemini.usd * g.cambio).toFixed(4), medianaDe(usoGemini.latencias)) : D.vozGeminiNenhuma, false],
     [D.respostasHoje, D.respostasValor(g.respostas, g.sessao.respostas), false],
     [D.tokensHoje, D.tokensValor(n(g.entrada), n(g.saida + g.pensamento)), false],
+    [D.orcamento, tetoReais() ? T.orcamento.diagnosticoValor(g.acumuladoReais.toFixed(2), tetoReais().toFixed(0), Math.round(situacaoOrcamento().pct * 100)) : T.orcamento.diagnosticoSemTeto(g.acumuladoReais.toFixed(2)), situacaoOrcamento().nivel === 'aviso' || situacaoOrcamento().nivel === 'estourou'],
     [D.gastoHoje, g.semPreco.length ? D.gastoSemPreco(g.reais.toFixed(2), g.semPreco.join(', ')) : D.gastoValor(g.reais.toFixed(2)), g.semPreco.length > 0],
     [D.projecao, textoProjecao(g), false],
     [D.recargas, String(contarRecargas()), contarRecargas() > 0],
@@ -1347,6 +1393,18 @@ function desenharDiagnostico() {
   }));
 }
 
+// Situação do gasto contra o teto. Aos 80% a engrenagem ganha um ponto; no teto o app passa ao modo econômico.
+function situacaoOrcamento() { return situacaoDoTeto(custo.resumo().acumuladoReais, tetoReais()); }
+function modoEconomicoAtivo() { return economicoManual() || situacaoOrcamento().nivel === 'estourou'; }
+let avisouOrcamento = null;
+function atualizarAlertaOrcamento() {
+  const s = situacaoOrcamento();
+  $('gear').dataset.alerta = s.nivel === 'aviso' || s.nivel === 'estourou' ? 'sim' : 'nao';
+  if (s.nivel !== avisouOrcamento && (s.nivel === 'aviso' || s.nivel === 'estourou')) {
+    console.warn('[orcamento] ' + (s.nivel === 'estourou' ? T.orcamento.estourou : T.orcamento.aviso(Math.round(s.pct * 100))));
+  }
+  avisouOrcamento = s.nivel;
+}
 elCambio.value = String(custo.resumo().cambio);
 elCambio.addEventListener('change', () => {
   custo.definirCambio(elCambio.value);
@@ -1572,7 +1630,7 @@ dlg.addEventListener('toggle', () => { if (dlg.open) desenharRag(); });
 
 /* ---------- Console do operador (I5): abas e cena ---------- */
 const ABA_DE = {
-  Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena', 'Base de conhecimento': 'personagem',
+  Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena', Orçamento: 'orcamento', 'Base de conhecimento': 'personagem',
   Câmera: 'sessao', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
   'Armazenamento e uso offline': 'armazenamento', Licenças: 'armazenamento',
 };
@@ -1669,6 +1727,17 @@ $('cenaRestaurar').addEventListener('click', () => {
 });
 aj.sel.addEventListener('change', preencherCena);
 dlg.addEventListener('toggle', () => { if (dlg.open) { preencherCena(); mostrarAba(ler('aba_operador', 'cena')); } });
+
+/* ---------- Orçamento (U5): campos do operador ---------- */
+const O = T.orcamento;
+$('orcDica').textContent = O.dica; $('orcTetoR').textContent = O.teto; $('orcReservaR').textContent = O.reserva;
+$('orcReservaDica').textContent = O.reservaDica; $('orcEconomicoR').textContent = O.economico; $('orcProxyR').textContent = O.proxy; $('orcProxyDica').textContent = O.proxyDica;
+$('orcTeto').value = String(tetoReais()); $('orcReserva').value = modeloReserva(); $('orcEconomico').checked = economicoManual(); $('orcProxy').value = proxyUrl();
+$('orcTeto').addEventListener('input', () => { gravar('teto_reais', String(Math.max(0, Number($('orcTeto').value) || 0))); atualizarAlertaOrcamento(); desenharDiagnostico(); });
+$('orcReserva').addEventListener('input', () => gravar('modelo_reserva', $('orcReserva').value.trim()));
+$('orcEconomico').addEventListener('change', () => { gravar('modo_economico', $('orcEconomico').checked ? 'sim' : 'nao'); atualizarAlertaOrcamento(); });
+$('orcProxy').addEventListener('input', () => gravar('proxy_url', $('orcProxy').value.trim()));
+atualizarAlertaOrcamento();
 
 /* ---------- Voz mãos-livres (R5) ---------- */
 const elML = { caixa: $('maosLivres'), rotulo: $('maosLivresRotulo'), dica: $('maosLivresDica') };

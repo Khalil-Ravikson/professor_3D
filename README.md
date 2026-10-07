@@ -166,6 +166,13 @@ Roda, nesta ordem: detector anti-slop, testes unitários, política de seguranç
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Orçamento, teto e proxy local
+
+- **Teto acumulado:** engrenagem, aba Orçamento, "Teto de gasto (R$)" (padrão R$ 50). O gasto de texto e o da voz Gemini paga somam num teto só, que **atravessa os dias**. Aos 80% a engrenagem ganha um ponto de aviso; no teto, o app passa sozinho ao **modo econômico** (voz Kokoro e resposta pronta da base, sem chamar o Gemini) e a criança vê só "agora só consigo responder o que já está pronto". "Modo econômico" também é um botão de emergência na mesma aba. O preço vem da tabela do diagnóstico (editável, com o câmbio).
+- **Cadeia de modelos:** principal (`gemini-3.1-flash-lite`) → modelo reserva mais barato (`gemini-2.5-flash-lite`, editável) → resposta pronta da base com a fonte, quando houver base. A reserva só entra em erro de cota ou servidor fora do ar, e nunca depois de o personagem já ter começado a falar. Os ids foram conferidos na lista de modelos da API em 07/10/2026; se um dia sumir, troque na aba Orçamento (nenhum id está fixo no código além do padrão inicial).
+- **Proxy local (chave fora do navegador):** `GEMINI_API_KEY=... TETO_REAIS=50 npm run proxy` (no PowerShell: `$env:GEMINI_API_KEY="..."; npm run proxy`) sobe um servidor em `http://127.0.0.1:8890`. Coloque esse endereço em "Endereço do proxy local" e a chave deixa de ser usada neste navegador para o texto. O proxy conta o gasto com os preços de `src/custo.js`, recusa modelo fora da tabela e origem não permitida, responde 429 no teto e **nunca grava nem escreve em log o corpo das perguntas nem a chave**. `GET /uso` mostra o acumulado. Não cobre a voz Gemini TTS (ainda usa a chave no navegador).
+- **`npm run orcamento -- --estacoes 2 --sessoes-dia 120 --dias 2`** imprime o gasto previsto por plano (A mínimo, B com pré-gravação, C com voz paga em parte das respostas, D com voz paga em todas), com margem de 15% e contra o teto. Informe `--entrada` e `--saida` com os tokens médios medidos para sair da premissa.
+
 ## Uso offline e armazenamento
 
 Depois de uma primeira visita **com internet**, o app abre sem ela: um service worker (`sw.js`) guarda a página, os personagens e as animações, e as bibliotecas da jsDelivr (todas com versão fixa na URL). Ele **nunca** guarda chamadas ao Gemini, ao servidor do Kokoro, POST nem pedido com chave de API. Fica desligado com `?debug`.

@@ -117,4 +117,7 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 50 | Conversar com a Luma (com chave do Gemini e teto liberado) e perguntar "o que é o SIGUEMA?", "quando foi criada a UEMA?" e "por que o céu é azul?". | As duas primeiras respondem com base nos documentos e mostram "Fontes:"; a terceira responde normalmente, sem "Fontes". | |
 | 51 | Perguntar à Luma "qual é o telefone da reitoria da UEMA?" e "quando é o vestibular de 2027?". | Ela diz que não sabe e indica o portal oficial; não inventa número nem data. (Esta é a verificação real do caso que o limiar não segura.) | |
 | 52 | Conferir 10 respostas da Luma sobre a UEMA contra o portal oficial da UEMA. | Nenhum fato diferente do portal. O PDF não traz endereços de fonte e eu não verifiquei nada dele. | |
+| 53 | Subir o proxy com a chave de verdade (`npm run proxy`), colocar o endereço na aba Orçamento e fazer 3 perguntas. | Respondem normalmente; `GET http://127.0.0.1:8890/uso` mostra 3 respostas e o gasto em reais; a chave não aparece no navegador. | |
+| 54 | Colocar um teto de R$ 1 no proxy (`TETO_REAIS=1`) e perguntar até passar. | A resposta seguinte vem em modo econômico, sem tela de erro, e a engrenagem mostra o aviso. | |
+| 55 | Conferir 30 perguntas reais e anotar o gasto do proxy; comparar com `npm run orcamento -- --turnos 30 --sessoes-dia 1` (informando `--entrada` e `--saida` medidos). | Previsto e medido na mesma ordem de grandeza. Me diga os números para eu fechar a tabela. | |
 

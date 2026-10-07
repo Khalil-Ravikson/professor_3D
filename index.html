@@ -135,6 +135,7 @@
   [data-totem="sim"] { user-select: none; -webkit-user-select: none; }
   .fontes { margin: 6px 0 0; font-size: .85rem; color: var(--tinta-suave); }
   .fontes[hidden] { display: none; }
+  .gear[data-alerta="sim"]::after { content: ""; position: absolute; top: 6px; right: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--alerta-fundo); box-shadow: 0 0 0 2px var(--alerta-tinta); }
   .sto-personagens { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
   .sto-personagens li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--alvo); }
   .diag-erros { list-style: none; margin: 10px 0 0; padding: 0; font-size: .8rem; color: var(--tinta-suave); }
@@ -844,6 +845,21 @@
     <label for="gtTeto">Teto de caracteres por dia (0 desliga o teto)</label>
     <input id="gtTeto" type="number" min="0" max="500000" step="1000">
     <p class="hint" id="gtUso" role="status"></p>
+  </fieldset>
+
+  <fieldset id="fsOrcamento">
+    <legend>Orçamento</legend>
+    <p class="hint" id="orcDica"></p>
+    <label for="orcTeto" id="orcTetoR"></label>
+    <input id="orcTeto" type="number" min="0" step="1">
+    <label for="orcReserva" id="orcReservaR"></label>
+    <input id="orcReserva" type="text" list="modelosReserva" spellcheck="false" autocapitalize="off">
+    <datalist id="modelosReserva"><option value="gemini-2.5-flash-lite"><option value="gemini-3.1-flash-lite"><option value="gemini-3.5-flash-lite"></datalist>
+    <p class="hint" id="orcReservaDica"></p>
+    <label class="check"><input type="checkbox" id="orcEconomico"> <span id="orcEconomicoR"></span></label>
+    <label for="orcProxy" id="orcProxyR"></label>
+    <input id="orcProxy" type="url" placeholder="http://127.0.0.1:8890" spellcheck="false" autocapitalize="off">
+    <p class="hint" id="orcProxyDica"></p>
   </fieldset>
 
   <fieldset id="fsRag">
