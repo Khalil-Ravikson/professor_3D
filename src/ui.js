@@ -7,6 +7,9 @@ import { listarMovimentos, salvarMovimento, apagarMovimento, idDoNome, medirClip
 import { carregarCatalogo, aplicarEscolhas, gravarEscolha } from './animacoes.js';
 import { criarDiretor, removerMarcas, instrucaoGestos, ESTADOS_BASE } from './gestos.js';
 import { instrucaoEmocao } from './emocao.js';
+import { criarEmbeddings, MODELO_EMB } from './rag/embeddings.js';
+import { criarRag } from './rag/rag.js';
+import { instrucaoRag, fontesCitadas } from './rag/prompt.js';
 import { registrarSW, aplicarAtualizacao, pedirPersistencia, usoEcota, tamanhosPorCategoria, apagarCategoria, prontoOffline, baixarParaOffline, formatarBytes, temServiceWorker } from './armazenamento.js';
 import { criarBoca } from './lipsync.js';
 import { PERSONAGENS, buscarPersonagem, aplicarAjustes } from './characters.js';
@@ -34,6 +37,10 @@ const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
 const micBtn = $('mic'), stopBtn = $('stop'), form = $('form'), input = $('text');
 const elEstadoChip = $('estadoChip'), tentarBtn = $('tentarDeNovo');
+let maosLivresAtivo = false, maosLivresPausado = false; // pausado: a pessoa apertou o microfone, então vale o apertar para falar nesta sessão
+// RAG (R4). O modelo de embeddings só baixa quando o operador pede "Preparar a base" e há documentos.
+const rag = criarRag({ embeddings: criarEmbeddings({ aoProgresso: (pct) => { const e = document.getElementById('ragEstado'); if (e) e.textContent = T.rag.baixandoModelo(pct); } }) });
+const elFontes = $('fontes');
 let ultimaFalha = null; // a pergunta que não foi respondida, para o botão Tentar de novo
 const dlg = $('settings'), keyInput = $('key'), voiceSel = $('voiceSel');
 const motorSel = $('motorSel'), urlInput = $('urlKokoro'), modeloInput = $('modelo');
@@ -124,7 +131,7 @@ function definirEstado(s, texto) {
   app.dataset.state = s;
   // Microfone aberto: o personagem continua audível, mas sai da frente de quem fala.
   if (mesa) mesa.abaixarFundo(s === 'listening');
-  elStatus.textContent = texto || T.estado[s];
+  elStatus.textContent = texto || (s === 'idle' && maosLivresAtivo ? T.maosLivres.pronto : T.estado[s]);
   elEstadoChip.textContent = T.barra.estados[s] || '';
   elEstadoChip.dataset.estado = s;
   stopBtn.hidden = !(s === 'speaking' || s === 'thinking');
@@ -771,6 +778,7 @@ function definirEtapa(e) {
     elPasso.caixa.hidden = true;
   }
   // Etapas que esperam o fim de uma fala têm um limite, para nunca travarem sem voz.
+  if (typeof atualizarMaosLivres === 'function') atualizarMaosLivres();
   if (e === 'cumprimento') timerEtapa = setTimeout(() => { if (etapa === 'cumprimento') definirEtapa(microfone ? 'conversa' : 'consentimento'); }, 8000);
   if (e === 'despedida') timerEtapa = setTimeout(() => { if (etapa === 'despedida') voltarParaAtracao(); }, 8000);
 }
@@ -870,6 +878,7 @@ function iniciarSessao(origem) {
 function encerrarSessao(origem) {
   if (!sessaoAtiva || !personagem) return false;
   sessaoAtiva = false;
+  maosLivresPausado = false;
   app.dataset.sessao = 'encerrada';
   clearTimeout(timerInatividade);
   if (abortCtl) abortCtl.abort();
@@ -957,12 +966,18 @@ async function perguntarAoPersonagem(q) {
   silenciar(); ocupado = true;
   elHeard.textContent = T.estado.voce(q);
   elAnswer.textContent = '';
+  elFontes.hidden = true; elFontes.textContent = '';
   definirEstado('thinking');
   if (ef.quadro) { elQuadro.hidden = false; quadro.limpar(q); }
   const contas = [];
   hist.push({ role: 'user', content: q });
   const ctl = new AbortController();
   abortCtl = ctl;
+  // Base de conhecimento (R4): só consulta quando o índice deste personagem está pronto. Falha na busca não derruba a pergunta.
+  let rg = null;
+  if (rag.pronto(quem.id)) {
+    try { rg = await rag.consultar(quem.id, q); } catch (e) { console.warn('[rag] consulta falhou, segue sem a base:', e); }
+  }
   // Servidor fora do ar na última checagem? Tenta de novo rápido antes de cair para a voz do sistema.
   if (config.motor !== 'webspeech' && voz.statusServidor.ok !== true) await voz.verificarServidor({ timeoutMs: 800 });
   const falaTurno = voz.novoTurno(ef.voz);
@@ -979,8 +994,14 @@ async function perguntarAoPersonagem(q) {
     ? criarLeitorMarcado({ aoFala: falar, aoQuadro: (l) => { if (!ctl.signal.aborted) quadro.adicionarLinha(removerMarcas(l)); } })
     : null;
   try {
-    const texto = await perguntarEmFluxo({
-      apiKey, modelo: config.modelo, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao(), historico: hist.slice(-9), signal: ctl.signal,
+    let texto;
+    if (rg && !rg.confiante) {
+      // A base não cobre a pergunta: resposta pronta, sem chamar o Gemini (custo zero) e sem inventar.
+      marca.aoPrimeiroTexto();
+      texto = T.rag.naoSei(quem.nome);
+      falar(texto);
+    } else texto = await perguntarEmFluxo({
+      apiKey, modelo: config.modelo, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(rg.resultados) : ''), historico: hist.slice(-9), signal: ctl.signal,
       temperatura: ef.temperatura, limitePalavras: ef.limitePalavras,
       ferramentas: Object.fromEntries((ef.ferramentas || []).filter((n) => FERRAMENTAS[n]).map((n) => [n, FERRAMENTAS[n]])),
       aoChamada: (nome, args, resultado) => {
@@ -996,7 +1017,13 @@ async function perguntarAoPersonagem(q) {
     falaTurno.finalizar();
     if (personagem !== quem) { hist.pop(); return; }
     if (!texto) { hist.pop(); elAnswer.textContent = T.resposta.vazia; return; }
-    hist.push({ role: 'assistant', content: texto.replace(/\[(gesto|emo):[^\]]*\]\s*/gi, ''), contas });
+    if (rg && rg.confiante) {
+      const lista = fontesCitadas(texto, rg.resultados);
+      const usados = lista.length ? lista : rg.resultados.slice(0, 2);
+      elFontes.textContent = T.rag.fontes(usados.map((t) => `${t.titulo}, ${t.secao} (${t.fonte || t.id})`));
+      elFontes.hidden = false;
+    }
+    hist.push({ role: 'assistant', content: texto.replace(/\[(gesto|emo|fonte):[^\]]*\]\s*/gi, ''), contas });
     elAnswer.textContent = removerMarcas(limparParaFala(falado)).trim() || separarFalaEQuadro(hist[hist.length - 1].content).fala;
   } catch (e) {
     hist.pop();
@@ -1034,6 +1061,9 @@ tentarBtn.addEventListener('click', () => {
 
 /* ---------- Ouvido ---------- */
 const ouvido = criarOuvido({
+  // Mãos-livres: falar por cima do personagem corta a fala e a requisição na hora e passa a ouvir.
+  aoInterromper: () => { if (abortCtl) abortCtl.abort(); silenciar(); },
+  aoTranscricao: (ms) => diagnostico.registrarTranscricao(ms),
   aoOuvirParcial: (t) => { elHeard.textContent = T.estado.voce(t); },
   aoOuvirFinal: (t) => perguntarAoPersonagem(t),
   aoMudarEstado: definirEstado,
@@ -1113,6 +1143,7 @@ iniciarBarra();
 /* ---------- Controles ---------- */
 micBtn.addEventListener('click', () => {
   voz.preparar();
+  if (maosLivresAtivo) { maosLivresPausado = true; atualizarMaosLivres(); return; } // apertou o botão: volta ao apertar para falar
   if (ouvido.gravando) { ouvido.alternar(); return; }
   if (abortCtl) abortCtl.abort();
   silenciar();
@@ -1281,6 +1312,7 @@ function desenharDiagnostico() {
     [D.gpu, r.gpu ? D.gpuValor(r.gpu.geometrias, r.gpu.texturas) : D.semDados, false],
     [D.respostaGemini, r.latencia.perguntaMs === null ? D.semMedida : D.ms(r.latencia.perguntaMs, r.latencia.amostras), false],
     [D.ateFala, r.latencia.falaMs === null ? D.semMedida : D.ms(r.latencia.falaMs), false],
+    [D.transcricao, r.latencia.transcricaoMs === null ? D.semMedida : D.ms(r.latencia.transcricaoMs), false],
     [D.qualidade, D.qualidadeValor(cena.qualidade.pixelRatio, cena.qualidade.automatica), cena.qualidade.degrau > 0],
     [D.vozAgora, personagem ? D.vozAgoraValor(personagem.nome, ultimoMotorVoz && ultimoMotorVoz.id === 'gemini' ? ((efetivo(personagem).voz.gemini && efetivo(personagem).voz.gemini.voz) || config.gemini.voz) : efetivo(personagem).voz.id, (ultimoMotorVoz && ultimoMotorVoz.id) || 'escolhendo') : D.semDados, false],
     [D.vozGemini, usoGemini.chamadas ? D.vozGeminiValor(usoGemini.chamadas, usoGemini.chars.toLocaleString('pt-BR'), (usoGemini.usd * g.cambio).toFixed(4), medianaDe(usoGemini.latencias)) : D.vozGeminiNenhuma, false],
@@ -1487,9 +1519,52 @@ dlg.addEventListener('toggle', () => {
   preencherAjustes();
 });
 
+/* ---------- Base de conhecimento (R4) ---------- */
+const elRag = {
+  dica: $('ragDica'), estado: $('ragEstado'), preparar: $('ragPreparar'), apagar: $('ragApagar'), limiar: $('ragLimiar'), limiarV: $('ragLimiarV'),
+  limiarDica: $('ragLimiarDica'), teste: $('ragTeste'), testar: $('ragTestar'), resultado: $('ragResultado'), trechos: $('ragTrechos'),
+};
+const RG = T.rag;
+$('ragLegenda').textContent = RG.legenda; elRag.dica.textContent = RG.dica; $('ragLimiarR').textContent = RG.limiar;
+elRag.limiarDica.textContent = RG.limiarDica; $('ragTesteR').textContent = RG.testar; elRag.testar.textContent = RG.testarBotao;
+elRag.preparar.textContent = RG.preparar; elRag.apagar.textContent = RG.apagar;
+elRag.limiar.value = ler('rag_limiar', '0.8'); elRag.limiarV.textContent = Number(elRag.limiar.value).toFixed(2); rag.definirLimiar(elRag.limiar.value);
+
+async function desenharRag() {
+  const pid = aj.sel.value;
+  const e = await rag.verificar(pid);
+  elRag.estado.textContent = e.documentos ? RG.estado(e.documentos, e.indexados) : RG.semDocumentos;
+  elRag.preparar.disabled = !e.documentos || !e.pendentes.length;
+  elRag.apagar.disabled = !e.indexados;
+  elRag.testar.disabled = !rag.pronto(pid);
+}
+elRag.limiar.addEventListener('input', () => { gravar('rag_limiar', elRag.limiar.value); elRag.limiarV.textContent = Number(elRag.limiar.value).toFixed(2); rag.definirLimiar(elRag.limiar.value); });
+elRag.preparar.addEventListener('click', async () => {
+  const pid = aj.sel.value;
+  elRag.preparar.disabled = true;
+  try {
+    const r = await rag.preparar(pid, (n, total) => { elRag.estado.textContent = RG.preparando(n, total); });
+    elRag.resultado.textContent = r.recusados && r.recusados.length ? r.recusados.map((x) => RG.recusado(x.arquivo, x.erros)).join(' ') : RG.pronto;
+  } catch (e) { console.warn('[rag] preparo falhou:', e); elRag.resultado.textContent = RG.falhou(e.message); }
+  desenharRag();
+});
+elRag.apagar.addEventListener('click', async () => { await rag.apagar(aj.sel.value); elRag.resultado.textContent = ''; desenharRag(); });
+elRag.testar.addEventListener('click', async () => {
+  const pid = aj.sel.value, q = elRag.teste.value.trim();
+  if (!q) return;
+  if (!rag.pronto(pid)) { elRag.resultado.textContent = RG.testarSemBase; return; }
+  try {
+    const r = await rag.consultar(pid, q);
+    elRag.resultado.textContent = RG.testarResultado(r.melhorCosseno.toFixed(3), r.confiante);
+    elRag.trechos.replaceChildren(...r.resultados.map((t) => { const li = document.createElement('li'); li.textContent = `${t.titulo}, ${t.secao}: cosseno ${t.cosseno.toFixed(3)}, palavras-chave ${t.palavraChave.toFixed(2)}`; return li; }));
+  } catch (e) { console.warn('[rag] teste falhou:', e); elRag.resultado.textContent = RG.falhou(e.message); }
+});
+aj.sel.addEventListener('change', desenharRag);
+dlg.addEventListener('toggle', () => { if (dlg.open) desenharRag(); });
+
 /* ---------- Console do operador (I5): abas e cena ---------- */
 const ABA_DE = {
-  Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena',
+  Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena', 'Base de conhecimento': 'personagem',
   Câmera: 'sessao', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
   'Armazenamento e uso offline': 'armazenamento', Licenças: 'armazenamento',
 };
@@ -1586,6 +1661,25 @@ $('cenaRestaurar').addEventListener('click', () => {
 });
 aj.sel.addEventListener('change', preencherCena);
 dlg.addEventListener('toggle', () => { if (dlg.open) { preencherCena(); mostrarAba(ler('aba_operador', 'cena')); } });
+
+/* ---------- Voz mãos-livres (R5) ---------- */
+const elML = { caixa: $('maosLivres'), rotulo: $('maosLivresRotulo'), dica: $('maosLivresDica') };
+elML.rotulo.textContent = T.maosLivres.rotulo; elML.dica.textContent = T.maosLivres.dica;
+const maosLivresLigado = () => ler('maos_livres', 'nao') === 'sim';
+elML.caixa.checked = maosLivresLigado();
+// Só liga com sessão em conversa e o microfone aceito. Qualquer outra coisa desliga.
+async function atualizarMaosLivres() {
+  maosLivresAtivo = ouvido.maosLivres; // o ouvido pode ter parado sozinho (cancelar ao trocar de personagem)
+  const querer = maosLivresLigado() && !maosLivresPausado && sessaoAtiva && etapa === 'conversa' && microfone === 'sim';
+  if (querer && !maosLivresAtivo) { maosLivresAtivo = await ouvido.iniciarMaosLivres(); if (maosLivresAtivo) estadoOcioso(); }
+  else if (!querer && maosLivresAtivo) { await ouvido.pararMaosLivres(); maosLivresAtivo = false; if (!ocupado) estadoOcioso(); }
+}
+elML.caixa.addEventListener('change', () => {
+  gravar('maos_livres', elML.caixa.checked ? 'sim' : 'nao');
+  maosLivresPausado = false;
+  if (elML.caixa.checked && microfone !== 'sim') elML.dica.textContent = T.maosLivres.precisaMicrofone + ' ' + T.maosLivres.dica;
+  atualizarMaosLivres();
+});
 
 /* ---------- Modo totem (R6) ---------- */
 // Tela cheia no primeiro toque (o navegador só deixa dentro de um gesto), engrenagem escondida e sem menu de contexto.
@@ -1945,6 +2039,8 @@ try { catalogo = await carregarCatalogo(); await carregarEnviados(); } catch (e)
 const checagens = await Promise.all(PERSONAGENS.map(async (p) => [p, await verificarArquivo(p.arquivoVrm)]));
 for (const [p, versao] of checagens) if (versao && !p.emBreve) { disponiveis.push(p); versoes.set(p.id, versao); }
 renderizarSelecao();
+// Base de conhecimento: vê, sem baixar nada, quais personagens já têm o índice pronto.
+for (const p of disponiveis) rag.verificar(p.id).catch((e) => console.warn(`[rag] verificação de ${p.id} falhou:`, e));
 cena.iniciar();
 // Qualidade adaptativa por FPS. Com ?debug fica desligada, para as medições não mudarem sozinhas (qualidade_auto=sim liga).
 cena.qualidadeAuto(!DEBUG || ler('qualidade_auto', 'nao') === 'sim');

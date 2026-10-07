@@ -17,6 +17,9 @@ Gerado por `node tools/licencas.mjs`. Não edite à mão: rode o script de novo.
 | wlipsync | 1.3.1 | navegador (CDN) | MIT |  |
 | src/vendor/mixamo (exemplo do three-vrm v3.5.5) |  | copiado no código | MIT, pixiv Inc. |  |
 | assets/mediapipe/face_landmarker.task (modelo do MediaPipe) |  | copiado no código | Apache-2.0 |  |
+| assets/vad/ (voz mãos-livres, ver assets/vad/CREDITS.md): @ricky0123/vad-web 0.0.31 (ISC) e onnxruntime-web 1.22.0 (MIT) |  | copiado no código | ISC e MIT |  |
+| assets/vad/silero_vad_legacy.onnx (modelo Silero VAD) |  | copiado no código | MIT declarada pelo repositório do Silero; texto da licença não vem no pacote [CONFERIR] |  |
+| Xenova/multilingual-e5-small (embeddings do RAG, baixado do Hugging Face no navegador, não fica no repositório) |  | copiado no código | licença do modelo [CONFERIR] na página do modelo antes de publicar |  |
 
 ## Dependências dentro dos bundles (um nível)
 
@@ -42,7 +45,8 @@ Gerado por `node tools/licencas.mjs`. Não edite à mão: rode o script de novo.
 | luma.vrm | Eugenia | [VIPEDeployer / 0xded150f6c599b08950919cfb0b97516b6235a36b] | 0.x | CC0 | permitido |  |
 | nina.vrm | Juanita | 0xded150f6c599b08950919cfb0b97516b6235a36b | 0.x | CC0 | permitido |  |
 | rafa.vrm | Bruno | 0xded150f6c599b08950919cfb0b97516b6235a36b | 0.x | CC0 | permitido |  |
-| teo.vrm | Cyberpal | [VIPEDeployer / 0xded150f6c599b08950919cfb0b97516b6235a36b] | 0.x | CC0 | permitido |  |
+| teo.vrm | AvatarSample_C | VRoid Project | 0.x | Other | permitido |  |
+| teo3.vrm | Anime Boy | Kaosvs | 0.x | Redistribution_Prohibited | bloqueado | só o autor pode usar este avatar; redistribuição proibida: o arquivo não pode ir para o repositório público; uso comercial proibido: confirme que o evento não tem fins lucrativos |
 
 ## Clipes de animação
 
@@ -65,4 +69,6 @@ Pacote VRoid e arquivos do Mixamo ficam fora do repositório (`.gitignore`). Fra
 
 - phonemizer@1.2.1 (via kokoro-js): usa o eSpeak NG, que é GPL-3.0. Só entra no motor opcional "Kokoro no navegador" (inglês). Conferir antes de publicar com esse motor ligado
 
-Nenhum problema encontrado.
+## Problemas
+
+- modelo teo3.vrm: só o autor pode usar este avatar; redistribuição proibida: o arquivo não pode ir para o repositório público

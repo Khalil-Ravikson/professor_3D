@@ -133,6 +133,8 @@
   [data-totem="sim"] .op-ponto { display: block; }
   [data-totem="sim"] .gear { display: none; }
   [data-totem="sim"] { user-select: none; -webkit-user-select: none; }
+  .fontes { margin: 6px 0 0; font-size: .85rem; color: var(--tinta-suave); }
+  .fontes[hidden] { display: none; }
   .sto-personagens { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
   .sto-personagens li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--alvo); }
   .diag-erros { list-style: none; margin: 10px 0 0; padding: 0; font-size: .8rem; color: var(--tinta-suave); }
@@ -599,7 +601,7 @@
   .cena-cores input[type=color] { width: 56px; height: 44px; padding: 2px; border: 2px solid var(--dlg-borda); border-radius: 10px; background: #fff; }
   @media (min-width: 1000px) {
     dialog#settings[data-encaixado="sim"] {
-      position: fixed; inset: 0 0 0 auto; margin: 0; height: 100dvh; max-height: 100dvh; width: min(560px, 44vw);
+      position: fixed; inset: 0 0 0 auto; margin: 0; height: 100dvh; max-height: 100dvh; width: min(560px, 44vw); z-index: 50; /* acima do canvas, que na atração ocupa a tela toda */
       border-radius: 0; box-shadow: -10px 0 28px rgba(16, 24, 43, .22);
     }
     dialog#settings[data-encaixado="sim"]::backdrop { display: none; }
@@ -710,6 +712,7 @@
     <div class="bubble" aria-live="polite">
       <p class="heard" id="heard"></p>
       <p class="answer" id="answer"></p>
+      <p class="fontes" id="fontes" hidden></p>
     </div>
     <div class="row">
       <span class="estado-chip" id="estadoChip" data-estado="idle" aria-hidden="true"></span>
@@ -843,6 +846,24 @@
     <p class="hint" id="gtUso" role="status"></p>
   </fieldset>
 
+  <fieldset id="fsRag">
+    <legend id="ragLegenda"></legend>
+    <p class="hint" id="ragDica"></p>
+    <p class="hint" id="ragEstado" role="status"></p>
+    <div class="actions">
+      <button class="btn ghost" id="ragPreparar" type="button"></button>
+      <button class="btn ghost" id="ragApagar" type="button"></button>
+    </div>
+    <label for="ragLimiar"><span id="ragLimiarR"></span>: <output id="ragLimiarV" for="ragLimiar"></output></label>
+    <input id="ragLimiar" type="range" min="0.6" max="0.95" step="0.01">
+    <p class="hint" id="ragLimiarDica"></p>
+    <label for="ragTeste" id="ragTesteR"></label>
+    <input id="ragTeste" type="text" maxlength="200" spellcheck="false">
+    <div class="actions"><button class="btn ghost" id="ragTestar" type="button"></button></div>
+    <p class="hint" id="ragResultado" role="status"></p>
+    <ul class="sto-personagens" id="ragTrechos"></ul>
+  </fieldset>
+
   <fieldset id="fsCena">
     <legend id="cenaLegenda"></legend>
     <p class="hint" id="cenaDica"></p>
@@ -916,6 +937,8 @@
 
   <fieldset>
     <legend>Sessão</legend>
+    <label class="check"><input type="checkbox" id="maosLivres"> <span id="maosLivresRotulo"></span></label>
+    <p class="hint" id="maosLivresDica"></p>
     <label class="check"><input type="checkbox" id="totemModo"> <span id="totemRotulo"></span></label>
     <p class="hint" id="totemDica"></p>
     <p class="hint">Cumprimenta com aceno ao começar. Ao encerrar, acena, se despede e apaga a conversa.</p>

@@ -4,11 +4,12 @@
 // Lojas:
 //   movimentos  : arquivos .fbx e .vrma enviados pelo operador (src/movimentos.js)
 //   miniaturas  : retratos renderizados dos .vrm, para a roleta de seleção (src/miniaturas.js)
+//   rag         : trechos e vetores dos documentos de knowledge/<personagem>/ (src/rag/indice.js)
 //
-// Versão 2 (P11/fase 5) acrescentou "miniaturas". Subir a versão é seguro: a loja antiga não é tocada.
+// Versão 2 (P11/fase 5) acrescentou "miniaturas"; a 3 (prompt 2, R4) acrescentou "rag". Subir a versão é seguro: as lojas antigas não são tocadas.
 export const BANCO = 'prof3d';
-export const VERSAO_BANCO = 2;
-export const LOJAS = { movimentos: 'id', miniaturas: 'id' };
+export const VERSAO_BANCO = 3;
+export const LOJAS = { movimentos: 'id', miniaturas: 'id', rag: 'id' };
 
 export function abrirBanco() {
   return new Promise((ok, falha) => {

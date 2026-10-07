@@ -9,6 +9,7 @@
 //   Gestos do fluxo (cumprimento, despedida) passam por cima do intervalo.
 
 import { removerEmocao } from './emocao.js';
+import { removerMarcaFonte } from './rag/prompt.js';
 
 export const ESTADOS_BASE = ['idle', 'listening', 'thinking', 'talking'];
 
@@ -133,7 +134,7 @@ export function extrairGestos(texto) {
 }
 // Para mostrar na tela: tira marcas completas e uma marca ainda incompleta no fim do texto.
 export function removerMarcas(texto) {
-  return removerEmocao(texto.replace(MARCA, '').replace(/\[(g(e(s(t(o(:[a-z0-9-]*)?)?)?)?)?)?$/i, ''));
+  return removerMarcaFonte(removerEmocao(texto.replace(MARCA, '').replace(/\[(g(e(s(t(o(:[a-z0-9-]*)?)?)?)?)?)?$/i, '')));
 }
 
 // Instrução para o LLM, só com os gestos que existem e estão ativos agora.

@@ -16,7 +16,7 @@ const mediana = (v) => {
 
 export function criarDiagnostico({ cena, aoErro = () => {} } = {}) {
   const erros = [];
-  const latencias = { pergunta: [], fala: [] }; // ms: até o primeiro texto e até a primeira fala
+  const latencias = { pergunta: [], fala: [], transcricao: [] }; // ms: até o primeiro texto, até a primeira fala e (mãos-livres) fim da fala até o texto
   const inicio = Date.now();
   let ultimaContagem = { quadros: cena ? cena.quadros : 0, t: performance.now() };
   let fpsAtual = null;
@@ -46,6 +46,7 @@ export function criarDiagnostico({ cena, aoErro = () => {} } = {}) {
 
   return {
     registrarErro,
+    registrarTranscricao(ms) { latencias.transcricao.push(ms); if (latencias.transcricao.length > MAX_LATENCIAS) latencias.transcricao.shift(); },
     // Chamado a cada pergunta: devolve uma função para marcar os tempos daquela pergunta.
     marcarPergunta() {
       const t0 = performance.now();
@@ -84,6 +85,7 @@ export function criarDiagnostico({ cena, aoErro = () => {} } = {}) {
         latencia: {
           perguntaMs: mediana(latencias.pergunta),
           falaMs: mediana(latencias.fala),
+          transcricaoMs: mediana(latencias.transcricao),
           amostras: latencias.pergunta.length,
         },
         servicos,

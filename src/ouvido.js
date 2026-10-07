@@ -2,7 +2,7 @@
 // como no Brave), cai para Whisper local via transformers.js.
 const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
 
-export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoProgresso }) {
+export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoProgresso, aoInterromper = () => {}, aoTranscricao = () => {} }) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let usarSR = !!SR, sr = null, textoSR = '', gravando = false, queroParar = false;
   let asr = null, recorder = null, stream = null, pedacos = [], autoParar = null;
@@ -93,8 +93,61 @@ export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoPro
     }
   }
 
+  // ---------- Voz mãos-livres (R5) ----------
+  // VAD local (src/maos-livres.js) detecta o começo e o fim da fala; o trecho de 16 kHz vai direto para o Whisper
+  // do navegador, o mesmo de carregarWhisper(). Falar por cima do personagem o interrompe. Nada é gravado.
+  let maosLivres = null, geracaoML = 0;
+
+  async function transcreverTrecho(audio, minha) {
+    if (minha !== geracaoML) return;
+    aoMudarEstado('thinking', 'Entendendo o que você disse...');
+    const t0 = performance.now();
+    try {
+      const out = await asr(audio, { language: 'portuguese', task: 'transcribe' });
+      if (minha !== geracaoML) return;
+      aoTranscricao(Math.round(performance.now() - t0));
+      const q = (out.text || '').trim();
+      if (!q) { aoMudarEstado('idle', 'Não ouvi nada. Pode falar de novo.'); return; }
+      aoOuvirFinal(q);
+    } catch (e) {
+      console.error('[ouvido] transcrição mãos-livres falhou:', e);
+      aoMudarEstado('idle', 'Não consegui entender o áudio. Tente de novo ou escreva.');
+    }
+  }
+
+  async function iniciarMaosLivres() {
+    if (maosLivres) return true;
+    const minha = ++geracaoML;
+    try {
+      if (!asr) await carregarWhisper();
+      if (!asr) return false;
+      const { criarMaosLivres } = await import('./maos-livres.js');
+      const ml = await criarMaosLivres({
+        aoFalaReal: () => { if (minha === geracaoML) { aoInterromper(); aoMudarEstado('listening'); } },
+        aoFimDeFala: (audio) => transcreverTrecho(audio, minha),
+      });
+      if (minha !== geracaoML) { await ml.destruir(); return false; }
+      maosLivres = ml;
+      return true;
+    } catch (e) {
+      console.warn('[ouvido] a voz mãos-livres não ligou:', e);
+      aoMudarEstado('idle', 'Não consegui ligar a voz mãos-livres. O botão do microfone continua funcionando.');
+      return false;
+    }
+  }
+
+  async function pararMaosLivres() {
+    geracaoML++;
+    const ml = maosLivres;
+    maosLivres = null;
+    if (ml) await ml.destruir();
+  }
+
   return {
     get gravando() { return gravando; },
+    get maosLivres() { return !!maosLivres; },
+    iniciarMaosLivres,
+    pararMaosLivres,
     async preparar() {
       if (navigator.brave) {
         try { if (await navigator.brave.isBrave()) usarSR = false; }
@@ -105,6 +158,7 @@ export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoPro
     // Para de ouvir e joga fora o que foi captado (troca de personagem).
     cancelar() {
       geracao++;
+      if (maosLivres) pararMaosLivres();
       if (!gravando) return;
       if (usarSR) { gravando = false; sr.abort(); }
       else pararGravacao();

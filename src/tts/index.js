@@ -13,6 +13,7 @@ import { criarGeminiTts } from './gemini-motor.js';
 import { dividirFrases, limparParaFala, normalizarParaFala } from './frases.js';
 import { extrairGestos } from '../gestos.js';
 import { extrairEmocao } from '../emocao.js';
+import { removerMarcaFonte } from '../rag/prompt.js';
 import { criarMesa, PAUSA_ENTRE_FRASES_MS } from '../audio.js';
 
 function criarCanal() {
@@ -147,7 +148,7 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
       const emo = extrairEmocao(marcado.texto);
       const gestos = gestosSobrando.concat(marcado.gestos);
       const emocao = emo.emocao ?? emocaoSobrando;
-      const texto = normalizarParaFala(limparParaFala(emo.texto)).trim();
+      const texto = normalizarParaFala(limparParaFala(removerMarcaFonte(emo.texto))).trim();
       // Marca sozinha numa "sentença" vazia vai para a próxima sentença com fala.
       if (!texto) { gestosSobrando = gestos; emocaoSobrando = emocao; continue; }
       gestosSobrando = []; emocaoSobrando = null;

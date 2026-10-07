@@ -11,7 +11,8 @@
     "avaliar": "node tools/avaliar.mjs",
     "avaliar:rapido": "node tools/avaliar.mjs --rapido",
     "avaliar:respostas": "node tools/avaliar-respostas.mjs",
-    "csp": "node tools/csp.mjs"
+    "csp": "node tools/csp.mjs",
+    "conhecimento": "node tools/knowledge.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

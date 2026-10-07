@@ -192,6 +192,32 @@ node tools/avaliar-respostas.mjs --gastar      # pergunta de verdade (gasta cré
 
 O detector (`src/frases-proibidas.js`) procura travessão, emoji, markdown, abertura genérica, pergunta repetida, "sou uma IA" sem terem perguntado, pedido de dado pessoal e marca de controle que vazou. As notas de voz, método, concisão e segurança são do dono, na tabela de `relatorios/avaliacao-respostas.md`.
 
+## Base de conhecimento (RAG)
+
+Cada personagem pode responder com base em documentos curados, citar de onde veio e dizer "não sei" quando a base não cobre. **Hoje a pasta `knowledge/` está vazia**: o app não inventa conteúdo, e sem documentos o personagem responde como sempre.
+
+1. Crie `knowledge/<id do personagem>/` (por exemplo `knowledge/matematico/`) e coloque arquivos `.md` ou `.txt`.
+2. Todo arquivo começa com o cabeçalho (sem ele o arquivo é recusado):
+
+   ```
+   fonte: de onde veio (documento, página ou endereço)
+   licenca: licença ou permissão de uso
+
+   # Título do documento
+   ## Uma seção
+   texto...
+   ```
+
+3. `npm run conhecimento` valida tudo e grava `knowledge/index.json`. **Rode sempre que mudar um documento.**
+4. Engrenagem, aba "Personagem", "Base de conhecimento": **Preparar a base**. A primeira vez baixa o modelo de embeddings (`Xenova/multilingual-e5-small`, 118 MB, do Hugging Face) para o navegador e depois guarda. Só o arquivo que mudou é reindexado.
+5. "Testar uma pergunta" mostra a semelhança de cada trecho. O **limiar de confiança** (padrão 0,85) decide quando o personagem diz que não sabe; ele foi medido só com 2 trechos de teste, então calibre com o corpus real (uma dezena de perguntas dentro da base e algumas fora).
+
+Como funciona: trechos de 150 a 300 palavras com o título preservado, busca por cosseno mais palavra-chave fundidas por RRF, e o texto recuperado entra no prompt como dado marcado (`<fonte>`), nunca como instrução. A resposta marca a fonte com `[fonte:id]` (não é falada) e a tela mostra "Fontes". Quando a base não cobre a pergunta o personagem responde "não sei" **sem chamar o Gemini**.
+
+## Voz mãos-livres (experimental)
+
+Opção em configurações, Sessão. **Vem desligada**; o botão de apertar para falar é o modo normal. Ligada, o microfone fica aberto durante a conversa: um detector de voz local (Silero VAD, `assets/vad/`, 13 MB) percebe quando a pessoa começa e termina de falar, o trecho vai para o Whisper do navegador (a primeira vez baixa o modelo) e vira a pergunta. Falar por cima do personagem o interrompe. Apertar o botão do microfone volta ao apertar para falar naquela sessão. Nada é gravado nem enviado. Use fone de ouvido: sem ele, o alto-falante pode ser entendido como fala. Os valores do detector (`src/maos-livres.js`) não foram calibrados com o barulho do local nem com crianças.
+
 ## Expressões
 
 O LLM pode marcar uma frase com `[emo:alegre]` (nomes: neutro, alegre, pensativo, surpreso, curioso, empatico). A marca é tirada antes da voz e da tela e vira uma expressão suave no rosto; nome inválido vira neutro. Respiração e escuta ativa (inclinar a cabeça) precisam de clipes VRMA que ainda não existem.
