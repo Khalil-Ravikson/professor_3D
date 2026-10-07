@@ -20,6 +20,9 @@ export const PRECOS_TTS = {
   'gemini-3.8-flash-tts': { entrada: [0.5, 1.0], saida: [9.0, 18.0] },
   'gemini-3.8-flash-lite-tts': { entrada: [0.5, 1.0], saida: [6.0, 12.0] },
   'gemini-3.1-flash-tts-preview': { entrada: [1.0, 1.0], saida: [20.0, 20.0] },
+  // cloud.google.com/text-to-speech/pricing, lida em 07/10/2026. O id exato na API pode ter sufixo: conferir ao ativar.
+  'gemini-2.5-flash-tts': { entrada: [0.5, 0.5], saida: [10.0, 10.0] },
+  'gemini-2.5-pro-tts': { entrada: [1.0, 1.0], saida: [20.0, 20.0] },
 };
 export const TOKENS_POR_SEGUNDO = 25; // página de preços: "25 tokens per second of audio" (documentado para os modelos 3.8)
 export const MUDANCA_DE_PRECO = '2027-01-01';

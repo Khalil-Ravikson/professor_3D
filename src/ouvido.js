@@ -4,29 +4,34 @@ const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers
 
 export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoProgresso }) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let usarSR = !!SR, sr = null, textoSR = '', gravando = false;
+  let usarSR = !!SR, sr = null, textoSR = '', gravando = false, queroParar = false;
   let asr = null, recorder = null, stream = null, pedacos = [], autoParar = null;
   // Sobe a cada cancelar(); uma transcrição que começou antes é descartada.
   let geracao = 0, geracaoDaGravacao = 0;
 
   function iniciarSR() {
-    textoSR = '';
+    textoSR = ''; queroParar = false;
     sr = new SR();
-    sr.lang = 'pt-BR'; sr.interimResults = true; sr.continuous = false;
+    sr.lang = 'pt-BR'; sr.interimResults = true; sr.continuous = true; // só o botão encerra; pausas não cortam a fala
     sr.onresult = (ev) => {
       textoSR = Array.from(ev.results).map((r) => r[0].transcript).join('');
       aoOuvirParcial(textoSR);
     };
     sr.onerror = (ev) => {
+      if (ev.error === 'no-speech' && gravando && !queroParar) return; // continua ouvindo até a pessoa parar
       gravando = false; textoSR = '';
       if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') aoMudarEstado('idle', 'O microfone está bloqueado. Clique no cadeado da barra de endereço e permita.');
       else if (ev.error === 'network') { usarSR = false; aoMudarEstado('idle', 'Preparando outro jeito de ouvir...'); carregarWhisper(); }
-      else if (ev.error === 'no-speech') aoMudarEstado('idle', 'Não ouvi nada. Tente de novo!');
+      else if (ev.error === 'no-speech') { if (gravando && !queroParar) return; aoMudarEstado('idle', 'Não ouvi nada. Tente de novo!'); }
       else if (ev.error !== 'aborted') aoMudarEstado('idle', 'Não consegui ouvir. Tente de novo ou escreva.');
     };
     const minha = geracao;
     sr.onend = () => {
       if (minha !== geracao) return;
+      // O navegador pode encerrar sozinho (silêncio longo). Se a pessoa não apertou parar, volta a ouvir e guarda o texto.
+      if (gravando && !queroParar) {
+        try { sr.start(); return; } catch (e) { console.warn('[ouvido] religar falhou:', e); }
+      }
       const estava = gravando; gravando = false;
       if (textoSR.trim()) aoOuvirFinal(textoSR);
       else if (estava) aoMudarEstado('idle', 'Não ouvi nada. Tente de novo!');
@@ -60,7 +65,6 @@ export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoPro
     recorder.ondataavailable = (ev) => { if (ev.data.size) pedacos.push(ev.data); };
     recorder.onstop = transcrever;
     recorder.start(); gravando = true; aoMudarEstado('listening');
-    autoParar = setTimeout(pararGravacao, 20000);
   }
 
   function pararGravacao() {
@@ -106,7 +110,7 @@ export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoPro
       else pararGravacao();
     },
     alternar() {
-      if (gravando) { usarSR ? sr.stop() : pararGravacao(); return false; }
+      if (gravando) { if (usarSR) { queroParar = true; sr.stop(); } else pararGravacao(); return false; }
       usarSR ? iniciarSR() : iniciarGravacao();
       return true;
     },

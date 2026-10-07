@@ -69,3 +69,16 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 28 | Ouvir os `.wav` de `relatorios/voz/audio/`, principalmente a frase `nomes` (Maranhão, UEMA, Imperatriz, Caxias) e as com estilo. | Dizer qual voz e qual modelo soam melhor em português do Brasil e se a pronúncia dos nomes está aceitável. A qualidade não foi avaliada por mim. | |
 | 29 | Nas configurações, escolher "Gemini TTS" no motor de voz e conversar com um personagem. | A fala sai com a voz escolhida; o selo mostra "Voz: Gemini"; "Voz Gemini hoje" mostra falas, caracteres e reais no diagnóstico. | |
 
+
+## Microfone manual
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 30 | Apertar o microfone, falar uma frase, parar uns 3 s no meio, continuar e só então apertar de novo. | O microfone continua aberto durante a pausa e só fecha no segundo toque. A frase inteira vai como pergunta. No Brave (Whisper local) também não há corte aos 20 s. | |
+
+## I4, barra de comando
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 31 | No totem, tocar em "+", depois em "O que cada sinal quer dizer", e falar com o personagem olhando o sinal (Pronto, Ouvindo, Pensando, Falando). | O menu abre acima da barra, a legenda mostra os cinco sinais, e a palavra do sinal muda junto com a cor. Dá para ler a 1 m de distância. | |
+| 32 | Tocar em "Guiada" e entregar o totem a uma criança. | Só as perguntas sugeridas aparecem; sem campo de texto e sem microfone. "Livre" devolve os dois. A escolha fica depois de recarregar. | |

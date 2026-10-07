@@ -52,9 +52,9 @@ test('I3 vitrine: cicla entre os ativos, sem som, com nome e frase; capturas do 
   await page.screenshot({ path: 'relatorios/p11-vitrine-2-teo-paisagem.png' });
   await page.waitForFunction(() => window.__prof3d.personagem.id === 'luma' && !!window.__prof3d.avatar && document.getElementById('loading').hidden, null, { timeout: 90_000 });
 
-  // Sem som automático: nenhuma fala começou, e o gesto de assinatura saiu do catálogo ("atracao").
+  // Sem som automático: nenhuma fala começou, e o gesto de assinatura saiu do catálogo (estado "atracao", clipe pose-modelo).
   // A pose entra 1,8 s depois de o personagem aparecer; numa máquina ocupada isso demora, então espera.
-  await page.waitForFunction(() => window.__prof3d.registroGestos.some((g) => /atracao/.test(g.msg)), null, { timeout: 20_000 });
+  await page.waitForFunction(() => window.__prof3d.registroGestos.some((g) => /pose-modelo/.test(g.msg)), null, { timeout: 20_000 });
   const r = await page.evaluate(() => ({ falas: window.__prof3d.voz.registro.filter((e) => e.tipo === 'toca-inicio').length }));
   expect(r.falas, 'a vitrine não pode falar sozinha').toBe(0);
   expect(erros).toEqual([]);

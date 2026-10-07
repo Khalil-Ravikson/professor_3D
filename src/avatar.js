@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
-import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
+import { VRMAnimationLoaderPlugin, VRMLookAtQuaternionProxy, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 import { criarLuzes, apontarCamera } from './scene.js';
 import { loadMixamoAnimation } from './vendor/mixamo/loadMixamoAnimation.js';
 
@@ -50,6 +50,14 @@ export async function carregarVrm(caminho, { signal, aoProgresso = null } = {}) 
   VRMUtils.combineSkeletons(gltf.scene);
   VRMUtils.combineMorphs(vrm);
   VRMUtils.rotateVRM0(vrm); // só gira quando meta.metaVersion === '0'
+  // createVRMAnimationClip pede este proxy quando o clipe pode ter trilha de olhar; sem ele o three-vrm-animation
+  // cria um sozinho e avisa no console a cada clipe. Criar uma vez por modelo, como no exemplo oficial.
+  // Os nossos clipes não trazem trilha de olhar, então o proxy fica em repouso: o olhar continua com o nosso lookAt.
+  if (vrm.lookAt && !vrm.scene.getObjectByName('lookAtQuaternionProxy')) {
+    const proxy = new VRMLookAtQuaternionProxy(vrm.lookAt);
+    proxy.name = 'lookAtQuaternionProxy';
+    vrm.scene.add(proxy);
+  }
   vrm.scene.traverse((o) => { o.frustumCulled = false; });
 
   return { vrm, bytes: buf.byteLength };

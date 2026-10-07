@@ -11,7 +11,7 @@ Fase 1 a 4 (P1 a P10) e fase 5 I1 a I3 (direção visual, seleção, vitrine e "
 - Visualizador de personagem (prompt 06).
 
 ## Pendente
-- **Fase 5:** I4 (conversa com barra de comando), I5 (console do operador), I6 (validar o Teo novo com os clipes: braço, quadril, cabelo), I7 (acabamento), I8 (fechamento). Pulados a pedido do dono para fazer o Gemini TTS e o visualizador antes.
+- **Fase 5:** I4 feita (barra de comando, local, não commitada). Faltam I5 (cadastro de personagem pulado a pedido do dono; sobra só o visual do console) (console do operador), I7 (acabamento), I8 (fechamento). Pulados a pedido do dono para fazer o Gemini TTS e o visualizador antes.
 - **Voz:** ouvir as amostras e escolher (itens 28 e 29 do roteiro manual). Streaming do Gemini TTS (primeiro áudio em 1 a 2 s) pede tocar por pedaços. Pacote de áudio pré-gravado e contagem de caracteres para o orçamento (seção 30.3).
 - **Decisões do dono:** modelo do Gemini de texto (3.5 Flash dá R$ 124 por 5.000 respostas, 3.1 Flash-Lite dá R$ 21); `MAX_RODADAS` do Rafa; aceno do Mixamo com "Character Arm-Space" maior; phonemizer/eSpeak NG (GPL) no motor Kokoro do navegador.
 - **Testes manuais:** `TESTES-MANUAIS.md`, itens 1 a 29. A maratona de 4 h (item 21) só rodou 9 minutos.

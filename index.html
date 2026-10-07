@@ -23,12 +23,16 @@
     --acao: #e0224a; --acao-tinta: #ffffff; --acao-sombra: #8f1230;
     --realce: #ffffff; --realce-tinta: #0c1c3e;
     --ok: #3fbf6a;
+    /* Avisos (voz de reserva, câmera ligada): iguais em todos os personagens, e por isso fora da paleta deles. */
+    --alerta-fundo: #ffe1c7; --alerta-tinta: #7a2e00; --cam-ativa: #b3261e;
     /* O quadro de resolução é claro, com texto escuro, como o editor de referência. */
     --quadro-fundo: #ffffff; --quadro-tinta: #14315f; --quadro-suave: #51607e;
     --alvo: 44px; --alvo-publico: 56px;
     --fonte: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
+  /* Só para leitor de tela: o título da tela atual (h1). A tela mostra o nome do personagem em h2. */
+  .so-leitor { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
   html, body { height: 100%; margin: 0; }
   /* Totem 1080×1920 lido de ~1 m: a base do texto cresce com a tela (16 px no celular, ~22 px no totem). */
   html { font-size: clamp(16px, calc(10px + 1.1vmin), 24px); }
@@ -100,11 +104,11 @@
     background: var(--cartao); color: var(--tinta); display: grid; place-items: center;
   }
   .cam svg { width: 22px; height: 22px; }
-  .cam[aria-pressed="true"] { background: #b3261e; color: #fff; }
+  .cam[aria-pressed="true"] { background: var(--cam-ativa); color: #fff; }
   .cam-aviso {
     position: absolute; right: 12px; top: 76px; z-index: 2; margin: 0;
     font-size: .8rem; font-weight: 800; padding: 4px 10px 4px 22px; border-radius: 999px;
-    background: #b3261e; color: #fff;
+    background: var(--cam-ativa); color: #fff;
   }
   .cam-aviso::before { content: ""; position: absolute; left: 9px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: #fff; }
   .cam-aviso[hidden] { display: none; }
@@ -113,11 +117,11 @@
     font-size: .8rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
     background: var(--cartao); color: var(--tinta-suave);
   }
-  .selo-voz[data-alerta="sim"] { color: #7a2e00; background: #ffe1c7; }
+  .selo-voz[data-alerta="sim"] { color: var(--alerta-tinta); background: var(--alerta-fundo); }
   .diag { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; font-size: .9rem; }
   .diag dt { color: var(--tinta-suave); }
   .diag dd { margin: 0; font-variant-numeric: tabular-nums; }
-  .diag dd[data-alerta="sim"] { color: #7a2e00; font-weight: 700; }
+  .diag dd[data-alerta="sim"] { color: var(--alerta-tinta); font-weight: 700; }
   .diag-erros { list-style: none; margin: 10px 0 0; padding: 0; font-size: .8rem; color: var(--tinta-suave); }
   .diag-erros li { padding: 3px 0; border-top: 1px solid #0001; font-family: ui-monospace, monospace; }
   .volume {
@@ -130,7 +134,7 @@
     background: transparent; color: var(--tinta); display: grid; place-items: center;
   }
   .volume button svg { width: 20px; height: 20px; }
-  .volume button[aria-pressed="true"] { background: #ffe1c7; color: #7a2e00; }
+  .volume button[aria-pressed="true"] { background: var(--alerta-fundo); color: var(--alerta-tinta); }
   .volume input[type=range] { width: 92px; min-height: var(--alvo-publico); accent-color: var(--acao); }
   .volume output { font-size: .75rem; font-weight: 700; color: var(--tinta-suave); min-width: 2.4em; text-align: right; }
   @media (max-width: 720px) { .volume input[type=range] { width: 70px; } .volume output { display: none; } }
@@ -173,7 +177,51 @@
     background: var(--cartao); border: 0; border-radius: 999px; padding: 0 16px; cursor: pointer;
     min-height: var(--alvo);
   }
-  form.typed { display: flex; gap: 8px; }
+  form.typed { display: flex; gap: 8px; flex: 1; min-width: 0; }
+  /* Barra de comando: "+", modo, campo de texto e enviar numa linha só. */
+  .barra { display: flex; align-items: center; gap: 8px; }
+  .mais-caixa { position: relative; flex: 0 0 auto; }
+  .barra-btn {
+    width: var(--alvo-publico); height: var(--alvo-publico); border-radius: 16px; border: 0; cursor: pointer;
+    background: var(--cartao); color: var(--tinta); display: grid; place-items: center;
+  }
+  .barra-btn svg { width: 26px; height: 26px; }
+  .barra-btn[aria-expanded="true"] { background: var(--tinta); color: var(--fundo-2); }
+  .mais-menu {
+    position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 5; margin: 0; padding: 6px; list-style: none;
+    min-width: 17rem; background: var(--cartao); border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,.35);
+  }
+  .mais-menu[hidden] { display: none; }
+  .mais-menu button {
+    width: 100%; text-align: left; font: inherit; font-weight: 700; color: var(--tinta); background: none; border: 0;
+    border-radius: 12px; min-height: var(--alvo-publico); padding: 0 14px; cursor: pointer;
+  }
+  .mais-menu button:hover, .mais-menu button:focus-visible { background: var(--fundo-2); }
+  .modo { flex: 0 0 auto; display: flex; padding: 4px; gap: 4px; background: var(--cartao); border-radius: 16px; }
+  .modo button {
+    font: inherit; font-weight: 800; color: var(--tinta-suave); background: none; border: 0; border-radius: 12px;
+    min-height: calc(var(--alvo-publico) - 8px); padding: 0 14px; cursor: pointer;
+  }
+  .modo button[aria-pressed="true"] { background: var(--acao); color: var(--acao-tinta); }
+  [data-modo="guiada"] .barra form.typed, [data-modo="guiada"] .mic { display: none; }
+  /* Sinal de estado: cor + palavra, nunca só cor. */
+  .estado-chip {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: .95rem;
+    padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--cartao); color: var(--tinta);
+  }
+  .estado-chip::before, .legenda-lista li::before {
+    content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--ok); flex: 0 0 auto;
+  }
+  .estado-chip[data-estado="listening"]::before, .legenda-lista li[data-estado="listening"]::before { background: var(--acao); }
+  .estado-chip[data-estado="thinking"]::before, .legenda-lista li[data-estado="thinking"]::before { background: var(--realce); }
+  .estado-chip[data-estado="speaking"]::before, .legenda-lista li[data-estado="speaking"]::before { background: var(--tinta); }
+  .estado-chip[data-estado="error"]::before, .legenda-lista li[data-estado="error"]::before { background: var(--alerta-tinta); }
+  .legenda { background: var(--cartao); border-radius: 16px; padding: 10px 16px; }
+  .legenda[hidden] { display: none; }
+  .legenda-tit { margin: 0 0 6px; font-weight: 800; }
+  .legenda-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .legenda-lista li { display: flex; align-items: center; gap: 10px; }
+  @media (max-width: 560px) { .barra { flex-wrap: wrap; } form.typed { flex-basis: 100%; order: 3; } }
   .typed input {
     flex: 1; min-width: 0; min-height: var(--alvo); font: inherit; font-size: 1rem; color: var(--tinta);
     background: var(--cartao); border: 2px solid transparent; border-radius: 12px; padding: 0 12px;
@@ -201,10 +249,10 @@
   .quadro-linhas li.resposta { font-weight: 600; font-size: 1.08rem; margin-top: 4px; }
   .quadro-linhas li.resposta .quadro-rotulo { color: var(--quadro-tinta); }
   .quadro-linhas li.suposicao .quadro-rotulo::after { content: " (suposição)"; font-weight: 400; }
-  .nao-conferido { display: inline-block; min-width: 1.4ch; text-align: center; border-radius: 4px; background: #ffe1c7; color: #7a2e00; font-weight: 600; }
+  .nao-conferido { display: inline-block; min-width: 1.4ch; text-align: center; border-radius: 4px; background: var(--alerta-fundo); color: var(--alerta-tinta); font-weight: 600; }
   .quadro-contas-bloco h3 { margin: 8px 0 2px; font: 700 .8rem "Baloo 2", system-ui, sans-serif; color: var(--quadro-suave); }
   .quadro-contas li { color: var(--quadro-suave); font-size: .85rem; }
-  .quadro-contas li.erro { color: #b3261e; }
+  .quadro-contas li.erro { color: var(--cam-ativa); }
   /* Fluxo de sessão (P5): atração, cumprimento, consentimento, conversa, despedida.
      Em cada etapa só um próximo passo fica à vista; o resto do painel sai do caminho. */
   .passo {
@@ -231,9 +279,9 @@
   [data-etapa="consentimento"] .panel > :not(.passo) { display: none; }
   /* Legenda sempre à vista: quem não ouve acompanha pela escrita, em qualquer etapa. */
   [data-state="speaking"] .panel > .bubble { display: block; }
-  [data-etapa="cumprimento"] .panel > :is(.chips, .typed),
-  [data-etapa="despedida"] .panel > :is(.chips, .typed),
-  [data-etapa="cumprimento"] :is(.mic, .stop), [data-etapa="despedida"] :is(.mic, .stop) { display: none; }
+  [data-etapa="cumprimento"] .panel > :is(.chips, .barra, .legenda),
+  [data-etapa="despedida"] .panel > :is(.chips, .barra, .legenda),
+  [data-etapa="cumprimento"] :is(.mic, .stop, .estado-chip), [data-etapa="despedida"] :is(.mic, .stop, .estado-chip) { display: none; }
   [data-microfone="nao"] .mic { display: none; }
   .usar-voz { font: inherit; font-weight: 700; background: var(--cartao); color: var(--tinta); border: 0; border-radius: 12px; min-height: var(--alvo); padding: 0 14px; cursor: pointer; }
   .usar-voz[hidden] { display: none; }
@@ -264,8 +312,8 @@
   dialog .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   dialog .close { margin-top: 16px; width: 100%; }
   .licencas { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; font-size: .9rem; }
-  .licencas li[data-decisao=bloqueado] { color: #b3261e; }
-  .licencas li[data-decisao=conferir] strong::after { content: ' (conferir)'; color: #7a2e00; }
+  .licencas li[data-decisao=bloqueado] { color: var(--cam-ativa); }
+  .licencas li[data-decisao=conferir] strong::after { content: ' (conferir)'; color: var(--alerta-tinta); }
   #creditos h3 { margin: 16px 0 6px; font-size: 1.05rem; }
   #creditos .frase-credito { font-weight: 800; margin: 6px 0 0; }
   #creditos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -411,7 +459,7 @@
   .visu > * { pointer-events: auto; }
   .viz-nome { margin: 0; min-height: 1.4em; font-weight: 800; font-size: 1.1rem; padding: 4px 14px; border-radius: 999px; background: var(--cartao); color: var(--tinta); }
   .viz-nome:empty { visibility: hidden; }
-  .viz-aviso { margin: 0; max-width: 46ch; padding: 8px 14px; border-radius: 14px; background: #ffe1c7; color: #7a2e00; font-weight: 700; text-align: center; }
+  .viz-aviso { margin: 0; max-width: 46ch; padding: 8px 14px; border-radius: 14px; background: var(--alerta-fundo); color: var(--alerta-tinta); font-weight: 700; text-align: center; }
   .viz-aviso[hidden] { display: none; }
   .viz-barra { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; padding: 8px; border-radius: 22px;
     background: var(--cartao); color: var(--tinta); max-width: 100%; transition: opacity .3s ease-out, transform .3s ease-out; }
@@ -509,6 +557,7 @@
 </head>
 <body>
 <main class="kiosk" id="app" data-state="idle" data-etapa="atracao">
+  <h1 class="so-leitor" id="tituloPagina"></h1>
   <div id="stage">
     <div class="loading" id="loading" role="status" aria-live="polite">
       <p class="carga-texto" id="cargaTexto">Carregando</p>
@@ -594,6 +643,7 @@
       <p class="answer" id="answer"></p>
     </div>
     <div class="row">
+      <span class="estado-chip" id="estadoChip" data-estado="idle"></span>
       <p class="status" id="status">Preparando...</p>
       <button class="stop" id="stop" type="button" hidden>Parar</button>
       <button class="usar-voz" id="usarVoz" type="button" hidden></button>
@@ -602,10 +652,26 @@
       </button>
     </div>
     <div class="chips" id="chips"></div>
-    <form class="typed" id="form" autocomplete="off">
-      <input id="text" type="text" placeholder="Ou escreva aqui..." aria-label="Escreva sua pergunta" maxlength="300">
-      <button type="submit">Enviar</button>
-    </form>
+    <div class="legenda" id="legenda" hidden>
+      <p class="legenda-tit" id="legendaTit"></p>
+      <ul class="legenda-lista" id="legendaLista"></ul>
+    </div>
+    <div class="barra" id="barra">
+      <div class="mais-caixa">
+        <button class="barra-btn" id="maisBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="maisMenu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <ul class="mais-menu" id="maisMenu" role="menu" hidden></ul>
+      </div>
+      <div class="modo" id="modo" role="group">
+        <button type="button" id="modoGuiada" aria-pressed="false"></button>
+        <button type="button" id="modoLivre" aria-pressed="true"></button>
+      </div>
+      <form class="typed" id="form" autocomplete="off">
+        <input id="text" type="text" placeholder="Ou escreva aqui..." aria-label="Escreva sua pergunta" maxlength="300">
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
   </section>
   </div>
   <section class="vitrine" id="vitrine" aria-label="Vitrine de personagens" hidden>

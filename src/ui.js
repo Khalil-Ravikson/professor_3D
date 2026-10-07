@@ -24,11 +24,14 @@ import { criarDiagnostico } from './diagnostico.js';
 import { lerMiniatura, gravarMiniatura } from './miniaturas.js';
 import { criarVisualizador } from './visualizador.js';
 import { criarMedidorDeCusto, CAMBIO_PADRAO } from './custo.js';
+import { projetar, mediaPorResposta } from './projecao.js';
+import { chaveDoModelo } from './custo.js';
 import { VERSAO, VERSAO_DATA, VERSAO_MARCO } from './versao.js';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), stage = $('stage'), elStatus = $('status'), elHeard = $('heard'), elAnswer = $('answer');
 const micBtn = $('mic'), stopBtn = $('stop'), form = $('form'), input = $('text');
+const elEstadoChip = $('estadoChip');
 const dlg = $('settings'), keyInput = $('key'), voiceSel = $('voiceSel');
 const motorSel = $('motorSel'), urlInput = $('urlKokoro'), modeloInput = $('modelo');
 const elStatusVoz = $('statusVoz'), elSeloVoz = $('seloVoz'), bocaSel = $('bocaSel');
@@ -82,7 +85,7 @@ config.gemini = {
     usoGemini.latencias.push(m.totalMs);
     if (usoGemini.latencias.length > 50) usoGemini.latencias.shift();
     gravarJSON('voz_gemini', usoGemini);
-    console.info(`[voz-gemini] ${m.modelo} ${m.voz}: ${m.chars} caracteres, ${m.totalMs} ms para ${m.segundos} s de áudio (${m.tokensSaida} tokens, US$ ${(m.usd || 0).toFixed(5)})`);
+    console.info(`[voz-gemini] ${m.modelo} ${m.voz}: ${m.chars} caracteres, ${m.totalMs} ms para ${m.segundos} s de áudio (${m.tokensSaida} tokens, R$ ${((m.usd || 0) * custo.resumo().cambio).toFixed(5)})`);
     if (typeof desenharUsoGemini === 'function') desenharUsoGemini();
   },
 };
@@ -119,6 +122,8 @@ function definirEstado(s, texto) {
   // Microfone aberto: o personagem continua audível, mas sai da frente de quem fala.
   if (mesa) mesa.abaixarFundo(s === 'listening');
   elStatus.textContent = texto || T.estado[s];
+  elEstadoChip.textContent = T.barra.estados[s] || '';
+  elEstadoChip.dataset.estado = s;
   stopBtn.hidden = !(s === 'speaking' || s === 'thinking');
   if (s === 'idle') micBtn.disabled = false;
 }
@@ -501,6 +506,7 @@ async function trocarPersonagem(p) {
 
   personagem = p;
   atualizarSelecao(); // texto, perfil e roleta mudam na hora; o modelo chega depois
+  atualizarTitulo();
   gravar('personagem', p.id);
   aplicarPaleta(p.paleta);
   document.title = `${p.nome} 3D`;
@@ -713,9 +719,23 @@ const elPasso = { caixa: $('passo'), titulo: $('passoTitulo'), texto: $('passoTe
 const usarVozBtn = $('usarVoz');
 let etapa = 'atracao', microfone = null, timerEtapa = null; // microfone: null (não perguntado), 'sim', 'nao'
 
+// Título da tela para leitor de tela (o único h1 da página). Muda a cada etapa e a cada personagem.
+function atualizarTitulo() {
+  const nome = personagem ? personagem.nome : '';
+  const v = visualizador.ativo;
+  $('tituloPagina').textContent = v ? T.titulos.visualizador(nome)
+    : etapa === 'atracao' ? T.titulos.atracao
+    : etapa === 'selecao' ? T.titulos.selecao
+    : etapa === 'consentimento' ? T.titulos.consentimento(nome)
+    : T.titulos.conversa(nome);
+}
+
 function definirEtapa(e) {
+  // Um visualizador aberto não pode ficar por cima de uma tela que mudou sozinha (despedida por inatividade, rosto novo).
+  if (visualizador.ativo && e !== 'conversa') visualizador.sair();
   etapa = e;
   app.dataset.etapa = e;
+  atualizarTitulo();
   elSel.raiz.hidden = e !== 'selecao';
   elVit.raiz.hidden = e !== 'atracao';
   if (e === 'selecao') atualizarSelecao();
@@ -837,21 +857,28 @@ function encerrarSessao(origem) {
   return true;
 }
 
-let toqueX = null;
+let toqueX = null, toqueId = null;
 stage.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button, input, select, textarea, form, a, .quadro')) return;
   voz.preparar();
   if (etapa === 'atracao') definirEtapa('selecao');
-  else if (etapa === 'selecao') toqueX = e.clientX;
+  else if (etapa === 'selecao') {
+    // Um segundo dedo no meio do deslize cancela o gesto em vez de saltar para o novo ponto.
+    if (toqueId !== null && e.pointerId !== toqueId) { toqueX = null; toqueId = null; return; }
+    toqueX = e.clientX; toqueId = e.pointerId;
+  }
 });
 // Deslizar o dedo no palco troca de personagem na seleção.
 stage.addEventListener('pointerup', (e) => {
-  if (toqueX === null) return;
+  if (toqueX === null || e.pointerId !== toqueId) return;
   const dx = e.clientX - toqueX;
-  toqueX = null;
+  toqueX = null; toqueId = null;
   if (etapa === 'selecao' && Math.abs(dx) > 60) andar(dx < 0 ? 1 : -1);
 });
-stage.addEventListener('pointercancel', () => { toqueX = null; });
+const largarToque = () => { toqueX = null; toqueId = null; };
+stage.addEventListener('pointercancel', largarToque);
+stage.addEventListener('lostpointercapture', largarToque);
+window.addEventListener('blur', largarToque);
 
 /* ---------- Pergunta ---------- */
 async function perguntarAoPersonagem(q) {
@@ -941,6 +968,74 @@ const ouvido = criarOuvido({
   aoProgresso: (pct) => { elStatus.textContent = T.estado.preparandoOuvidoPct(pct); },
 });
 
+/* ---------- Barra de comando ---------- */
+// "+" abre um menu pequeno; Guiada deixa só as perguntas sugeridas; o sinal de estado tem legenda própria.
+// Guiada aqui NÃO é a demonstração offline com áudios pré-gravados do REPERTORIO 24: essa não existe ainda.
+// As perguntas sugeridas continuam indo ao Gemini.
+const elMais = { btn: $('maisBtn'), menu: $('maisMenu') };
+const elLegenda = { raiz: $('legenda'), tit: $('legendaTit'), lista: $('legendaLista') };
+const elModo = { guiada: $('modoGuiada'), livre: $('modoLivre') };
+
+function aplicarModo(m) {
+  const guiada = m === 'guiada';
+  app.dataset.modo = guiada ? 'guiada' : 'livre';
+  elModo.guiada.setAttribute('aria-pressed', String(guiada));
+  elModo.livre.setAttribute('aria-pressed', String(!guiada));
+  if (guiada && ouvido.gravando) ouvido.cancelar();
+}
+function trocarModo(m) { gravar('modo_conversa', m); aplicarModo(m); }
+
+function fecharMenu({ foco = false } = {}) {
+  if (elMais.menu.hidden) return;
+  elMais.menu.hidden = true;
+  elMais.btn.setAttribute('aria-expanded', 'false');
+  if (foco) elMais.btn.focus();
+}
+function abrirMenu() {
+  elMais.menu.hidden = false;
+  elMais.btn.setAttribute('aria-expanded', 'true');
+  elMais.menu.querySelector('button').focus();
+}
+function desenharLegenda() {
+  elLegenda.tit.textContent = T.barra.legendaTitulo;
+  elLegenda.lista.replaceChildren(...Object.entries(T.barra.legenda).map(([estado, texto]) => {
+    const li = document.createElement('li'); li.dataset.estado = estado; li.textContent = texto; return li;
+  }));
+}
+function iniciarBarra() {
+  elMais.btn.setAttribute('aria-label', T.barra.maisRotulo);
+  $('modo').setAttribute('aria-label', T.barra.modoRotulo);
+  elModo.guiada.textContent = T.barra.guiada; elModo.guiada.title = T.barra.guiadaDica;
+  elModo.livre.textContent = T.barra.livre; elModo.livre.title = T.barra.livreDica;
+  const itens = [
+    [T.barra.menu.verDePerto, () => visualizador.entrar()],
+    [T.barra.menu.legenda, () => { elLegenda.raiz.hidden = !elLegenda.raiz.hidden; }],
+    [T.barra.menu.terminar, () => encerrarSessao('fluxo')],
+  ];
+  elMais.menu.replaceChildren(...itens.map(([rotulo, acao]) => {
+    const li = document.createElement('li'); li.setAttribute('role', 'none');
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = rotulo;
+    b.addEventListener('click', () => { fecharMenu(); acao(); });
+    li.append(b); return li;
+  }));
+  desenharLegenda();
+  elMais.btn.addEventListener('click', () => (elMais.menu.hidden ? abrirMenu() : fecharMenu({ foco: true })));
+  elMais.menu.addEventListener('keydown', (e) => {
+    const bs = [...elMais.menu.querySelectorAll('button')];
+    const i = bs.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); fecharMenu({ foco: true }); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); bs[(i + 1) % bs.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); bs[(i - 1 + bs.length) % bs.length].focus(); }
+    else if (e.key === 'Tab') fecharMenu();
+  });
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.mais-caixa')) fecharMenu(); });
+  elModo.guiada.addEventListener('click', () => trocarModo('guiada'));
+  elModo.livre.addEventListener('click', () => trocarModo('livre'));
+  aplicarModo(ler('modo_conversa', 'livre') === 'guiada' ? 'guiada' : 'livre');
+}
+
+iniciarBarra();
+
 /* ---------- Controles ---------- */
 micBtn.addEventListener('click', () => {
   voz.preparar();
@@ -1021,6 +1116,9 @@ elViz.vel.setAttribute('aria-label', TV.velocidade);
 $('galeriaVisualizador').textContent = TV.galeria;
 
 function desenharVisualizador(e) {
+  // Olhar de perto também é estar usando: sem isto a sessão acabava por inatividade com a pessoa vendo o personagem.
+  if (sessaoAtiva) tocarInatividade();
+  if (typeof atualizarTitulo === 'function') atualizarTitulo();
   elViz.seguir.setAttribute('aria-pressed', String(e.seguir));
   elViz.seguir.setAttribute('aria-label', TV.seguir); elViz.seguir.title = `${TV.seguir} (T)`;
   const cheia = e.telaCheia || e.telaCheiaCss;
@@ -1044,6 +1142,7 @@ const visualizador = criarVisualizador({
   aoMudar: desenharVisualizador,
   aoEntrar: () => { silenciar(); },
 });
+stage.addEventListener('pointerdown', () => { if (visualizador.ativo && sessaoAtiva) tocarInatividade(); });
 elViz.entrar.addEventListener('click', () => visualizador.entrar());
 elViz.reset.addEventListener('click', () => visualizador.resetar());
 elViz.seguir.addEventListener('click', () => visualizador.definirSeguir(!visualizador.estado.seguir));
@@ -1083,6 +1182,14 @@ function estadoDosServicos() {
   };
 }
 
+function textoProjecao(g) {
+  const media = mediaPorResposta(g);
+  const linha = projetar({ respostas: 5000, media, cambio: g.cambio }).find((l) => l.modelo === chaveDoModelo(config.modelo));
+  if (!linha) return T.diagnostico.projecaoSemPreco(config.modelo);
+  const base = media.medido ? T.diagnostico.projecaoMedida(media.amostras) : T.diagnostico.projecaoPremissa;
+  return T.diagnostico.projecaoValor(linha.reaisTotal.toFixed(2), config.modelo, base);
+}
+
 const RUIM = /sem chave|fora do ar|falhou|sem avatar|bloqueado/i;
 
 function desenharDiagnostico() {
@@ -1103,7 +1210,8 @@ function desenharDiagnostico() {
     [D.vozGemini, usoGemini.chamadas ? D.vozGeminiValor(usoGemini.chamadas, usoGemini.chars.toLocaleString('pt-BR'), (usoGemini.usd * g.cambio).toFixed(4), medianaDe(usoGemini.latencias)) : D.vozGeminiNenhuma, false],
     [D.respostasHoje, D.respostasValor(g.respostas, g.sessao.respostas), false],
     [D.tokensHoje, D.tokensValor(n(g.entrada), n(g.saida + g.pensamento)), false],
-    [D.gastoHoje, g.semPreco.length ? D.gastoSemPreco(g.usd.toFixed(4), g.semPreco.join(', ')) : D.gastoValor(g.reais.toFixed(2), g.usd.toFixed(4)), g.semPreco.length > 0],
+    [D.gastoHoje, g.semPreco.length ? D.gastoSemPreco(g.reais.toFixed(2), g.semPreco.join(', ')) : D.gastoValor(g.reais.toFixed(2)), g.semPreco.length > 0],
+    [D.projecao, textoProjecao(g), false],
     [D.recargas, String(contarRecargas()), contarRecargas() > 0],
     [D.erros, r.erros ? D.errosValor(r.erros, r.ultimoErro.t) : D.semErros, r.erros > 0],
   ];

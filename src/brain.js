@@ -3,7 +3,7 @@
 
 // gemini-2.5-flash passou a ter acesso restrito a quem já o usava (docs de modelos,
 // 30/09/2026); a recomendação para projetos novos é a família 3.5+.
-export const MODELO_PADRAO = 'gemini-3.5-flash';
+export const MODELO_PADRAO = 'gemini-3.1-flash-lite'; // cabe no teto de R$ 50 (R$ 21 por 5.000 respostas); o 3.5 Flash custaria R$ 124
 const URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
 export class ErroGemini extends Error {
