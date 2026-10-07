@@ -15,6 +15,8 @@
 // oiPresenca / despedida: frases curtas do cumprimento e da despedida (P4); a fala começa ~300 ms depois do aceno.
 // temperatura: null usa o padrão do modelo. limitePalavras: teto da parte falada.
 // luz: rig de três pontos { ambiente, principal, preenchimento, recorte }; só o que mudar do padrão de scene.js (LUZ_PADRAO).
+// conhecimento: { modo } 'exclusivo' (padrão: base que não cobre a pergunta responde "não sei") ou 'complemento' (só as perguntas do
+//   assunto da base, termos derivados em knowledge/index.json, exigem a base; o resto o personagem responde como sempre).
 // quadro: mostra o quadro de resolução. ferramentas: nomes de funções do Gemini (ver calcular.js).
 // O usuário pode sobrescrever persona, voz, temperatura e limite nas configurações
 // (ver aplicarAjustes); este arquivo continua sendo o padrão.
@@ -74,6 +76,8 @@ export const PERSONAGENS = [
     ferramentas: [],
     enquadramento: { distancia: 2.0, altura: 0.12 },
     selecao: { distancia: 3.6, altura: -0.62 }, // corpo inteiro, na tela de seleção
+    // Base de conhecimento (knowledge/luma/): complemento. Pergunta do assunto da base só se responde com ela; as demais seguem normais.
+    conhecimento: { modo: 'complemento' },
     gestos: null,
     atalhos: [
       { rotulo: 'Uma história', pergunta: 'Me conte uma história curtinha' },

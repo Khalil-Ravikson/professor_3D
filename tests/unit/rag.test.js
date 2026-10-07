@@ -37,8 +37,8 @@ test('busca: RRF funde duas listas e a palavra-chave ajuda quando o vetor empata
   assert.equal(r.resultados[0].id, 'x#1');
 });
 
-test('limiar: abaixo dele não é confiante, acima é; o padrão é 0,85', () => {
-  assert.equal(LIMIAR_PADRAO, 0.85);
+test('limiar: abaixo dele não é confiante, acima é; o padrão é 0,86', () => {
+  assert.equal(LIMIAR_PADRAO, 0.86);
   const v = (a) => { const n = Math.hypot(...a); return Float32Array.from(a.map((x) => x / n)); };
   const trechos = [{ id: 'a#1', titulo: 'T', secao: 'S', texto: 'algo', vetor: v([1, 0, 0]) }];
   assert.equal(buscar({ consulta: 'x', vetorConsulta: v([0, 1, 0]), trechos }).confiante, false);

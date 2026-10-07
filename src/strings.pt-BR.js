@@ -128,6 +128,7 @@ export const T = {
     testarSemBase: 'Prepare a base antes de testar.',
     testarResultado: (melhor, confiante) => `Melhor semelhança: ${melhor}. ${confiante ? 'Acima do limiar: responderia com a base.' : 'Abaixo do limiar: diria que não sabe.'}`,
     naoSei: (nome) => `Não encontrei isso na minha base. Você pode perguntar de outro jeito?`,
+    naoSeiTema: (nome) => `Não encontrei isso na minha base. Para esse assunto, o melhor é consultar o portal oficial. Posso ajudar com outra pergunta?`,
     fontes: (lista) => `Fontes: ${lista.join('; ')}`,
   },
   console: {

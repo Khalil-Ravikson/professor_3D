@@ -114,4 +114,7 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 47 | Ligar "Voz mãos-livres" (Sessão), aceitar o microfone, começar uma conversa e falar sem apertar nada. | Entende a pergunta (a primeira vez demora, baixa o Whisper). Anote o tempo do "Fim da fala até o texto" no diagnóstico. | |
 | 48 | Falar por cima do personagem enquanto ele responde. | A fala dele para na hora e o app passa a ouvir. Sem fone de ouvido, ver se o próprio alto-falante dispara falsas interrupções. | |
 | 49 | Apertar o botão do microfone com as mãos-livres ligadas. | Volta ao apertar para falar naquela sessão, sem microfone aberto sozinho. | |
+| 50 | Conversar com a Luma (com chave do Gemini e teto liberado) e perguntar "o que é o SIGUEMA?", "quando foi criada a UEMA?" e "por que o céu é azul?". | As duas primeiras respondem com base nos documentos e mostram "Fontes:"; a terceira responde normalmente, sem "Fontes". | |
+| 51 | Perguntar à Luma "qual é o telefone da reitoria da UEMA?" e "quando é o vestibular de 2027?". | Ela diz que não sabe e indica o portal oficial; não inventa número nem data. (Esta é a verificação real do caso que o limiar não segura.) | |
+| 52 | Conferir 10 respostas da Luma sobre a UEMA contra o portal oficial da UEMA. | Nenhum fato diferente do portal. O PDF não traz endereços de fonte e eu não verifiquei nada dele. | |
 

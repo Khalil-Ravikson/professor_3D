@@ -2,7 +2,7 @@
 // Nada aqui inventa conteúdo: sem manifest.json (ou com a pasta vazia) o personagem segue sem base e responde como sempre.
 import { operar } from '../banco.js';
 import { lerDocumento, dividirEmTrechos, textoParaVetor, VERSAO_CHUNKER } from './chunker.js';
-import { buscar, LIMIAR_PADRAO } from './busca.js';
+import { buscar, semAcento, LIMIAR_PADRAO } from './busca.js';
 import { MODELO_EMB } from './embeddings.js';
 
 const LOJA = 'rag';
@@ -33,8 +33,8 @@ export function criarRag({ embeddings, aoStatus = () => {}, raiz = 'knowledge' }
   async function lerLista() {
     if (listaCache) return listaCache;
     try {
-      const r = await fetch(`${raiz}/index.json`);
-      listaCache = r.ok ? ((await r.json()).personagens || {}) : {};
+      const resp = await fetch(`${raiz}/index.json`);
+      listaCache = resp.ok ? await resp.json() : {};
     } catch (e) {
       console.warn('[rag] index.json não abriu:', e);
       listaCache = {};
@@ -42,7 +42,7 @@ export function criarRag({ embeddings, aoStatus = () => {}, raiz = 'knowledge' }
     return listaCache;
   }
   async function lerManifesto(pid) {
-    const arquivos = (await lerLista())[pid];
+    const arquivos = ((await lerLista()).personagens || {})[pid];
     return Array.isArray(arquivos) && arquivos.length ? { arquivos } : null;
   }
 
@@ -100,6 +100,12 @@ export function criarRag({ embeddings, aoStatus = () => {}, raiz = 'knowledge' }
 
   return {
     verificar, preparar, apagar,
+    // A pergunta cita um termo do assunto da base? O padrão vem pronto do index.json (tools/knowledge.mjs), derivado dos documentos.
+    async ehDoTema(pid, pergunta) {
+      const tema = ((await lerLista()).temas || {})[pid];
+      if (!tema || !tema.padrao) return false;
+      return new RegExp(tema.padrao, 'i').test(semAcento(pergunta));
+    },
     // Depois de mudar documentos e rodar tools/knowledge.mjs: relê a lista na próxima verificação.
     esquecerLista() { listaCache = null; },
     estado: (pid) => estado.get(pid) || { documentos: 0, indexados: 0, pendentes: [] },

@@ -211,7 +211,9 @@ Cada personagem pode responder com base em documentos curados, citar de onde vei
 
 3. `npm run conhecimento` valida tudo e grava `knowledge/index.json`. **Rode sempre que mudar um documento.**
 4. Engrenagem, aba "Personagem", "Base de conhecimento": **Preparar a base**. A primeira vez baixa o modelo de embeddings (`Xenova/multilingual-e5-small`, 118 MB, do Hugging Face) para o navegador e depois guarda. Só o arquivo que mudou é reindexado.
-5. "Testar uma pergunta" mostra a semelhança de cada trecho. O **limiar de confiança** (padrão 0,85) decide quando o personagem diz que não sabe; ele foi medido só com 2 trechos de teste, então calibre com o corpus real (uma dezena de perguntas dentro da base e algumas fora).
+5. "Testar uma pergunta" mostra a semelhança de cada trecho. O **limiar de confiança** (padrão 0,86) decide quando o personagem diz que não sabe. Foi medido com o corpus da UEMA (dentro da base 0,876 a 0,929; outros assuntos 0,789 a 0,842), mas perguntas do assunto que a base não tem (telefone da reitoria, vestibular) ficam em 0,87 e passam: quem segura esse caso é a instrução ao modelo.
+
+**Modo do personagem** (`conhecimento` em `src/characters.js`): `exclusivo` (padrão) responde "não sei" sempre que a base não cobre a pergunta. `complemento` (a Luma) só exige a base para perguntas do assunto dela; o resto o personagem responde como sempre. O assunto é reconhecido por um regex **derivado dos documentos** por `npm run conhecimento` (siglas com 2 ou mais ocorrências, sem RAG, TTS, PDF e FAQ) e gravado em `knowledge/index.json`: não é escrito à mão e muda quando os documentos mudam. Limite: pergunta do assunto sem nenhuma dessas siglas (por exemplo "onde fica a universidade?") é tratada como pergunta geral.
 
 Como funciona: trechos de 150 a 300 palavras com o título preservado, busca por cosseno mais palavra-chave fundidas por RRF, e o texto recuperado entra no prompt como dado marcado (`<fonte>`), nunca como instrução. A resposta marca a fonte com `[fonte:id]` (não é falada) e a tela mostra "Fontes". Quando a base não cobre a pergunta o personagem responde "não sei" **sem chamar o Gemini**.
 

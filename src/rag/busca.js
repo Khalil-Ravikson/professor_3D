@@ -1,10 +1,11 @@
 // Busca híbrida do RAG (prompt 2, R4): cosseno em força bruta mais palavra-chave, fundidos por Reciprocal Rank Fusion.
 // Puro: recebe vetores e textos, devolve a lista ordenada. Vetores já vêm normalizados (L2), então cosseno = produto interno.
 
-// O E5 dá cosseno alto até para assunto sem relação. Medido em 07/10/2026 com um corpus de teste de só 2 trechos de matemática:
-// dentro da base 0,92 e 0,95; fora da base 0,75 (copa do mundo) e 0,81 (receita de bolo). Por isso 0,85. NÃO CALIBRADO com o corpus real:
-// recalibrar com 10 perguntas dentro e 5 fora, usando "Testar uma pergunta" no painel.
-export const LIMIAR_PADRAO = 0.85;
+// O E5 dá cosseno alto até para assunto sem relação. Medido em 07/10/2026 com o corpus da UEMA (16 documentos, 31 trechos):
+// 10 perguntas dentro da base deram 0,876 a 0,929; 5 de outros assuntos deram 0,789 a 0,842. Por isso 0,86.
+// Limite que o limiar NÃO resolve: perguntas do assunto que a base não tem (telefone da reitoria, vestibular 2027, reitor atual)
+// deram 0,869 a 0,872, parecendo "dentro". Quem segura esse caso é a instrução ao modelo (responder só com os blocos e dizer que não sabe).
+export const LIMIAR_PADRAO = 0.86;
 export const K_RRF = 60;
 
 const PARADAS = new Set(('a o as os um uma uns umas de do da dos das em no na nos nas por para com sem sob sobre e ou mas que se ' +

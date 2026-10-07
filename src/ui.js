@@ -975,8 +975,16 @@ async function perguntarAoPersonagem(q) {
   abortCtl = ctl;
   // Base de conhecimento (R4): só consulta quando o índice deste personagem está pronto. Falha na busca não derruba a pergunta.
   let rg = null;
+  let regraDoTema = false; // pergunta do assunto da base: só pode ser respondida com ela
   if (rag.pronto(quem.id)) {
-    try { rg = await rag.consultar(quem.id, q); } catch (e) { console.warn('[rag] consulta falhou, segue sem a base:', e); }
+    try {
+      rg = await rag.consultar(quem.id, q);
+      regraDoTema = await rag.ehDoTema(quem.id, q);
+    } catch (e) { console.warn('[rag] consulta falhou, segue sem a base:', e); }
+    // Modo complemento: a base só entra quando a pergunta cita termos do assunto dela (regex derivado dos documentos, em
+    // knowledge/index.json). Semelhança alta sozinha não basta: "por que o céu é azul?" passou do limiar com um trecho da UEMA.
+    const complemento = (ef.conhecimento && ef.conhecimento.modo) === 'complemento';
+    if (rg && complemento && !regraDoTema) rg = null;
   }
   // Servidor fora do ar na última checagem? Tenta de novo rápido antes de cair para a voz do sistema.
   if (config.motor !== 'webspeech' && voz.statusServidor.ok !== true) await voz.verificarServidor({ timeoutMs: 800 });
@@ -998,7 +1006,7 @@ async function perguntarAoPersonagem(q) {
     if (rg && !rg.confiante) {
       // A base não cobre a pergunta: resposta pronta, sem chamar o Gemini (custo zero) e sem inventar.
       marca.aoPrimeiroTexto();
-      texto = T.rag.naoSei(quem.nome);
+      texto = regraDoTema ? T.rag.naoSeiTema(quem.nome) : T.rag.naoSei(quem.nome);
       falar(texto);
     } else texto = await perguntarEmFluxo({
       apiKey, modelo: config.modelo, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(rg.resultados) : ''), historico: hist.slice(-9), signal: ctl.signal,
