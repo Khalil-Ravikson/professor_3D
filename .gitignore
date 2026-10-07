@@ -32,3 +32,6 @@ assets/avatars/teo3.vrm
 # Para commitar depois, remova estas linhas. O knowledge/index.json local lista esses arquivos; não commitar a versão local.
 knowledge/luma/
 knowledge/*.pdf
+
+# Pacote de movimentos VRMA do VRoid: termos proíbem redistribuir, e este repositório é público. Nunca commitar.
+assets/animations/VRMA_*.vrma
