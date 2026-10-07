@@ -82,3 +82,11 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 |---|---|---|---|
 | 31 | No totem, tocar em "+", depois em "O que cada sinal quer dizer", e falar com o personagem olhando o sinal (Pronto, Ouvindo, Pensando, Falando). | O menu abre acima da barra, a legenda mostra os cinco sinais, e a palavra do sinal muda junto com a cor. Dá para ler a 1 m de distância. | |
 | 32 | Tocar em "Guiada" e entregar o totem a uma criança. | Só as perguntas sugeridas aparecem; sem campo de texto e sem microfone. "Livre" devolve os dois. A escolha fica depois de recarregar. | |
+
+## Sessão e câmera livre
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 33 | Começar uma conversa, passar para o modo escrito e digitar devagar por uns 3 minutos sem enviar. | A sessão não fecha enquanto digita. Parar de mexer por 90 s fecha com a despedida. | |
+| 34 | Na conversa, girar a câmera com o dedo, aproximar com a pinça e dar dois toques rápidos. | Gira e aproxima sem rolar a página; dois toques voltam ao enquadramento em meio segundo. | |
+| 35 | Falar com o microfone aberto e fechar a conversa pelo "+", "Terminar a conversa". | O personagem se despede e o microfone fecha. Nenhuma pergunta nova nasce sozinha. | |

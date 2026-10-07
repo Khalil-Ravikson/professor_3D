@@ -742,6 +742,7 @@ function definirEtapa(e) {
   if (e === 'atracao') iniciarVitrine(); else pararVitrine();
   tocarOciosoSelecao();
   aplicarEnquadramento(true);
+  cena.orbitaAutomatica(e === 'cumprimento' || e === 'conversa');
   clearTimeout(timerEtapa);
   app.dataset.microfone = microfone === 'sim' ? 'sim' : 'nao';
   usarVozBtn.hidden = !(e === 'conversa' && microfone === 'nao');
@@ -805,7 +806,16 @@ const medidasSessao = []; // { tipo, origem, gatilho, gesto } em ms (performance
 
 function tocarInatividade() {
   clearTimeout(timerInatividade);
-  if (sessaoAtiva) timerInatividade = setTimeout(() => encerrarSessao('inatividade'), inatividadeS() * 1000);
+  if (!sessaoAtiva) return;
+  timerInatividade = setTimeout(() => {
+    // Falar, pensar ou ouvir é estar usando: só fecha quando tudo está parado.
+    if (ocupado || voz.falando || ouvido.gravando) { tocarInatividade(); return; }
+    encerrarSessao('inatividade');
+  }, inatividadeS() * 1000);
+}
+// Qualquer toque, tecla, roda ou texto digitado conta como presença: quem escreve, lê ou gira a câmera não saiu.
+for (const ev of ['pointerdown', 'keydown', 'wheel', 'input']) {
+  document.addEventListener(ev, () => { if (sessaoAtiva) tocarInatividade(); }, { capture: true, passive: true });
 }
 
 function acenarEFalar(tipo, origem, frase) {
@@ -848,14 +858,47 @@ function encerrarSessao(origem) {
   clearTimeout(timerInatividade);
   if (abortCtl) abortCtl.abort();
   silenciar();
+  limparConversa();
   definirEtapa('despedida');
   acenarEFalar('despedida', origem, efetivo(personagem).despedida);
-  // Limpeza: nenhuma conversa fica para a próxima pessoa.
-  for (const h of historicos.values()) h.length = 0;
-  quadro.limpar('');
-  if (personagem.quadro) mostrarQuadroDe(personagem, historicoDe(personagem.id));
   return true;
 }
+
+// Nada da conversa anterior pode sobrar para a próxima pessoa: histórico, quadro, microfone aberto, menu e legenda.
+// O microfone importa: sem cancelar, o reconhecimento termina depois e abre uma pergunta nova em cima da vitrine.
+function limparConversa() {
+  ouvido.cancelar();
+  for (const h of historicos.values()) h.length = 0;
+  quadro.limpar('');
+  if (personagem && personagem.quadro) mostrarQuadroDe(personagem, historicoDe(personagem.id));
+  input.value = '';
+  fecharMenu();
+  elLegenda.raiz.hidden = true;
+}
+
+// Sair do personagem sem despedida: volta à escolha na hora.
+function escolherOutroPersonagem() {
+  clearTimeout(timerInatividade);
+  sessaoAtiva = false;
+  app.dataset.sessao = 'encerrada';
+  if (abortCtl) abortCtl.abort();
+  silenciar();
+  limparConversa();
+  elHeard.textContent = ''; elAnswer.textContent = '';
+  microfone = null;
+  estadoOcioso();
+  definirEtapa('selecao');
+}
+
+// Duplo clique ou duplo toque no personagem centraliza a câmera. O visualizador tem o seu próprio.
+let ultimoToqueCam = 0;
+const naTelaDaConversa = (e) => (etapa === 'conversa' || etapa === 'cumprimento') && !visualizador.ativo && e.target === cena.renderer.domElement;
+stage.addEventListener('dblclick', (e) => { if (naTelaDaConversa(e)) cena.resetarCamera(reduzirMovimento.matches ? 0 : 500); });
+stage.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch' || !naTelaDaConversa(e)) return;
+  const agora = performance.now();
+  if (agora - ultimoToqueCam < 350) { cena.resetarCamera(reduzirMovimento.matches ? 0 : 500); ultimoToqueCam = 0; } else ultimoToqueCam = agora;
+});
 
 let toqueX = null, toqueId = null;
 stage.addEventListener('pointerdown', (e) => {
@@ -1009,7 +1052,9 @@ function iniciarBarra() {
   elModo.livre.textContent = T.barra.livre; elModo.livre.title = T.barra.livreDica;
   const itens = [
     [T.barra.menu.verDePerto, () => visualizador.entrar()],
+    [T.barra.menu.centralizar, () => cena.resetarCamera(reduzirMovimento.matches ? 0 : 500)],
     [T.barra.menu.legenda, () => { elLegenda.raiz.hidden = !elLegenda.raiz.hidden; }],
+    [T.barra.menu.outro, () => escolherOutroPersonagem()],
     [T.barra.menu.terminar, () => encerrarSessao('fluxo')],
   ];
   elMais.menu.replaceChildren(...itens.map(([rotulo, acao]) => {

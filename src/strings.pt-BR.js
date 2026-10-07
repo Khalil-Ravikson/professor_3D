@@ -88,6 +88,8 @@ export const T = {
     menu: {
       verDePerto: 'Ver o personagem de perto',
       legenda: 'O que cada sinal quer dizer',
+      centralizar: 'Centralizar o personagem',
+      outro: 'Escolher outro personagem',
       terminar: 'Terminar a conversa',
     },
     estados: { idle: 'Pronto', listening: 'Ouvindo', thinking: 'Pensando', speaking: 'Falando', error: 'Problema' },

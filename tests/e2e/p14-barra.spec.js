@@ -47,7 +47,7 @@ test('I4 menu "+": abre, navega por seta, fecha com Esc e devolve o foco', async
   await expect(page.locator('#maisMenu')).toBeVisible();
   await expect(page.locator('#maisBtn')).toHaveAttribute('aria-expanded', 'true');
   const itens = page.locator('#maisMenu button');
-  await expect(itens).toHaveCount(3);
+  await expect(itens).toHaveCount(5);
   await expect(itens.first()).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(itens.nth(1)).toBeFocused();
@@ -113,4 +113,88 @@ test('I4 menu: "Ver o personagem de perto" abre o visualizador e "Terminar a con
   await page.click('#maisBtn');
   await page.getByRole('menuitem', { name: 'Terminar a conversa' }).click();
   await page.waitForFunction(() => window.__prof3d.etapa === 'despedida', null, { timeout: 15_000 });
+});
+
+// ---- Câmera livre desde o início, e sair do personagem sem sobras ----
+const camera = (page) => page.evaluate(() => { const c = window.__prof3d.cena; return { p: c.camera.position.toArray(), orbita: c.orbitaAtiva }; });
+const longe = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+async function arrastar(page, dx, dy) {
+  const c = await page.locator('#stage canvas').boundingBox();
+  const x = c.x + c.width / 2, y = c.y + c.height / 2;
+  await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx, y + dy, { steps: 12 }); await page.mouse.up();
+  await page.waitForTimeout(300);
+}
+
+for (const personagem of ['luma', 'matematico']) {
+  test(`I4 câmera livre na conversa (${personagem}): liga sozinha, sem salto, gira, e o duplo clique centraliza`, async ({ page }) => {
+    await abrir(page, undefined, { personagem });
+    await page.waitForFunction(() => window.__prof3d.cena.orbitaAtiva, null, { timeout: 15_000 });
+    const padrao = await page.evaluate(() => window.__prof3d.cena.alvoPadrao().posicao.toArray());
+    const antes = await camera(page);
+    expect(longe(antes.p, padrao), 'ligar a câmera livre não pode mover a câmera').toBeLessThan(0.02);
+    await arrastar(page, 160, 40);
+    const girou = await camera(page);
+    expect(longe(girou.p, antes.p), 'arrastar gira a câmera').toBeGreaterThan(0.1);
+    const c = await page.locator('#stage canvas').boundingBox();
+    await page.mouse.dblclick(c.x + c.width / 2, c.y + c.height / 2);
+    await page.waitForTimeout(900);
+    expect(longe((await camera(page)).p, padrao), 'o duplo clique volta ao enquadramento').toBeLessThan(0.02);
+  });
+}
+
+test('I4 câmera livre: desliga ao sair da conversa e o menu centraliza', async ({ page }) => {
+  await abrir(page);
+  await page.waitForFunction(() => window.__prof3d.cena.orbitaAtiva, null, { timeout: 15_000 });
+  await arrastar(page, -150, 30);
+  const padrao = await page.evaluate(() => window.__prof3d.cena.alvoPadrao().posicao.toArray());
+  await page.click('#maisBtn');
+  await page.getByRole('menuitem', { name: 'Centralizar o personagem' }).click();
+  await page.waitForTimeout(900);
+  expect(longe((await camera(page)).p, padrao)).toBeLessThan(0.02);
+  await page.evaluate(() => window.__prof3d.definirEtapa && 0);
+  await page.click('#maisBtn');
+  await page.getByRole('menuitem', { name: 'Escolher outro personagem' }).click();
+  await page.waitForFunction(() => window.__prof3d.etapa === 'selecao');
+  expect((await camera(page)).orbita, 'na seleção a câmera livre fica desligada').toBe(false);
+});
+
+test('bug: fechar a conversa com o microfone aberto não deixa uma pergunta nascer depois', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__sr = { starts: 0, ultimo: null };
+    class FakeSR {
+      constructor() { window.__sr.ultimo = this; }
+      start() { window.__sr.starts++; }
+      stop() { setTimeout(() => this.onend && this.onend(), 0); }
+      abort() { setTimeout(() => this.onend && this.onend(), 0); }
+    }
+    window.SpeechRecognition = FakeSR; window.webkitSpeechRecognition = FakeSR;
+  });
+  await abrir(page);
+  await page.evaluate(() => window.__prof3d.irParaConversa('sim'));
+  await page.click('#mic');
+  expect(await page.evaluate(() => window.__sr.starts)).toBe(1);
+  await page.evaluate(() => window.__sr.ultimo.onresult({ results: [[{ transcript: 'qual a capital do Maranhão' }]] }));
+  await page.click('#maisBtn');
+  await page.getByRole('menuitem', { name: 'Terminar a conversa' }).click();
+  await page.waitForFunction(() => window.__prof3d.etapa === 'despedida', null, { timeout: 10_000 });
+  // O navegador entrega o fim do reconhecimento depois do fechamento.
+  await page.evaluate(() => window.__sr.ultimo.onend());
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => window.__prof3d.etapa), 'não pode voltar para a conversa').toBe('despedida');
+  expect(await page.evaluate(() => window.__sr.starts), 'não pode religar o microfone').toBe(1);
+  await expect(page.locator('#estadoChip')).not.toHaveText('Ouvindo');
+});
+
+test('sair do personagem: "Escolher outro personagem" limpa a conversa e volta à escolha', async ({ page }) => {
+  await abrir(page);
+  await page.evaluate(() => { window.__prof3d.historicos.get(window.__prof3d.personagem.id).push({ role: 'user', parts: [{ text: 'oi' }] }); });
+  await page.fill('#text', 'rascunho');
+  await page.click('#maisBtn');
+  await page.getByRole('menuitem', { name: 'Escolher outro personagem' }).click();
+  await page.waitForFunction(() => window.__prof3d.etapa === 'selecao');
+  await expect(page.locator('#selecao')).toBeVisible();
+  expect(await page.evaluate(() => [...window.__prof3d.historicos.values()].every((h) => h.length === 0))).toBe(true);
+  await expect(page.locator('#text')).toHaveValue('');
+  await expect(page.locator('#maisMenu')).toBeHidden();
 });

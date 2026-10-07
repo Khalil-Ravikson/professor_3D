@@ -89,7 +89,7 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
   // de cabeça para baixo). O reset devolve a câmera ao enquadramento padrão do personagem em 0,5 s, com
   // suavização. O rastreamento leva o alvo e a câmera juntos atrás de um ponto (a cabeça), e pausa 3 s
   // quando a pessoa gira a câmera à mão.
-  let orbita = null, reinicio = null, seguirPonto = null, pausaSeguir = 0;
+  let orbita = null, reinicio = null, seguirPonto = null, pausaSeguir = 0, orbitaAuto = false;
   const alvoSeguido = new THREE.Vector3();
   const suave = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
 
@@ -134,8 +134,18 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
   // fn(vetor) preenche o ponto a seguir, ou null desliga. O ponto é lido a cada quadro.
   function definirSeguir(fn) { seguirPonto = fn || null; }
 
+  // Câmera livre desde a conversa, sem precisar do visualizador. Só liga depois que a câmera termina de deslizar
+  // para o enquadramento, para o OrbitControls não congelá-la no meio do caminho nem dar salto.
+  function orbitaAutomatica(ligada) {
+    orbitaAuto = !!ligada;
+    if (!orbitaAuto) desativarOrbita();
+  }
+
   function passoOrbita(dt) {
-    if (!orbita) return;
+    if (!orbita) {
+      if (orbitaAuto && temAlvo && !deslizando) ativarOrbita();
+      return;
+    }
     if (reinicio) {
       reinicio.t += dt;
       const k = suave(Math.min(1, reinicio.t / reinicio.dur));
@@ -224,7 +234,7 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
   return {
     renderer, scene, camera,
     definirFoco, definirCorpo, enquadrar, iniciar,
-    ativarOrbita, desativarOrbita, resetarCamera, definirSeguir,
+    ativarOrbita, desativarOrbita, orbitaAutomatica, resetarCamera, definirSeguir,
     get orbitaAtiva() { return !!orbita; },
     get orbita() { return orbita; },
     // Onde o reset deixa a câmera: para o teste e para o painel.

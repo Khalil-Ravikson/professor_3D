@@ -68,8 +68,11 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
 
     await page.click('#vizSair');
     await expect(page.locator('#viz')).toBeHidden();
-    expect(await page.evaluate(() => window.__prof3d.cena.orbitaAtiva)).toBe(false);
+    // Na conversa a câmera livre volta sozinha; o que o visualizador precisa soltar é o estado dele.
+    expect(await page.evaluate(() => window.__prof3d.visualizador.ativo)).toBe(false);
     expect(await page.evaluate(() => document.getElementById('app').dataset.visualizador)).toBeUndefined();
+    await page.evaluate(() => window.__prof3d.cena.orbitaAutomatica(false));
+    expect(await page.evaluate(() => window.__prof3d.cena.orbitaAtiva), 'sem a câmera automática não sobra controle').toBe(false);
     expect(erros).toEqual([]);
   });
 }
@@ -310,6 +313,8 @@ test('visualizador: trocar de personagem com ele aberto não vaza memória nem c
   await page.waitForTimeout(500);
   const fim = await mem();
   expect(fim).toEqual(base);
+  // A câmera livre automática da conversa pode estar de volta; desligada, não pode sobrar nenhum controle.
+  await page.evaluate(() => window.__prof3d.cena.orbitaAutomatica(false));
   expect(await page.evaluate(() => window.__prof3d.cena.orbita)).toBeNull();
 });
 
