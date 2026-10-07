@@ -163,6 +163,8 @@ export const T = {
     shell: 'Página e códigos do app',
     binarios: 'Personagens, animações e imagens',
     bibliotecas: 'Bibliotecas externas (cache)',
+    audio: 'Áudio das frases fixas',
+    apagarAudio: 'Apagar áudio das frases',
     semDado: 'sem dado',
     personagens: 'Pronto para usar offline',
     pronto: 'pronto offline',

@@ -174,7 +174,8 @@ Depois de uma primeira visita **com internet**, o app abre sem ela: um service w
 - **Atualização:** uma versão nova do app instala e **espera**. O painel mostra "Atualizar agora"; nada reinicia no meio de uma conversa.
 - **Limpar o cache:** pelo painel, ou nas ferramentas do navegador (Application, Storage, Clear site data).
 - **Ao trocar um `.vrm`, `.vrma`, fonte ou imagem com o mesmo nome:** suba `BIN` em `sw.js` e `CACHE_BIN` em `src/armazenamento.js`, senão o navegador continua com o arquivo velho.
-- **Limite conhecido:** as bibliotecas ainda vêm da CDN na primeira visita; hospedá-las aqui é uma decisão pendente. O cache de áudio TTS continua só em memória.
+- **Áudio das frases fixas:** o cumprimento, a despedida e a amostra de voz (motor Kokoro) ficam guardados em disco, até 40 MB, e tocam mesmo com o servidor de voz fora do ar. A fala das respostas e a voz paga não são guardadas.
+- **Limite conhecido:** as bibliotecas ainda vêm da CDN na primeira visita; hospedá-las aqui é uma decisão pendente.
 
 ## Modo totem e segurança
 

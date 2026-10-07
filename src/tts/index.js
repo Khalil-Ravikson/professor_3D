@@ -14,6 +14,7 @@ import { dividirFrases, limparParaFala, normalizarParaFala } from './frases.js';
 import { extrairGestos } from '../gestos.js';
 import { extrairEmocao } from '../emocao.js';
 import { removerMarcaFonte } from '../rag/prompt.js';
+import { lerAudio, gravarAudio, paraAudioBuffer } from './cache-audio.js';
 import { criarMesa, PAUSA_ENTRE_FRASES_MS } from '../audio.js';
 
 function criarCanal() {
@@ -249,8 +250,8 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
     async preSintetizar(texto, voz) {
       const motor = resolverMotor(voz);
       if (motor.direto) return false;
-      // Voz paga NUNCA pré-sintetiza sozinha: o cache é só de memória e se perde a cada carregamento,
-      // então cada abertura da página gastaria crédito à toa. Pré-gravar com voz paga é uma ação deliberada
+      // Voz paga NUNCA pré-sintetiza sozinha: cada abertura da página gastaria crédito à toa, e o cache em disco
+      // (cache-audio.js) é só das frases fixas do motor gratuito. Pré-gravar com voz paga é uma ação deliberada
       // do operador (pacote de áudio, REPERTORIO seção 31), não efeito colateral de escolher o motor.
       if (motor === gemini) return false;
       let ok = true;
@@ -259,7 +260,15 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
         const chave = chaveFrase(motor, voz, limpo);
         if (!limpo || preSintetizadas.has(chave)) continue;
         try {
-          preSintetizadas.set(chave, await motor.sintetizar(limpo, voz, { ctx }));
+          // Primeiro o disco (R3): uma frase fixa já guardada toca na hora, mesmo com o servidor de voz fora do ar.
+          let buffer = null;
+          try { const guardado = await lerAudio(chave); if (guardado) buffer = paraAudioBuffer(ctx, guardado); }
+          catch (e) { console.warn('[voz] cache em disco indisponível; sintetizando:', e); }
+          if (!buffer) {
+            buffer = await motor.sintetizar(limpo, voz, { ctx });
+            gravarAudio(chave, buffer).catch((e) => console.warn('[voz] não guardei o áudio em disco:', e));
+          }
+          preSintetizadas.set(chave, buffer);
           if (preSintetizadas.size > 40) preSintetizadas.delete(preSintetizadas.keys().next().value);
         } catch (e) {
           console.warn('[voz] não consegui pré-sintetizar; a frase será sintetizada na hora:', e);

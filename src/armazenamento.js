@@ -4,6 +4,8 @@
 // Os nomes seguem o sw.js. Se mudar lá (BIN, CDN), mude aqui.
 export const CACHE_BIN = 'p3d-bin-1';
 export const CACHE_CDN = 'p3d-cdn-1';
+import { tamanhoAudio, apagarAudio } from './tts/cache-audio.js';
+
 const PREFIXO = 'p3d-';
 
 export const temServiceWorker = () => 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
@@ -61,7 +63,8 @@ async function tamanhoDe(resposta) {
 
 // Bytes por categoria. "shell" junta todas as versões do app que ainda existirem.
 export async function tamanhosPorCategoria() {
-  const total = { shell: 0, binarios: 0, bibliotecas: 0 };
+  const total = { shell: 0, binarios: 0, bibliotecas: 0, audio: 0 };
+  try { total.audio = await tamanhoAudio(); } catch (e) { console.warn('[armazenamento] sem tamanho do áudio:', e); }
   if (!window.caches) return total;
   for (const nome of await caches.keys()) {
     if (!nome.startsWith(PREFIXO)) continue;
@@ -73,8 +76,9 @@ export async function tamanhosPorCategoria() {
 }
 
 export async function apagarCategoria(categoria) {
-  if (!window.caches) return 0;
   let n = 0;
+  if (categoria === 'audio' || categoria === 'tudo') { try { n += (await apagarAudio()) > 0 ? 1 : 0; } catch (e) { console.warn('[armazenamento] não apagou o áudio:', e); } }
+  if (categoria === 'audio' || !window.caches) return n;
   for (const nome of await caches.keys()) {
     if (!nome.startsWith(PREFIXO)) continue;
     const ehBin = nome.startsWith('p3d-bin'), ehCdn = nome.startsWith('p3d-cdn');

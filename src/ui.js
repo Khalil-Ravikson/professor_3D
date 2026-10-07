@@ -1706,11 +1706,11 @@ document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.k
 let swEsperando = null;
 const elSto = {
   dica: $('stoDica'), lista: $('stoLista'), perm: $('stoPermanente'), atuTexto: $('stoAtualizacaoTexto'), atu: $('stoAtualizar'),
-  persTitulo: $('stoPersonagensTitulo'), pers: $('stoPersonagens'), apBin: $('stoApagarBin'), apLib: $('stoApagarLib'), apTudo: $('stoApagarTudo'), status: $('stoStatus'),
+  persTitulo: $('stoPersonagensTitulo'), pers: $('stoPersonagens'), apBin: $('stoApagarBin'), apLib: $('stoApagarLib'), apAudio: $('stoApagarAudio'), apTudo: $('stoApagarTudo'), status: $('stoStatus'),
 };
 const SA = T.armazenamento;
 elSto.dica.textContent = SA.dica; elSto.persTitulo.textContent = SA.personagens;
-elSto.apBin.textContent = SA.apagarBinarios; elSto.apLib.textContent = SA.apagarBibliotecas; elSto.apTudo.textContent = SA.apagarTudo;
+elSto.apBin.textContent = SA.apagarBinarios; elSto.apLib.textContent = SA.apagarBibliotecas; elSto.apAudio.textContent = SA.apagarAudio; elSto.apTudo.textContent = SA.apagarTudo;
 elSto.perm.textContent = SA.pedirPermanente; elSto.atu.textContent = SA.atualizar;
 
 // O que um personagem precisa para abrir sem internet: o modelo e os clipes ativos.
@@ -1721,7 +1721,7 @@ async function desenharArmazenamento() {
   const linhas = [
     [SA.uso, u.usado === null ? SA.semDado : SA.usoValor(formatarBytes(u.usado), formatarBytes(u.cota))],
     [SA.permanente, u.persistente === null ? SA.semDado : u.persistente ? SA.permanenteSim : SA.permanenteNao],
-    [SA.shell, formatarBytes(t.shell)], [SA.binarios, formatarBytes(t.binarios)], [SA.bibliotecas, formatarBytes(t.bibliotecas)],
+    [SA.shell, formatarBytes(t.shell)], [SA.binarios, formatarBytes(t.binarios)], [SA.bibliotecas, formatarBytes(t.bibliotecas)], [SA.audio, formatarBytes(t.audio)],
   ];
   elSto.lista.replaceChildren(...linhas.flatMap(([n, v]) => {
     const dt = document.createElement('dt'); dt.textContent = n;
@@ -1750,7 +1750,7 @@ async function desenharArmazenamento() {
 }
 elSto.perm.addEventListener('click', async () => { elSto.status.textContent = (await pedirPersistencia()) ? '' : SA.pediuNegado; desenharArmazenamento(); });
 elSto.atu.addEventListener('click', () => aplicarAtualizacao(swEsperando));
-for (const [botao, categoria] of [[elSto.apBin, 'binarios'], [elSto.apLib, 'bibliotecas'], [elSto.apTudo, 'tudo']]) {
+for (const [botao, categoria] of [[elSto.apBin, 'binarios'], [elSto.apLib, 'bibliotecas'], [elSto.apAudio, 'audio'], [elSto.apTudo, 'tudo']]) {
   botao.addEventListener('click', async () => { elSto.status.textContent = SA.apagou(await apagarCategoria(categoria)); desenharArmazenamento(); });
 }
 dlg.addEventListener('toggle', () => { if (dlg.open) desenharArmazenamento(); });

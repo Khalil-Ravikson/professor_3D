@@ -1,0 +1,88 @@
+{
+  "data": "2026-10-07T17:03:52.350Z",
+  "repeticoes": 3,
+  "gpu": "--use-angle=d3d11",
+  "semCache": [
+    {
+      "ms": 2865,
+      "recursos": 82,
+      "tamanho": 32076977,
+      "transferido": 1201385
+    },
+    {
+      "ms": 2085,
+      "recursos": 82,
+      "tamanho": 32076977,
+      "transferido": 1201385
+    },
+    {
+      "ms": 1939,
+      "recursos": 82,
+      "tamanho": 32076977,
+      "transferido": 1201385
+    }
+  ],
+  "comCache": [
+    {
+      "ms": 2327,
+      "recursos": 82,
+      "tamanho": 34702758,
+      "transferido": 1200
+    },
+    {
+      "ms": 1456,
+      "recursos": 82,
+      "tamanho": 34702758,
+      "transferido": 1200
+    },
+    {
+      "ms": 1876,
+      "recursos": 82,
+      "tamanho": 34702758,
+      "transferido": 1200
+    }
+  ],
+  "offline": [
+    {
+      "ms": 1709,
+      "recursos": 83,
+      "tamanho": 34702758,
+      "transferido": 0
+    },
+    {
+      "ms": 1437,
+      "recursos": 83,
+      "tamanho": 34702758,
+      "transferido": 0
+    },
+    {
+      "ms": 1415,
+      "recursos": 83,
+      "tamanho": 34702758,
+      "transferido": 0
+    }
+  ],
+  "tabela": [
+    {
+      "situacao": "sem cache (primeira visita)",
+      "medianaMs": 2085,
+      "melhorMs": 1939,
+      "recursos": 82,
+      "tamanhoMB": 32.1
+    },
+    {
+      "situacao": "com cache (segunda visita)",
+      "medianaMs": 1876,
+      "melhorMs": 1456,
+      "recursos": 82,
+      "tamanhoMB": 34.7
+    },
+    {
+      "situacao": "offline (rede desligada)",
+      "medianaMs": 1437,
+      "melhorMs": 1415,
+      "recursos": 83,
+      "tamanhoMB": 34.7
+    }
+  ]
+}
