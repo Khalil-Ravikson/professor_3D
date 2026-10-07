@@ -4,7 +4,18 @@
 //  - palavras: para a voz do sistema, que não passa pelo nosso AudioContext;
 //    cada evento de palavra dá um pulso de abertura.
 // Os valores saem como pesos de expressão VRM: { aa, ih, ou, ee, oh }.
-import { createWLipSyncNode } from 'wlipsync';
+import { createWLipSyncNode, configuration } from 'wlipsync';
+
+// O build "single" do wLipSync embute o processador de áudio como URL data:, que a CSP bloqueia. Usamos o build em
+// arquivos (assets/vendor/wlipsync/): o worklet vem de um arquivo do próprio site e o wasm é compilado aqui.
+const URL_WLIPSYNC = new URL('assets/vendor/wlipsync/', location.href).href;
+let wasmWlip = null;
+const workletRegistrado = new WeakSet();
+async function prepararWLipSync(ctx) {
+  if (!wasmWlip) wasmWlip = fetch(URL_WLIPSYNC + 'wlipsync.wasm').then((r) => { if (!r.ok) throw new Error(`wlipsync.wasm: HTTP ${r.status}`); return r.arrayBuffer(); }).then((b) => WebAssembly.compile(b));
+  configuration.wasmModule = await wasmWlip;
+  if (!workletRegistrado.has(ctx)) { await ctx.audioWorklet.addModule(URL_WLIPSYNC + 'audio-processor.js'); workletRegistrado.add(ctx); }
+}
 
 export const VISEMAS = ['aa', 'ih', 'ou', 'ee', 'oh'];
 const MAPA_WLIPSYNC = { A: 'aa', I: 'ih', U: 'ou', E: 'ee', O: 'oh' };
@@ -41,6 +52,7 @@ export async function criarLipSyncWLipSync(ctx, fonte, urlPerfil = 'assets/lipsy
   const r = await fetch(urlPerfil);
   if (!r.ok) throw new Error(`perfil do wLipSync não encontrado: ${urlPerfil} (HTTP ${r.status})`);
   const perfil = await r.json();
+  await prepararWLipSync(ctx);
   const no = await createWLipSyncNode(ctx, perfil);
   fonte.connect(no); // o nó não tem saída de áudio; só analisa
   return {

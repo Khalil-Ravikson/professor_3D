@@ -212,7 +212,8 @@ Depois de uma primeira visita **com internet**, o app abre sem ela: um service w
 - **Limpar o cache:** pelo painel, ou nas ferramentas do navegador (Application, Storage, Clear site data).
 - **Ao trocar um `.vrm`, `.vrma`, fonte ou imagem com o mesmo nome:** suba `BIN` em `sw.js` e `CACHE_BIN` em `src/armazenamento.js`, senão o navegador continua com o arquivo velho.
 - **Áudio das frases fixas:** o cumprimento, a despedida e a amostra de voz (motor Kokoro) ficam guardados em disco, até 40 MB, e tocam mesmo com o servidor de voz fora do ar. A fala das respostas e a voz paga não são guardadas.
-- **Limite conhecido:** as bibliotecas ainda vêm da CDN na primeira visita; hospedá-las aqui é uma decisão pendente.
+- **Bibliotecas hospedadas (grupo A):** Three.js, os carregadores, three-vrm, wLipSync e mathjs (com as dependências dele) ficam em `assets/vendor/` (3,3 MB; origem, versão e licença em `assets/vendor/CREDITS.md`) e entram no cache `p3d-cdn`. O app abre sem internet e **sem nenhum pedido à CDN** para essas bibliotecas (verificado no Chromium: 25 arquivos em cache e recarga offline com o canvas e sem erro).
+- **Limite conhecido:** ainda vêm da CDN o MediaPipe da câmera (12,2 MB de wasm), o transformers.js e o kokoro-js (voz no navegador, Whisper e embeddings do RAG), mais os pesos dos modelos no Hugging Face. Hospedar isso depende da sua autorização (não dada nesta rodada).
 
 ## Modo totem e segurança
 
@@ -340,7 +341,8 @@ Estado em 07/10/2026, ao fim do prompt 03 parcial (U1, U4, U5, U6 e U8; U2, U3 e
 - Os 65 itens do roteiro manual (`Repertorio/TESTES-MANUAIS.md`) não foram executados por você.
 
 **Outras**
-- As bibliotecas da CDN (Three.js, three-vrm, transformers.js) ainda não são hospedadas localmente: o uso offline depende do cache do service worker.
+- As bibliotecas do grupo A já são locais (`assets/vendor/`). **Ainda na CDN:** MediaPipe (câmera), transformers.js e kokoro-js; sem internet na primeira visita, a câmera e a voz no navegador não funcionam.
+- **Três testes e2e falham mesmo sem as mudanças da hospedagem local** (confirmado desfazendo-as): `app.spec.js` M1 (espera 5 filhos na cena e há 6) e M2, e `p13-visualizador` "galeria abre o visualizador tocando os clipes". Não investigados.
 - Cache de respostas do Gemini: não feito.
 - O prompt 07 (Photo Booth e rastreamento do corpo) não existe no repositório.
 - Decisões antigas suas: `MAX_RODADAS` do Rafa, aceno do Mixamo, eSpeak (GPL), `PROPOSTA-SKILL-VRM.md` e `references/` da skill vrm-avatar-web.

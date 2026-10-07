@@ -31,3 +31,5 @@ O `MEGA-PROMPT-MESTRE.md` manda executar os cinco prompts em ordem. Feitos: 1 (b
 
 ## Regra aprendida
 Nunca `git add -A` quando houver `.vrm` na pasta. Adicionar por caminho.
+
+**Bibliotecas locais (07/10/2026):** o grupo A da CDN (Three.js, three-vrm, wLipSync, mathjs) está em `assets/vendor/` e o app abre offline; MediaPipe, transformers.js e kokoro-js seguem na CDN. O wLipSync passou a funcionar sob a CSP (antes caía em RMS). Três testes e2e antigos falham independentemente disso.

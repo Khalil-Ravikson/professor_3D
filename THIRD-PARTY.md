@@ -6,15 +6,24 @@ Gerado por `node tools/licencas.mjs`. Não edite à mão: rode o script de novo.
 
 | Pacote | Versão | Uso | Licença | Alerta |
 | --- | --- | --- | --- | --- |
+| @babel/runtime | 7.29.2 | hospedado em assets/vendor/ | MIT |  |
 | @huggingface/transformers | 3.8.1 | navegador (CDN) | Apache-2.0 |  |
 | @mediapipe/tasks-vision | 1.0.1 | navegador (CDN) | Apache-2.0 |  |
-| @pixiv/three-vrm | 3.5.5 | navegador (CDN) | MIT |  |
-| @pixiv/three-vrm-animation | 3.5.5 | navegador (CDN) | MIT |  |
+| @pixiv/three-vrm | 3.5.5 | hospedado em assets/vendor/ | MIT |  |
+| @pixiv/three-vrm-animation | 3.5.5 | hospedado em assets/vendor/ | MIT |  |
 | @playwright/test | 1.63.0 | só testes | Apache-2.0 |  |
+| complex.js | 2.4.3 | hospedado em assets/vendor/ | MIT |  |
+| decimal.js | 10.6.0 | hospedado em assets/vendor/ | MIT |  |
+| escape-latex | 1.2.0 | hospedado em assets/vendor/ | MIT |  |
+| fraction.js | 5.3.4 | hospedado em assets/vendor/ | MIT |  |
+| javascript-natural-sort | 0.7.1 | hospedado em assets/vendor/ | MIT |  |
 | kokoro-js | 1.2.1 | navegador (CDN) | Apache-2.0 |  |
 | mathjs | 15.2.0 | dependência | Apache-2.0 |  |
-| three | 0.180.0 | navegador (CDN) | MIT |  |
-| wlipsync | 1.3.1 | navegador (CDN) | MIT |  |
+| seedrandom | 3.0.5 | hospedado em assets/vendor/ | MIT |  |
+| three | 0.180.0 | hospedado em assets/vendor/ | MIT |  |
+| tiny-emitter | 2.1.0 | hospedado em assets/vendor/ | MIT |  |
+| typed-function | 4.2.2 | hospedado em assets/vendor/ | MIT |  |
+| wlipsync | 1.3.1 | hospedado em assets/vendor/ | MIT |  |
 | src/vendor/mixamo (exemplo do three-vrm v3.5.5) |  | copiado no código | MIT, pixiv Inc. |  |
 | assets/mediapipe/face_landmarker.task (modelo do MediaPipe) |  | copiado no código | Apache-2.0 |  |
 | assets/vad/ (voz mãos-livres, ver assets/vad/CREDITS.md): @ricky0123/vad-web 0.0.31 (ISC) e onnxruntime-web 1.22.0 (MIT) |  | copiado no código | ISC e MIT |  |

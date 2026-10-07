@@ -3,7 +3,7 @@
 //   p3d-shell-<v>   página, módulos e estilos do app (rede primeiro, com o cache só como reserva offline; o prompt
 //                   pede stale-while-revalidate para scripts, mas isso serviria código velho depois de cada edição)
 //   p3d-bin-<n>     .vrm, .vrma, fontes, imagens, modelo do MediaPipe (cache primeiro; troque BIN ao trocar um arquivo)
-//   p3d-cdn-<n>     bibliotecas da jsDelivr, sempre com versão fixa na URL (cache primeiro, nunca muda)
+//   p3d-cdn-<n>     bibliotecas da jsDelivr e as hospedadas em assets/vendor/, sempre com versão fixa (cache primeiro, nunca muda)
 // NUNCA entram: chamadas à API do Gemini, ao servidor do Kokoro, qualquer POST, qualquer pedido com chave de API.
 // Atualização controlada: uma versão nova instala e fica esperando. Só ativa quando a página manda { tipo: 'pular' }
 // (o operador aceita no painel). Sem skipWaiting automático no meio de uma conversa.
@@ -71,6 +71,8 @@ self.addEventListener('fetch', (ev) => {
   if (temChave(req, url)) return; // chave de API nunca é guardada
   if (url.origin === location.origin) {
     if (url.pathname.endsWith('/sw.js')) return;
+    // Bibliotecas hospedadas (assets/vendor/): versão fixa na pasta, nunca mudam; mesmo cache da jsDelivr.
+    if (url.pathname.includes('/assets/vendor/')) { ev.respondWith(cachePrimeiro(req, CACHE_CDN)); return; }
     if (EXT_BINARIA.test(url.pathname)) { ev.respondWith(cachePrimeiro(req, CACHE_BIN)); return; }
     if (req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) { ev.respondWith(redePrimeiro(req, CACHE_SHELL)); return; }
     if (EXT_ESTATICA.test(url.pathname)) { ev.respondWith(redePrimeiro(req, CACHE_SHELL)); return; }

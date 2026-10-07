@@ -51,6 +51,8 @@ for (const f of fontesCodigo) {
   const t = readFileSync(f, 'utf8');
   for (const m of t.matchAll(/https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com|esm\.sh)\/((?:@[^/@]+\/)?[^/@'"]+)@([0-9][^/'" ]*)/g)) cdn.set(`${m[1]}@${m[2]}`, { pkg: m[1], versao: m[2], uso: 'navegador (CDN)' });
 }
+// Hospedadas em assets/vendor/ (lista em assets/vendor/vendor.json): entram como hospedadas, não como CDN.
+for (const p of JSON.parse(readFileSync('assets/vendor/vendor.json', 'utf8')).pacotes) cdn.set(`${p.pkg}@${p.versao}`, { pkg: p.pkg, versao: p.versao, uso: 'hospedado em assets/vendor/' });
 const pj = JSON.parse(readFileSync('package.json', 'utf8'));
 for (const [pkg, v] of Object.entries(pj.dependencies || {})) cdn.set(`${pkg}@${v}`, { pkg, versao: v, uso: 'dependência' });
 for (const [pkg, v] of Object.entries(pj.devDependencies || {})) cdn.set(`${pkg}@${v}`, { pkg, versao: v, uso: 'só testes' });
