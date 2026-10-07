@@ -217,6 +217,14 @@ Cada personagem pode responder com base em documentos curados, citar de onde vei
 
 Como funciona: trechos de 150 a 300 palavras com o título preservado, busca por cosseno mais palavra-chave fundidas por RRF, e o texto recuperado entra no prompt como dado marcado (`<fonte>`), nunca como instrução. A resposta marca a fonte com `[fonte:id]` (não é falada) e a tela mostra "Fontes". Quando a base não cobre a pergunta o personagem responde "não sei" **sem chamar o Gemini**.
 
+### Ingestão de documentos (PDF, PPTX, DOCX)
+
+1. Coloque os arquivos em `knowledge/_inbox/` e rode `npm run ingest`. Cada um vira um `.md` em `knowledge/_revisao/`, com um relatório de qualidade ao lado (método e motivo, palavras, títulos e tabelas detectados, páginas sem texto, resíduos removidos). Camadas: MarkItDown para DOCX e PPTX; `pdfminer.six` por página para PDF (o MarkItDown não marca a página). O Docling (camada 2) **não está instalado** e o relatório só recomenda quando a estrutura sai quebrada. O PyMuPDF4LLM (AGPL-3.0) **não é usado**.
+2. Abra o `.md` e preencha `fonte:`, `url:` e `licenca:` (saem como `PENDENTE`) e confira `nivel:` (`infantil`, `geral` ou `tecnico`). Leia o texto: o relatório não verifica fatos.
+3. `python tools/ingest/ingerir.py aprovar ARQUIVO.md --para luma` move para `knowledge/luma/`, e só se nada estiver `PENDENTE`. Depois `npm run conhecimento` e "Preparar a base".
+4. Mudou o arquivo de entrada? O manifest (`knowledge/_inbox/.manifest.json`, com hash) reprocessa só ele.
+5. **Nuvem:** `llamaparse` (camada 3) e `infantil` recusam rodar sem a variável de ambiente da chave (`LLAMA_CLOUD_API_KEY`, `GEMINI_API_KEY`) e sem `--confirmo` para aquele arquivo. **O envio real não foi implementado**; os comandos só mostram a estimativa e as travas.
+
 ## Voz mãos-livres (experimental)
 
 Opção em configurações, Sessão. **Vem desligada**; o botão de apertar para falar é o modo normal. Ligada, o microfone fica aberto durante a conversa: um detector de voz local (Silero VAD, `assets/vad/`, 13 MB) percebe quando a pessoa começa e termina de falar, o trecho vai para o Whisper do navegador (a primeira vez baixa o modelo) e vira a pergunta. Falar por cima do personagem o interrompe. Apertar o botão do microfone volta ao apertar para falar naquela sessão. Nada é gravado nem enviado. Use fone de ouvido: sem ele, o alto-falante pode ser entendido como fala. Os valores do detector (`src/maos-livres.js`) não foram calibrados com o barulho do local nem com crianças.

@@ -12,7 +12,8 @@
     "avaliar:rapido": "node tools/avaliar.mjs --rapido",
     "avaliar:respostas": "node tools/avaliar-respostas.mjs",
     "csp": "node tools/csp.mjs",
-    "conhecimento": "node tools/knowledge.mjs"
+    "conhecimento": "node tools/knowledge.mjs",
+    "ingest": "python tools/ingest/ingerir.py converter"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"
