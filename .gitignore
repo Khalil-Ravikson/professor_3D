@@ -27,3 +27,8 @@ relatorios/voz/audio/
 
 # Anime Boy (Kaosvs): licenca Redistribution_Prohibited, OnlyAuthor, uso comercial proibido. Nunca commitar.
 assets/avatars/teo3.vrm
+
+# Corpus da UEMA do dono: licença não informada e fatos não verificados, num repositório público (decisão de 07/10/2026).
+# Para commitar depois, remova estas linhas. O knowledge/index.json local lista esses arquivos; não commitar a versão local.
+knowledge/luma/
+knowledge/*.pdf

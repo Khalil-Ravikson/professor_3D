@@ -26,6 +26,7 @@ O `MEGA-PROMPT-MESTRE.md` manda executar os cinco prompts em ordem. Feitos: 1 (b
 - **Decisões do dono:** `MAX_RODADAS` do Rafa; aceno do Mixamo com "Character Arm-Space" maior; phonemizer/eSpeak NG (GPL) no Kokoro do navegador; aprovar `PROPOSTA-SKILL-VRM.md`; `references/` da skill vrm-avatar-web.
 
 ## Arquivos fora do git
+`knowledge/luma/` e `knowledge/Mega_Base_RAG_UEMA_CTIC_SIGUEMA.pdf` (corpus da UEMA do dono, por decisão dele em 07/10/2026; estão no `.gitignore`). O `knowledge/index.json` **local** lista esses documentos e **não deve ser commitado** nesse estado: o commitado é o vazio, para quem clonar não ver erro de arquivo faltando.
 `.env.local`, `VRMA_MotionPack/`, `assets/animations/aceno*.fbx` e `aceno*.vrma`, `amostras/`, `relatorios/voz/audio/`, `assets/avatars/teo3.vrm` (licença `Redistribution_Prohibited`, **nunca commitar**).
 
 ## Regra aprendida
