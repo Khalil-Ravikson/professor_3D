@@ -51,7 +51,7 @@ test('M1: abre, carrega o VRM e o console fica limpo', async ({ page }) => {
   await expect(page.locator('#erroAvatar')).toBeHidden();
   await expect(page.locator('#stage canvas')).toBeVisible();
   const cena = await page.evaluate(() => window.__prof3d.cena.scene.children.length);
-  expect(cena).toBe(5); // 3 luzes + modelo + alvo do olhar
+  expect(cena).toBe(6); // 4 luzes (hemisférica + principal, preenchimento e contorno) + modelo + alvo do olhar
   expect(erros).toEqual([]);
 });
 
@@ -67,7 +67,7 @@ test('M2: 2 personagens ativos, 2 voltas, memória estável e sem erro', async (
         const { geometries, textures } = window.__prof3d.cena.renderer.info.memory;
         return { geometries, textures, filhos: window.__prof3d.cena.scene.children.length, titulo: document.title };
       });
-      expect(m.filhos).toBe(5); // não acumula alvo do olhar nem modelo
+      expect(m.filhos).toBe(6); // 4 luzes + modelo + alvo do olhar; não acumula alvo do olhar nem modelo
       (memoria[id] ||= []).push(`${m.geometries}/${m.textures}`);
     }
   }
