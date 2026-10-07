@@ -16,7 +16,8 @@
     "ingest": "python tools/ingest/ingerir.py converter",
     "proxy": "node tools/proxy/servidor.mjs",
     "orcamento": "node tools/orcamento.mjs",
-    "guiada": "node tools/guiada.mjs"
+    "guiada": "node tools/guiada.mjs",
+    "importar-voz": "node tools/importar-voz.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

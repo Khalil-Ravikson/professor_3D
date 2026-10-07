@@ -42,3 +42,6 @@ knowledge/_revisao/
 
 # Contadores do proxy local do Gemini (só números, mas são do operador)
 tools/proxy/uso.json
+
+# Áudio exportado de terceiros (U4): a licença é de quem exportou, e o repositório é público.
+assets/voz-importada/

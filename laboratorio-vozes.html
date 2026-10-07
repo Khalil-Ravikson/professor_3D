@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Laboratório de vozes</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --tinta: #1f2a44; --suave: #51607e; --fundo: #eef3f7; --cartao: #fff; --acento: #1f5fbf; --ok: #1b6e3c; --erro: #a12626; }
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: var(--tinta); background: var(--fundo); padding: 16px; }
+  main { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  p.aviso { color: var(--suave); margin: 0 0 16px; max-width: 70ch; }
+  section { background: var(--cartao); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  label { display: block; font-weight: 600; margin: 8px 0 4px; }
+  input[type=text], input[type=number], textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid #c9d3df; border-radius: 8px; background: #fff; color: var(--tinta); }
+  textarea { min-height: 150px; font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
+  button { font: inherit; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #c9d3df; background: var(--cartao); color: var(--tinta); cursor: pointer; }
+  button.principal { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
+  .linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  #estado { color: var(--suave); min-height: 1.5em; }
+  .nota { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 10px; }
+  .nota button { min-width: 44px; padding: 0 10px; }
+  .nota button[aria-pressed=true] { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 700; }
+  .codigo { font-size: 2rem; font-weight: 700; letter-spacing: .04em; }
+  .frase { font-size: 1.15rem; margin: 6px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid #e3e8ef; text-align: left; vertical-align: top; }
+  .tabela { overflow-x: auto; }
+  pre { white-space: pre-wrap; background: #f4f7fa; padding: 12px; border-radius: 8px; font-size: .85rem; }
+  .erro { color: var(--erro); } .ok { color: var(--ok); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Laboratório de vozes</h1>
+  <p class="aviso">Página só do operador, sem link no app. Gera as 13 frases em cada voz, embaralha tudo sem mostrar o nome da voz e pede notas de 1 a 5. No fim sai um relatório com a recomendação por papel. Nada aqui é enviado a ninguém além dos motores que você ligar.</p>
+
+  <section aria-labelledby="t-config">
+    <h2 id="t-config">1. Vozes a comparar</h2>
+    <div class="grade">
+      <div><label for="urlKokoro">Servidor Kokoro</label><input id="urlKokoro" type="text" value="http://127.0.0.1:8880"></div>
+      <div><label for="urlProxy">Proxy local (ElevenLabs)</label><input id="urlProxy" type="text" value="http://127.0.0.1:8890"></div>
+      <div><label for="cambio">Câmbio (R$ por US$)</label><input id="cambio" type="number" step="0.01" value="5.17"></div>
+    </div>
+    <label for="candidatas">Candidatas (JSON). Entradas sem <code>voiceId</code> ou <code>rotulo</code> são ignoradas.</label>
+    <textarea id="candidatas" spellcheck="false"></textarea>
+    <label><input id="usarLexico" type="checkbox"> Aplicar o léxico de pronúncia (assets/lexico-pronuncia.json) às frases</label>
+    <div class="linha"><button id="gerar" class="principal">Gerar amostras</button><span id="estado" role="status" aria-live="polite"></span></div>
+  </section>
+
+  <section id="avaliacao" aria-labelledby="t-aval" hidden>
+    <h2 id="t-aval">2. Avaliação cega</h2>
+    <div class="codigo" id="codigo"></div>
+    <p class="frase" id="frase"></p>
+    <div class="linha"><button id="tocar" class="principal">Tocar</button><span id="progresso"></span></div>
+    <div id="notas"></div>
+    <div class="linha"><button id="anterior">Anterior</button><button id="proxima" class="principal">Salvar e próxima</button></div>
+  </section>
+
+  <section id="resultado" aria-labelledby="t-res" hidden>
+    <h2 id="t-res">3. Relatório</h2>
+    <div class="grade">
+      <div><label for="limNota">Nota mínima ao vivo</label><input id="limNota" type="number" step="0.1" value="3.5"></div>
+      <div><label for="limTempo">Tempo máximo ao vivo (ms)</label><input id="limTempo" type="number" step="100" value="2500"></div>
+      <div><label for="limEst">Estabilidade máxima (%)</label><input id="limEst" type="number" step="1" value="15"></div>
+    </div>
+    <div class="linha"><button id="relatorio" class="principal">Gerar relatório</button><button id="baixarJson" disabled>Baixar JSON</button><button id="baixarMd" disabled>Baixar relatório</button></div>
+    <div class="tabela"><pre id="saida"></pre></div>
+  </section>
+</main>
+<script type="module" src="src/lab-vozes.js"></script>
+</body>
+</html>

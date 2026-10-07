@@ -131,3 +131,13 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 59 | Evento: 3 perguntas por sessão e 2 minutos. Conversar até estourar cada limite. | O personagem se despede depois da fala em curso e o motivo aparece nos avisos. | |
 | 60 | Soma 3 pessoas na fila pelo painel e deixa a tela de atração. | Aparece "3 pessoas na fila". | |
 
+## U4, laboratório de vozes
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 61 | Com o Kokoro ligado e `python serve.py 8771`, abrir `http://localhost:8771/laboratorio-vozes.html` e clicar em Gerar amostras (só as candidatas Kokoro completas). | Gera 13 frases por voz mais a repetição, sem erro; mostra "Pronto". | |
+| 62 | Avaliar as amostras sem saber a voz. | Tentar avançar sem nota é recusado; "Pronúncia dos nomes" só aparece nas frases com nomes. | |
+| 63 | Gerar o relatório e baixar JSON e Markdown. | Tabela com notas, tempo, estabilidade, custo e papel por voz; me mande o arquivo para eu fechar a recomendação. | |
+| 64 | Com chave do ElevenLabs: `ELEVENLABS_API_KEY=... npm run proxy`, preencher o `voiceId` e repetir. | A voz entra no relatório com custo em reais; o plano gratuito basta para o teste (limite de caracteres). | |
+| 65 | Exportar do NaturalReader os MP3 das 13 frases e importar com `npm run importar-voz -- lote`. | A voz importada aparece como candidata (`rotulo`) e entra no relatório. | |
+

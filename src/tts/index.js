@@ -10,6 +10,9 @@ import { criarKokoroServidor, normalizarUrl } from './kokoro-server.js';
 import { criarKokoroNavegador } from './kokoro-browser.js';
 import { criarWebSpeech } from './webspeech.js';
 import { criarGeminiTts } from './gemini-motor.js';
+import { criarElevenLabs } from './elevenlabs.js';
+import { criarImportado } from './importado.js';
+import { aplicarLexico } from './lexico.js';
 import { dividirFrases, limparParaFala, normalizarParaFala } from './frases.js';
 import { extrairGestos } from '../gestos.js';
 import { extrairEmocao } from '../emocao.js';
@@ -52,6 +55,12 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
   // config.gemini = { chave, modelo, voz, estilo, aoMedir, disponivel() } vem da interface (ui.js).
   const gemini = criarGeminiTts({ obterConfig: () => config.gemini });
   let statusGemini = { ok: null, detalhe: 'não usado' };
+  // U4: ElevenLabs só por proxy local (config.elevenlabs = { proxy }) e áudio importado (MP3 de assets/voz-importada/).
+  const eleven = criarElevenLabs({ obterConfig: () => config.elevenlabs });
+  const importado = criarImportado();
+  let statusEleven = { ok: null, detalhe: 'não usado' };
+  // Léxico de pronúncia do operador (config.lexico), aplicado por motor logo antes de sintetizar.
+  const comLexico = (texto, motor) => aplicarLexico(texto, motor.id, config.lexico);
 
   let statusServidor = { ok: null, detalhe: 'verificando' };
   let motorAtual = null, avisoAtual = null;
@@ -96,7 +105,20 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
       reservaDoGemini = true;
       aviso = g.ok ? 'O Gemini TTS falhou. Usando outra voz.' : g.aviso;
     }
-    if (reservaDoGemini) {
+    // ElevenLabs (voz paga, via proxy) e áudio importado: mesma regra de reserva do Gemini.
+    let reservaPaga = false;
+    if (config.motor === 'elevenlabs' || config.motor === 'importado') {
+      const alvo = config.motor === 'elevenlabs' ? eleven : importado;
+      const st = config.motor === 'elevenlabs' ? statusEleven : { ok: null };
+      const d = config.motor === 'elevenlabs' ? eleven.disponivel() : { ok: true };
+      if (d.ok && st.ok !== false) {
+        if (motorAtual !== alvo || avisoAtual !== null) { motorAtual = alvo; avisoAtual = null; emitirStatus(); }
+        return alvo;
+      }
+      reservaPaga = true;
+      aviso = d.ok ? `${alvo.nome} falhou. Usando outra voz.` : d.aviso;
+    }
+    if (reservaDoGemini || reservaPaga) {
       motor = statusServidor.ok ? servidor : sistema;
     } else if (config.motor === 'webspeech') {
       motor = sistema;
@@ -149,12 +171,13 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
       const emo = extrairEmocao(marcado.texto);
       const gestos = gestosSobrando.concat(marcado.gestos);
       const emocao = emo.emocao ?? emocaoSobrando;
-      const texto = normalizarParaFala(limparParaFala(removerMarcaFonte(emo.texto))).trim();
+      const texto0 = normalizarParaFala(limparParaFala(removerMarcaFonte(emo.texto))).trim();
       // Marca sozinha numa "sentença" vazia vai para a próxima sentença com fala.
-      if (!texto) { gestosSobrando = gestos; emocaoSobrando = emocao; continue; }
+      if (!texto0) { gestosSobrando = gestos; emocaoSobrando = emocao; continue; }
       gestosSobrando = []; emocaoSobrando = null;
       const i = n++;
       const motor = resolverMotor(t.voz);
+      const texto = comLexico(texto0, motor);
       if (motor.direto) { t.audios.enviar({ i, texto, motor, gestos, emocao }); continue; }
       const pronta = preSintetizadas.get(chaveFrase(motor, t.voz, texto));
       if (pronta) { anotar('sintese-cache', { turno: t.id, i }); t.audios.enviar({ i, texto, buffer: pronta, gestos, emocao }); continue; }
@@ -170,7 +193,8 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
         anotar('sintese-erro', { turno: t.id, i, motor: motor.id });
         if (motor === servidor) { statusServidor = { ok: false, detalhe: 'falhou ao sintetizar' }; resolverMotor(t.voz); }
         if (motor === gemini) { statusGemini = { ok: false, detalhe: e.status ? `HTTP ${e.status}` : 'falhou' }; resolverMotor(t.voz); }
-        t.audios.enviar({ i, texto, motor: sistema, gestos, emocao });
+        if (motor === eleven) { statusEleven = { ok: false, detalhe: e.status ? `HTTP ${e.status}` : 'falhou' }; resolverMotor(t.voz); }
+        t.audios.enviar({ i, texto: texto0, motor: sistema, gestos, emocao });
       }
     }
     t.audios.fechar();
@@ -237,7 +261,11 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
     get statusServidor() { return statusServidor; },
     sistema,
     gemini,
+    eleven,
+    importado,
     get statusGemini() { return statusGemini; },
+    get statusEleven() { return statusEleven; },
+    reiniciarEleven() { statusEleven = { ok: null, detalhe: 'não usado' }; resolverMotor(null); },
     // Depois de mudar chave, modelo ou voz nas configurações, tenta o Gemini de novo.
     reiniciarGemini() { statusGemini = { ok: null, detalhe: 'não usado' }; resolverMotor(null); },
     navegador,
@@ -253,10 +281,10 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
       // Voz paga NUNCA pré-sintetiza sozinha: cada abertura da página gastaria crédito à toa, e o cache em disco
       // (cache-audio.js) é só das frases fixas do motor gratuito. Pré-gravar com voz paga é uma ação deliberada
       // do operador (pacote de áudio, REPERTORIO seção 31), não efeito colateral de escolher o motor.
-      if (motor === gemini) return false;
+      if (motor === gemini || motor === eleven || motor === importado) return false; // o importado já é arquivo em disco
       let ok = true;
       for (const f of dividirFrases(texto)) {
-        const limpo = normalizarParaFala(limparParaFala(f)).trim();
+        const limpo = comLexico(normalizarParaFala(limparParaFala(f)).trim(), motor);
         const chave = chaveFrase(motor, voz, limpo);
         if (!limpo || preSintetizadas.has(chave)) continue;
         try {
@@ -282,7 +310,7 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
     temPronta(texto, voz) {
       const motor = resolverMotor(voz);
       if (motor.direto) return false;
-      const partes = dividirFrases(texto).map((f) => normalizarParaFala(limparParaFala(f)).trim()).filter(Boolean);
+      const partes = dividirFrases(texto).map((f) => comLexico(normalizarParaFala(limparParaFala(f)).trim(), motor)).filter(Boolean);
       return partes.length > 0 && partes.every((f) => preSintetizadas.has(chaveFrase(motor, voz, f)));
     },
     // Toca SÓ o que está em cache. Nunca sintetiza: é o que garante que o botão "Ouvir voz" não gasta

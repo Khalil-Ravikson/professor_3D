@@ -166,6 +166,13 @@ Roda, nesta ordem: detector anti-slop, testes unitários, política de seguranç
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Laboratório de vozes e novos motores de voz
+
+- **Laboratório (só do operador):** com `python serve.py 8771`, abra `http://localhost:8771/laboratorio-vozes.html` (não há link no app). Ele gera 13 frases fixas em cada voz candidata, mais uma repetição da primeira para medir estabilidade, mistura tudo **sem mostrar o nome da voz** e pede nota de 1 a 5 em naturalidade, clareza e pronúncia dos nomes (esta só nas frases com nomes). Mede o tempo do pedido até o áudio completo, a diferença de duração entre duas gerações e o custo por 1.000 caracteres (em reais, com câmbio editável). **Baixar JSON** e **Baixar relatório** guardam o resultado; coloque em `relatorios/voz/`. A recomendação por papel (ao vivo, pré-gravada, reserva, desligada) sai de limiares escritos no relatório e editáveis na página.
+- **ElevenLabs, só pelo proxy local:** `ELEVENLABS_API_KEY=... npm run proxy` (o proxy aceita Gemini, ElevenLabs ou os dois). O navegador fala com `http://127.0.0.1:8890/elevenlabs/v1/text-to-speech/{voiceId}`; o proxy recusa modelo fora da tabela (Flash v2.5, Multilingual v2 e v3), texto vazio ou acima de 5.000 caracteres, e soma o gasto no mesmo teto do Gemini. **O plano gratuito do ElevenLabs só permite uso não comercial** (termos, seção 1c): uso no evento exige plano pago ou confirmação deles por escrito.
+- **NaturalReader:** o site oficial não publica API (conferido em 07/10/2026). Entra como pré-gravação: exporte os MP3 e rode `npm run importar-voz -- adicionar --voz <rotulo> --texto "Frase exata" --arquivo x.mp3` (ou `lote` com uma lista). Os arquivos ficam em `assets/voz-importada/`, **fora do git**, indexados por hash de texto e voz.
+- **Léxico de pronúncia:** `assets/lexico-pronuncia.json`, trocas de texto por motor (`de`, `para`, `motores`). Cada entrada nasce `validado: false` e só se confirma de ouvido no laboratório.
+
 ## Modo evento
 
 Engrenagem, aba **Evento**.

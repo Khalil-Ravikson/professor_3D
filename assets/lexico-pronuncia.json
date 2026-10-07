@@ -1,0 +1,6 @@
+{
+  "descricao": "Léxico de pronúncia do operador (U4). Cada entrada troca um texto por outro ANTES de sintetizar. Nada aqui foi ouvido ainda: 'validado' só vira true depois do laboratório de vozes. Sem travessão nos textos.",
+  "entradas": [
+    { "de": "UEMASUL", "para": "Uema Sul", "validado": false, "nota": "separa a sigla em duas palavras; testar em cada motor" }
+  ]
+}
