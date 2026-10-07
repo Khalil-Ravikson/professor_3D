@@ -1089,7 +1089,7 @@ async function perguntarAoPersonagem(q) {
       }).finally(() => { clearTimeout(timer); ctl.signal.removeEventListener('abort', cancelar); });
     };
     // Falha que vale tentar o reserva ou a resposta pronta: cota, servidor fora, queda de rede. Nunca depois de já ter falado.
-    const tentavel = (e) => !falado && e.name !== 'AbortError' && (e instanceof ErroGemini ? [401, 403, 429, 500, 502, 503, 504].includes(e.status) : true);
+    const tentavel = (e) => !falado && e.name !== 'AbortError' && (e instanceof ErroGemini ? [401, 403, 404, 429, 500, 502, 503, 504].includes(e.status) : true);
     const tetoDoProxy = (e) => e instanceof ErroGemini && e.status === 429 && /teto/i.test(e.detalhe || '');
     if (modoEconomicoAtivo()) {
       texto = prontaDaBase('orcamento');
@@ -1108,6 +1108,7 @@ async function perguntarAoPersonagem(q) {
         const reserva = modeloReserva();
         try {
           if ([401, 403].includes(e1.status)) avisarOperador(T.evento.aviso.chaveRecusada);
+          if (e1.status === 404) avisarOperador(T.evento.aviso.modeloNaoExiste(config.modelo));
           if (tetoDoProxy(e1) || [401, 403].includes(e1.status) || !reserva || reserva === config.modelo) throw e1; // a mesma chave recusada ou o mesmo teto valem para o reserva
           console.warn(`[gemini] ${config.modelo} falhou (${e1.status || e1.message}); tentando o reserva ${reserva}`);
           texto = await chamar(reserva, LENTO_RESERVA_MS);
@@ -1145,6 +1146,7 @@ async function perguntarAoPersonagem(q) {
       const motivo = (() => { try { return JSON.parse(e.detalhe).error.message; } catch (x) { return (e.detalhe || '').slice(0, 200); } })();
       elAnswer.textContent = [401, 403].includes(e.status) ? T.resposta.chaveRecusada
         : e.status === 400 ? T.resposta.recusado(motivo)
+        : e.status === 404 ? T.resposta.modeloNaoExiste(config.modelo)
         : e.status === 429 ? T.resposta.muitasPerguntas
         : T.resposta.erroHttp(e.status);
     } else {
