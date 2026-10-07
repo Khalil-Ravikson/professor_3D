@@ -166,6 +166,10 @@ Roda, nesta ordem: detector anti-slop, testes unitários, política de seguranç
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Painel do operador: onde fica cada coisa
+
+Engrenagem do app: **Cena**, **Orçamento** (teto, modelo reserva, modo econômico, endereço do proxy), **Base de conhecimento**, **Modo evento** (modo livre ou guiada, limites de sessão, fila, pacote de áudio, avisos), **Armazenamento** e **Modo totem**. Fora do app: `laboratorio-vozes.html` (vozes) e `python serve.py` para servir. Linha de comando: `npm run ingest`, `npm run conhecimento`, `npm run guiada`, `npm run proxy`, `npm run orcamento`, `npm run importar-voz`.
+
 ## Laboratório de vozes e novos motores de voz
 
 - **Laboratório (só do operador):** com `python serve.py 8771`, abra `http://localhost:8771/laboratorio-vozes.html` (não há link no app). Ele gera 13 frases fixas em cada voz candidata, mais uma repetição da primeira para medir estabilidade, mistura tudo **sem mostrar o nome da voz** e pede nota de 1 a 5 em naturalidade, clareza e pronúncia dos nomes (esta só nas frases com nomes). Mede o tempo do pedido até o áudio completo, a diferença de duração entre duas gerações e o custo por 1.000 caracteres (em reais, com câmbio editável). **Baixar JSON** e **Baixar relatório** guardam o resultado; coloque em `relatorios/voz/`. A recomendação por papel (ao vivo, pré-gravada, reserva, desligada) sai de limiares escritos no relatório e editáveis na página.
@@ -306,6 +310,40 @@ Roda sessões simuladas em sequência pelo número de horas pedido, troca de per
 ## Design
 
 Direção visual, tipografia e paleta (com o motivo de cada escolha) em `DESIGN.md`. A interface funciona em retrato (totem 1080×1920, celular) e em paisagem (avatar à esquerda, quadro e conversa à direita).
+
+## Pendências conhecidas (sem suavizar)
+
+Estado em 07/10/2026, ao fim do prompt 03 parcial (U1, U4, U5, U6 e U8; U2, U3 e U7 esperam você).
+
+**Não verificado contra o serviço de verdade**
+- **Gemini real:** o AI Studio está com teto de R$ 7, então nada desta fase falou com o Gemini de verdade: o proxy contra o Google, a cadeia de modelos, a escada de falhas do modo evento e `gemini-real.spec.js` foram verificados só com Gemini simulado. A tabela "previsto contra medido em 30 turnos reais" não foi feita.
+- **ElevenLabs e NaturalReader:** sem chave e sem MP3 exportado; só o proxy contra um servidor falso e o laboratório com Kokoro real. As notas de ouvido do laboratório não existem ainda (quem avalia é você).
+- **Pacote de áudio do modo evento** com o Kokoro: não testado.
+- **Voz mãos-livres:** o pedido de áudio de fala real e a interrupção ficam NÃO TESTADOS (só com áudio de fala falso).
+
+**Conteúdo da UEMA (U2, U3, U7)**
+- Nenhum fato foi verificado. O PDF do corpus foi compilado por IA, não traz endereços de fonte e a licença não foi informada; fica só local (`knowledge/luma/`, fora do git). U2 (corpus oficial), U3 (atividades sobre a UEMA) e U7 (ensaio e avaliação) dependem de documentos oficiais e de aprovações suas.
+- O limiar do RAG não segura perguntas do assunto da UEMA cuja resposta a base não tem (telefone, vestibular, reitor). Perguntas da UEMA sem nenhuma sigla ("onde fica a universidade?") são tratadas como gerais e o modelo pode inventar. Quem segura é a instrução ao modelo, não uma trava.
+- **Respostas guiadas:** nenhuma aprovada. O FAQ do PDF tem 36 itens e alguns são instruções para o agente.
+
+**Ingestão**
+- O envio real à nuvem (LlamaParse e a versão infantil com o Gemini) **não foi implementado**: os comandos só mostram estimativa e travas. Não há aprovação de versão infantil funcionando nem filtro por nível no RAG.
+
+**Voz e animação**
+- Os motores `elevenlabs` e `importado` existem no adaptador, mas não estão ligados à tela de configuração nem a um personagem; o `voiceId` de cada personagem depende do relatório do laboratório.
+- O proxy não cobre a voz Gemini TTS (ela ainda usa a chave no navegador).
+- **Clone novo sem animações:** o catálogo `animacoes.json` aponta para `aceno*.vrma` (Mixamo) e `VRMA_MotionPack/...` (VRoid), que não podem ir ao git. Num clone novo esses clipes dão 404 no console e o app usa o idle. O pacote novo em `assets/animations/` ainda precisa ser catalogado por folha de contato.
+- Respiração e escuta ativa continuam sem clipes.
+
+**Testes**
+- A suíte completa não foi rodada depois das últimas edições (adiada a seu pedido). `p12` e M6.1 já estouraram o tempo só na rodada completa, sem causa investigada.
+- Os 65 itens do roteiro manual (`Repertorio/TESTES-MANUAIS.md`) não foram executados por você.
+
+**Outras**
+- As bibliotecas da CDN (Three.js, three-vrm, transformers.js) ainda não são hospedadas localmente: o uso offline depende do cache do service worker.
+- Cache de respostas do Gemini: não feito.
+- O prompt 07 (Photo Booth e rastreamento do corpo) não existe no repositório.
+- Decisões antigas suas: `MAX_RODADAS` do Rafa, aceno do Mixamo, eSpeak (GPL), `PROPOSTA-SKILL-VRM.md` e `references/` da skill vrm-avatar-web.
 
 ## Testes
 
