@@ -14,7 +14,13 @@ o mesmo caminho e subindo `CDN` em `sw.js` (o service worker guarda esta pasta n
 | `mathjs/mathjs.esm.js` | `mathjs@15.2.0/+esm` (empacotado pela jsDelivr com Rollup e esbuild) | Apache-2.0 | 666 KB |
 | `mathjs/deps/` | os 10 arquivos `+esm` que o mathjs importa: typed-function 4.2.2, decimal.js 10.6.0, complex.js 2.4.3, fraction.js 5.3.4, seedrandom 3.0.5, tiny-emitter 2.1.0, javascript-natural-sort 0.7.1, escape-latex 1.2.0, @babel/runtime 7.29.2 (helpers `extends` e `defineProperty`) | todas MIT | cerca de 80 KB no total |
 
+| `mediapipe/` (`vision_bundle.mjs`, `wasm/vision_wasm_internal.js`, `wasm/vision_wasm_internal.wasm`) | `@mediapipe/tasks-vision@1.0.1/` (só a variante com SIMD; a sem SIMD, 11,3 MB, não foi baixada) | Apache-2.0 | 155 KB, 323 KB e 11,76 MB |
+| `transformers/` (`transformers.min.js`, `ort-wasm-simd-threaded.jsep.mjs`, `ort-wasm-simd-threaded.jsep.wasm`) | `@huggingface/transformers@3.8.1/dist/` (o runtime ONNX vem no mesmo `dist/`) | Apache-2.0 (transformers.js); o runtime é o onnxruntime-web 1.22.0-dev, MIT | 888 KB, 44 KB e 21,6 MB |
+
+Fora daqui, ainda na jsDelivr: `kokoro-js@1.2.1` (só o motor opcional "Kokoro no navegador", inglês). Os **pesos dos modelos** (Whisper, E5, Kokoro) continuam no Hugging Face e ficam no cache do navegador depois da primeira vez.
+
 Mudanças em relação ao original:
+- **transformers.js:** `src/transformers-local.js` carrega o `transformers.min.js` desta pasta e fixa `env.backends.onnx.wasm.wasmPaths` nela (o padrão apontava para a jsDelivr). Os arquivos em si não foram alterados.
 - **wLipSync:** o build "single" (que embute o processador de áudio como URL `data:`, bloqueada pela CSP do app) foi trocado pelo build em arquivos. O app registra o worklet e compila o wasm em `src/lipsync.js`.
 - **mathjs:** nos arquivos de `mathjs/` os endereços `/npm/<pacote>/+esm` foram trocados por caminhos relativos para `mathjs/deps/`. Nenhuma outra alteração de código.
 

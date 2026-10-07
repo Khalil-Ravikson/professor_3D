@@ -3,8 +3,9 @@
 // (posição do rosto, sorriso, ângulos da cabeça) viram estado local. Desligar para as tracks.
 // Inferência limitada (padrão 15/s) e pausada com a aba oculta.
 
-const URL_TASKS = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs';
-const URL_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm';
+// MediaPipe hospedado em assets/vendor/mediapipe/ (tasks-vision 1.0.1, só a variante wasm com SIMD; ver assets/vendor/CREDITS.md).
+const URL_TASKS = new URL('assets/vendor/mediapipe/vision_bundle.mjs', location.href).href;
+const URL_WASM = new URL('assets/vendor/mediapipe/wasm', location.href).href;
 const URL_MODELO = 'assets/mediapipe/face_landmarker.task'; // float16/1, do bucket oficial mediapipe-models
 
 /* ---------- Partes puras (testadas em tests/unit/camera.test.js) ---------- */

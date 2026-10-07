@@ -212,8 +212,8 @@ Depois de uma primeira visita **com internet**, o app abre sem ela: um service w
 - **Limpar o cache:** pelo painel, ou nas ferramentas do navegador (Application, Storage, Clear site data).
 - **Ao trocar um `.vrm`, `.vrma`, fonte ou imagem com o mesmo nome:** suba `BIN` em `sw.js` e `CACHE_BIN` em `src/armazenamento.js`, senão o navegador continua com o arquivo velho.
 - **Áudio das frases fixas:** o cumprimento, a despedida e a amostra de voz (motor Kokoro) ficam guardados em disco, até 40 MB, e tocam mesmo com o servidor de voz fora do ar. A fala das respostas e a voz paga não são guardadas.
-- **Bibliotecas hospedadas (grupo A):** Three.js, os carregadores, three-vrm, wLipSync e mathjs (com as dependências dele) ficam em `assets/vendor/` (3,3 MB; origem, versão e licença em `assets/vendor/CREDITS.md`) e entram no cache `p3d-cdn`. O app abre sem internet e **sem nenhum pedido à CDN** para essas bibliotecas (verificado no Chromium: 25 arquivos em cache e recarga offline com o canvas e sem erro).
-- **Limite conhecido:** ainda vêm da CDN o MediaPipe da câmera (12,2 MB de wasm), o transformers.js e o kokoro-js (voz no navegador, Whisper e embeddings do RAG), mais os pesos dos modelos no Hugging Face. Hospedar isso depende da sua autorização (não dada nesta rodada).
+- **Bibliotecas hospedadas:** Three.js, os carregadores, three-vrm, wLipSync, mathjs (com as dependências), MediaPipe (câmera) e transformers.js com o runtime ONNX (Whisper e embeddings do RAG) ficam em `assets/vendor/` (cerca de 37 MB; origem, versão e licença em `assets/vendor/CREDITS.md`) e entram no cache `p3d-cdn`. Verificado no Chromium: nenhum pedido à CDN; câmera, embeddings do RAG, calculadora e boca funcionam; com o service worker o app abre sem internet.
+- **Limite conhecido:** só o `kokoro-js` (motor opcional "Kokoro no navegador", inglês) ainda vem da CDN. Os **pesos** dos modelos de voz e de embeddings continuam vindo do Hugging Face na primeira vez (o Whisper e o E5 ficam no cache do navegador depois). Os arquivos de câmera e de voz só entram no cache offline depois de usados uma vez com internet.
 
 ## Modo totem e segurança
 
@@ -341,7 +341,7 @@ Estado em 07/10/2026, ao fim do prompt 03 parcial (U1, U4, U5, U6 e U8; U2, U3 e
 - Os 65 itens do roteiro manual (`Repertorio/TESTES-MANUAIS.md`) não foram executados por você.
 
 **Outras**
-- As bibliotecas do grupo A já são locais (`assets/vendor/`). **Ainda na CDN:** MediaPipe (câmera), transformers.js e kokoro-js; sem internet na primeira visita, a câmera e a voz no navegador não funcionam.
+- As bibliotecas (Three.js, three-vrm, wLipSync, mathjs, MediaPipe e transformers.js) já são locais (`assets/vendor/`). **Ainda na CDN:** só o kokoro-js (motor opcional em inglês). O Whisper foi religado ao transformers.js local mas **não foi testado com o modelo** (só os embeddings do RAG, que usam o mesmo carregador).
 - **Três testes e2e falham mesmo sem as mudanças da hospedagem local** (confirmado desfazendo-as): `app.spec.js` M1 (espera 5 filhos na cena e há 6) e M2, e `p13-visualizador` "galeria abre o visualizador tocando os clipes". Não investigados.
 - Cache de respostas do Gemini: não feito.
 - O prompt 07 (Photo Booth e rastreamento do corpo) não existe no repositório.

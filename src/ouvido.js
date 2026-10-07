@@ -1,6 +1,6 @@
 // Entrada por voz: SpeechRecognition do navegador; se não houver (ou der erro de rede,
 // como no Brave), cai para Whisper local via transformers.js.
-const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+import { carregarTransformers } from './transformers-local.js';
 
 export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoProgresso, aoInterromper = () => {}, aoTranscricao = () => {} }) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -43,7 +43,7 @@ export function criarOuvido({ aoOuvirParcial, aoOuvirFinal, aoMudarEstado, aoPro
   async function carregarWhisper() {
     aoMudarEstado('loading-ear');
     try {
-      const { pipeline } = await import(TRANSFORMERS_URL);
+      const { pipeline } = await carregarTransformers();
       asr = await pipeline('automatic-speech-recognition', 'Xenova/whisper-base', {
         progress_callback: (p) => {
           if (p.status === 'progress' && typeof p.progress === 'number') aoProgresso(Math.round(p.progress));

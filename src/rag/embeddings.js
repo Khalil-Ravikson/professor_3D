@@ -8,7 +8,7 @@
 // NÃO TESTADO: o modelo não foi baixado nem executado nesta sessão (testes adiados a pedido do dono).
 
 // A mesma versão fixa que src/ouvido.js usa para o Whisper: uma biblioteca só na CDN.
-const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+import { carregarTransformers } from '../transformers-local.js';
 export const MODELO_EMB = 'Xenova/multilingual-e5-small';
 export const DIM = 384;
 export const TAMANHO_DOWNLOAD_MB = 118;
@@ -21,7 +21,7 @@ export function criarEmbeddings({ aoProgresso = () => {} } = {}) {
     if (extrator) return extrator;
     if (!carregando) {
       carregando = (async () => {
-        const { pipeline } = await import(TRANSFORMERS_URL);
+        const { pipeline } = await carregarTransformers();
         extrator = await pipeline('feature-extraction', MODELO_EMB, {
           dtype: 'q8', // model_quantized.onnx
           progress_callback: (p) => { if (p.status === 'progress' && typeof p.progress === 'number') aoProgresso(Math.round(p.progress)); },

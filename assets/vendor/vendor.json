@@ -1,19 +1,69 @@
 {
   "descricao": "Bibliotecas de terceiros hospedadas aqui para o app abrir sem internet. Lido por tools/licencas.mjs.",
   "pacotes": [
-    { "pkg": "three", "versao": "0.180.0" },
-    { "pkg": "@pixiv/three-vrm", "versao": "3.5.5" },
-    { "pkg": "@pixiv/three-vrm-animation", "versao": "3.5.5" },
-    { "pkg": "wlipsync", "versao": "1.3.1" },
-    { "pkg": "mathjs", "versao": "15.2.0" },
-    { "pkg": "typed-function", "versao": "4.2.2" },
-    { "pkg": "tiny-emitter", "versao": "2.1.0" },
-    { "pkg": "decimal.js", "versao": "10.6.0" },
-    { "pkg": "fraction.js", "versao": "5.3.4" },
-    { "pkg": "complex.js", "versao": "2.4.3" },
-    { "pkg": "javascript-natural-sort", "versao": "0.7.1" },
-    { "pkg": "escape-latex", "versao": "1.2.0" },
-    { "pkg": "seedrandom", "versao": "3.0.5" },
-    { "pkg": "@babel/runtime", "versao": "7.29.2" }
+    {
+      "pkg": "three",
+      "versao": "0.180.0"
+    },
+    {
+      "pkg": "@pixiv/three-vrm",
+      "versao": "3.5.5"
+    },
+    {
+      "pkg": "@pixiv/three-vrm-animation",
+      "versao": "3.5.5"
+    },
+    {
+      "pkg": "wlipsync",
+      "versao": "1.3.1"
+    },
+    {
+      "pkg": "mathjs",
+      "versao": "15.2.0"
+    },
+    {
+      "pkg": "typed-function",
+      "versao": "4.2.2"
+    },
+    {
+      "pkg": "tiny-emitter",
+      "versao": "2.1.0"
+    },
+    {
+      "pkg": "decimal.js",
+      "versao": "10.6.0"
+    },
+    {
+      "pkg": "fraction.js",
+      "versao": "5.3.4"
+    },
+    {
+      "pkg": "complex.js",
+      "versao": "2.4.3"
+    },
+    {
+      "pkg": "javascript-natural-sort",
+      "versao": "0.7.1"
+    },
+    {
+      "pkg": "escape-latex",
+      "versao": "1.2.0"
+    },
+    {
+      "pkg": "seedrandom",
+      "versao": "3.0.5"
+    },
+    {
+      "pkg": "@babel/runtime",
+      "versao": "7.29.2"
+    },
+    {
+      "pkg": "@mediapipe/tasks-vision",
+      "versao": "1.0.1"
+    },
+    {
+      "pkg": "@huggingface/transformers",
+      "versao": "3.8.1"
+    }
   ]
 }

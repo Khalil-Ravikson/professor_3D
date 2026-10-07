@@ -7,8 +7,8 @@ Gerado por `node tools/licencas.mjs`. Não edite à mão: rode o script de novo.
 | Pacote | Versão | Uso | Licença | Alerta |
 | --- | --- | --- | --- | --- |
 | @babel/runtime | 7.29.2 | hospedado em assets/vendor/ | MIT |  |
-| @huggingface/transformers | 3.8.1 | navegador (CDN) | Apache-2.0 |  |
-| @mediapipe/tasks-vision | 1.0.1 | navegador (CDN) | Apache-2.0 |  |
+| @huggingface/transformers | 3.8.1 | hospedado em assets/vendor/ | Apache-2.0 |  |
+| @mediapipe/tasks-vision | 1.0.1 | hospedado em assets/vendor/ | Apache-2.0 |  |
 | @pixiv/three-vrm | 3.5.5 | hospedado em assets/vendor/ | MIT |  |
 | @pixiv/three-vrm-animation | 3.5.5 | hospedado em assets/vendor/ | MIT |  |
 | @playwright/test | 1.63.0 | só testes | Apache-2.0 |  |

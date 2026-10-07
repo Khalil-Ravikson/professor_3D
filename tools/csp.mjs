@@ -7,7 +7,8 @@ const ARQ = 'index.html';
 const html = readFileSync(ARQ, 'utf8');
 const m = html.match(/<script type="importmap">([\s\S]*?)<\/script>/);
 if (!m) { console.error('importmap não encontrado'); process.exit(2); }
-const hash = 'sha256-' + createHash('sha256').update(m[1]).digest('base64');
+// O navegador normaliza CRLF para LF ao ler o script inline: o hash vale para o texto com LF (no Windows o git pode entregar CRLF).
+const hash = 'sha256-' + createHash('sha256').update(m[1].replace(/\r\n/g, '\n')).digest('base64');
 
 // Hosts realmente usados (conferidos no código): jsDelivr (bibliotecas fixas), Gemini, Hugging Face (modelos do
 // Whisper e do Kokoro no navegador), servidor local do Kokoro (porta configurável).
