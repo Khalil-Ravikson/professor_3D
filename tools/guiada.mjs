@@ -20,7 +20,7 @@ if (cmd === 'gerar') {
   const doc = lerDocumento(readFileSync(caminho, 'utf8'));
   if (doc.erros.length) { console.error(`${caminho}: ${doc.erros.join('; ')}`); process.exit(1); }
   const itens = [];
-  for (const m of doc.corpo.matchAll(/Pergunta:\s*([\s\S]+?)\s*Resposta-base:\s*([\s\S]+?)(?=\n\s*Pergunta:|\s*$)/g)) {
+  for (const m of doc.corpo.matchAll(/Pergunta:\s*([\s\S]+?)\s*Resposta-base:\s*([\s\S]+?)(?=\n\s*#{1,6}\s|\n\s*Pergunta:|\s*$)/g)) {
     itens.push({ id: itens.length + 1, pergunta: limpo(m[1]), resposta: limpo(m[2]), fonte: `${terceiro} (${doc.fonte.slice(0, 90)})`, aprovado: false });
   }
   if (!itens.length) { console.error('Nenhum bloco "Pergunta: ... Resposta-base: ..." encontrado.'); process.exit(1); }

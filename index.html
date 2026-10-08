@@ -649,11 +649,12 @@
   .pb-pausa { top: 12px; right: 268px; width: var(--alvo-publico, 56px); height: var(--alvo-publico, 56px); border-radius: 50%; border: 0; cursor: pointer; background: #fff; box-shadow: var(--pb-sombra); display: grid; place-items: center; }
   .pb-i-pausa { width: 18px; height: 20px; border-left: 6px solid var(--pb-tinta); border-right: 6px solid var(--pb-tinta); box-sizing: border-box; }
   .pb-i-tocar { width: 0; height: 0; border-top: 11px solid transparent; border-bottom: 11px solid transparent; border-left: 18px solid var(--pb-tinta); margin-left: 4px; }
-  .pb-faixa { top: 84px; left: 12px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100% - 190px); overflow-y: auto; padding: 4px; }
+  .pb-faixa { top: 84px; left: 12px; display: grid; grid-template-columns: repeat(2, auto); align-content: start; gap: 10px; max-height: calc(100% - 190px); overflow-y: auto; padding: 4px; } /* duas colunas: com 11 clipes cabem 10 à vista */
   .pb-mini { position: relative; width: 84px; height: 104px; padding: 0; border: 3px solid transparent; border-radius: 16px; background: #fff; box-shadow: var(--pb-sombra); cursor: pointer; overflow: hidden; flex: 0 0 auto; font: inherit; color: var(--pb-suave); }
   .pb-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pb-mini-vazia { position: absolute; inset: 0; background: linear-gradient(90deg, #eef1f6, #f8f9fc, #eef1f6); }
   .pb-mini-nome { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 4px 4px; font-size: .68rem; font-weight: 800; line-height: 1.1; text-align: center; color: var(--pb-tinta); background: linear-gradient(transparent, rgba(255, 255, 255, .92) 55%); }
+  .pb-mini-novo { position: absolute; top: 4px; left: 4px; padding: 1px 7px; border-radius: 999px; font-size: .62rem; font-weight: 800; background: var(--acao, #e0224a); color: var(--acao-tinta, #fff); }
   .pb-mini[aria-pressed="true"] { border-color: var(--acao, #e0224a); }
   .pb-mais { display: grid; place-items: center; font-size: 1.6rem; font-weight: 800; }
   .pb-mini:focus-visible, .pb-pausa:focus-visible, .pb-imitar:focus-visible, .pb-pilula:focus-visible, .pb-seg-b:focus-visible, .pb-expr:focus-visible, .pb-abas [role=tab]:focus-visible { outline: 3px solid var(--pb-tinta); outline-offset: 2px; }
@@ -687,7 +688,7 @@
   /* Retrato: o painel vira folha inferior e a faixa de miniaturas fica na horizontal; a barra do visualizador sobe. */
   @media (max-aspect-ratio: 1/1), (max-width: 700px) {
     .pb-painel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: var(--pb-folha); border-radius: 24px 24px 0 0; }
-    .pb-faixa { top: auto; left: 8px; right: 8px; bottom: calc(var(--pb-folha) + 8px); flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; }
+    .pb-faixa { top: auto; left: 8px; right: 8px; bottom: calc(var(--pb-folha) + 8px); display: flex; flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; }
     .pb-mini { width: clamp(62px, 11vw, 130px); height: calc(clamp(62px, 11vw, 130px) * 1.26); }
     .pb-acoes { top: 206px; bottom: auto; max-width: 190px; }
     [data-visualizador="sim"] .visu { bottom: calc(var(--pb-folha) + 8px + 104px + 56px); }

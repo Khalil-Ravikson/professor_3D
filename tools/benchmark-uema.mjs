@@ -4,6 +4,11 @@
 // Uso: python serve.py 8771 (outro terminal) e depois  node tools/benchmark-uema.mjs
 // O modelo E5 (118 MB) baixa do Hugging Face na primeira vez (autorizado na rodada R4). Gasta 0 de Gemini.
 import { chromium } from '@playwright/test';
+import { writeFileSync } from 'node:fs';
+
+// --amostra <arquivo.json>: grava o que a busca devolve (trecho, seção, nota, texto) para cada pergunta, para comparar antes e depois de mexer no chunker.
+const iAmostra = process.argv.indexOf('--amostra');
+const ARQ_AMOSTRA = iAmostra > 0 ? process.argv[iAmostra + 1] : null;
 
 const BASE = process.env.BASE || 'http://localhost:8771';
 // pergunta -> pedaço de texto que o trecho certo precisa conter
@@ -39,13 +44,14 @@ const r = await page.evaluate(async ({ oficiais, gerais }) => {
     const tema = await rag.ehDoTema('luma', q);
     const res = await rag.consultar('luma', q);
     const topo = res && res.resultados[0];
-    linhas.push({ q, tema, confiante: !!(res && res.confiante), score: topo ? +topo.score.toFixed(3) : null, acertou: !!(topo && topo.texto.includes(esperado)), trecho: topo ? topo.id : null });
+    linhas.push({ q, tema, confiante: !!(res && res.confiante), score: topo ? +topo.score.toFixed(3) : null, acertou: !!(topo && topo.texto.includes(esperado)), trecho: topo ? topo.id : null, secao: topo ? topo.secao : null, palavras: topo ? topo.texto.split(/\s+/).length : 0, texto: topo ? topo.texto : null, segundo: res && res.resultados[1] ? { id: res.resultados[1].id, score: +res.resultados[1].score.toFixed(3) } : null });
   }
   const outras = [];
   for (const q of gerais) outras.push({ q, tema: await rag.ehDoTema('luma', q) });
   return { indexou, linhas, outras, estado: rag.estado('luma') };
 }, { oficiais: OFICIAIS, gerais: GERAIS });
 
+if (ARQ_AMOSTRA) { writeFileSync(ARQ_AMOSTRA, JSON.stringify({ geradoEm: new Date().toISOString(), estado: r.estado, perguntas: r.linhas }, null, 2) + '\n'); console.log(`amostra gravada em ${ARQ_AMOSTRA}`); }
 console.log(`indexação: ${r.indexou} ms; ${JSON.stringify(r.estado)}`);
 let ok = 0;
 for (const l of r.linhas) {

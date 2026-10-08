@@ -18,6 +18,20 @@ export function tokenizar(t) {
   return semAcento(t).split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !PARADAS.has(w));
 }
 
+// Trecho de pergunta e resposta ("Pergunta: ... Resposta-base: ..."): devolve a pergunta, ou null. Serve à resposta pronta, sem chamar o Gemini.
+export function perguntaDoTrecho(texto) {
+  const m = String(texto || '').match(/^Pergunta:\s*(.+?)\s*Resposta-base:/);
+  return m ? m[1].trim() : null;
+}
+// Mesma pergunta, sem depender de acento, maiúscula, pontuação e palavras de ligação: sobreposição de palavras (Jaccard) de pelo menos `minimo`.
+export function mesmaPergunta(a, b, minimo = 0.6) {
+  const ta = new Set(tokenizar(a)), tb = new Set(tokenizar(b));
+  if (!ta.size || !tb.size) return false;
+  let comuns = 0;
+  for (const w of ta) if (tb.has(w)) comuns++;
+  return comuns / (ta.size + tb.size - comuns) >= minimo;
+}
+
 export function cosseno(a, b) {
   let s = 0;
   const n = Math.min(a.length, b.length);

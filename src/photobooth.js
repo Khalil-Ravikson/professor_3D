@@ -11,7 +11,8 @@ const el = (tag, atrib = {}, ...filhos) => {
   for (const f of filhos.flat()) if (f != null) e.append(f.nodeType ? f : document.createTextNode(f));
   return e;
 };
-const MAX_MINIS = 6; // miniaturas na faixa; as demais ficam no seletor "Clipe atual"
+const MAX_MINIS = 40; // a faixa mostra todos os clipes ativos (rola de lado no retrato e para baixo na paisagem); eram só 6 e os novos ficavam escondidos
+const ehNovo = (c) => /\/overte\//.test(c.arquivo || ''); // clipes do Overte, de 08/10/2026: ganham a marca "Novo"
 const LARGURA_MINI = 160, ALTURA_MINI = 200;
 
 export function criarPhotoBooth({ palco, raiz, T, visualizador, avatar, cena, personagem, publico, carregarClipe, controles }) {
@@ -70,11 +71,14 @@ export function criarPhotoBooth({ palco, raiz, T, visualizador, avatar, cena, pe
     if (!faixa) return;
     const atual = visualizador.estado.clipe && visualizador.estado.clipe.id;
     faixa.replaceChildren();
-    for (const c of visualizador.clipes.slice(0, MAX_MINIS)) {
+    // Os novos vêm primeiro: no retrato a faixa rola de lado e quem não rola não via as animações novas.
+    const ordem = [...visualizador.clipes].sort((x, y) => Number(ehNovo(y)) - Number(ehNovo(x)));
+    for (const c of ordem.slice(0, MAX_MINIS)) {
       const img = urls.get(c.id);
       faixa.append(el('button', { type: 'button', class: 'pb-mini', 'data-id': c.id, 'aria-pressed': String(c.id === atual), 'aria-label': nomeDoClipe(c.id), title: nomeDoClipe(c.id), onclick: () => visualizador.tocarPorId(c.id) },
         img ? el('img', { src: img, alt: '', draggable: 'false' }) : el('span', { class: 'pb-mini-vazia', 'aria-hidden': 'true' }),
-        el('span', { class: 'pb-mini-nome' }, nomeDoClipe(c.id))));
+        el('span', { class: 'pb-mini-nome' }, nomeDoClipe(c.id)),
+        ehNovo(c) ? el('span', { class: 'pb-mini-novo' }, P.novo) : null));
     }
     if (visualizador.clipes.length > MAX_MINIS) faixa.append(el('button', { type: 'button', class: 'pb-mini pb-mais', 'aria-label': P.mais, title: P.mais, onclick: () => { mostrarAba('animacoes'); selClipe && selClipe.focus(); } }, '...'));
   }

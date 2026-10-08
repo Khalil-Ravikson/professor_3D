@@ -22,6 +22,8 @@ import { criarPhotoBooth } from './photobooth.js';
 import { avaliarCaptura } from './captura-licenca.js';
 import { criarCamera, criarPresenca, criarDetectorSorriso, FiltroOneEuro } from './camera.js';
 import { perguntarEmFluxo, ErroGemini, MODELO_PADRAO } from './brain.js';
+import { criarCacheRespostas, chaveDaPergunta, CHAVE as CHAVE_CACHE } from './cache-respostas.js';
+import { perguntaDoTrecho, mesmaPergunta } from './rag/busca.js';
 import { criarVoz } from './tts/index.js';
 import { URL_PADRAO } from './tts/kokoro-server.js';
 import { criarDivisor, limparParaFala } from './tts/frases.js';
@@ -138,6 +140,9 @@ let ocupado = false, abortCtl = null, falando = false;
 let mesa = null;              // mesa de som; só existe depois de criarVoz
 let marcaPergunta = null;     // tempos da pergunta em curso (diagnóstico)
 const historicos = new Map(); // id -> [{ role, content, contas? }]
+const cacheRespostas = criarCacheRespostas({ ler: () => lerJSON(CHAVE_CACHE, {}), gravar: (v) => gravarJSON(CHAVE_CACHE, v) });
+const MAX_TRECHOS_NO_PROMPT = 2; // trechos da base que vão ao Gemini (eram 4): cada um custa de 100 a 400 tokens por pergunta
+const MAX_MENSAGENS_NO_PROMPT = 6; // últimas mensagens da conversa que vão ao Gemini (eram 9)
 // Ajustes do usuário por personagem (persona, temperatura, limite, voz). characters.js fica como padrão.
 let ajustes = lerJSON('ajustes_personagens', {});
 const efetivo = (p) => aplicarAjustes(p, ajustes);
@@ -1011,6 +1016,11 @@ stage.addEventListener('lostpointercapture', largarToque);
 window.addEventListener('blur', largarToque);
 
 /* ---------- Pergunta ---------- */
+// Trechos da base que vão ao Gemini: os 2 melhores, e só os que não ficam muito atrás do primeiro (menos prompt, menos tokens).
+function trechosParaOPrompt(rg) {
+  const melhor = rg.resultados.length ? rg.resultados[0].cosseno : 0;
+  return rg.resultados.filter((t, i) => i === 0 || (t.cosseno >= melhor - 0.03)).slice(0, MAX_TRECHOS_NO_PROMPT);
+}
 async function perguntarAoPersonagem(q) {
   q = (q || '').trim();
   if (!q || ocupado || !personagem) return;
@@ -1056,6 +1066,9 @@ async function perguntarAoPersonagem(q) {
     if (baseIndisponivel) avisarOperador(T.rag.avisoSemBase(quem.nome));
   }
   // Teo e os outros não respondem sobre a UEMA e o CTIC: isso é da Luma (vocabulário derivado dos documentos dela, em knowledge/index.json).
+  // Resposta pronta direta: assunto da base, busca confiante e o melhor trecho é a resposta DESTA pergunta (par pergunta e resposta).
+  const topoDaBase = rgBruto && rgBruto.confiante && rgBruto.resultados[0];
+  const respostaDireta = !!(topoDaBase && regraDoTema && perguntaDoTrecho(topoDaBase.texto) && mesmaPergunta(q, perguntaDoTrecho(topoDaBase.texto)));
   let eDaLuma = false;
   if (quem.id !== 'luma') { try { eDaLuma = await rag.ehDoTema('luma', q); } catch (e) { console.warn('[rag] não consegui checar o assunto da Luma:', e); } }
   // Servidor fora do ar na última checagem? Tenta de novo rápido antes de cair para a voz do sistema.
@@ -1101,7 +1114,7 @@ async function perguntarAoPersonagem(q) {
       const armar = () => { clearTimeout(timer); timer = setTimeout(() => { lento = true; sub.abort(); }, limiteMs); };
       armar();
       return perguntarEmFluxo({
-        apiKey, proxy: proxyUrl(), modelo: modeloUsado, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(rg.resultados) : ''), historico: hist.slice(-9), signal: sub.signal,
+        apiKey, proxy: proxyUrl(), modelo: modeloUsado, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao() + (rg ? instrucaoRag(trechosParaOPrompt(rg)) : ''), historico: hist.slice(-MAX_MENSAGENS_NO_PROMPT), signal: sub.signal,
         temperatura: ef.temperatura, limitePalavras: ef.limitePalavras,
         ferramentas: Object.fromEntries((ef.ferramentas || []).filter((n) => FERRAMENTAS[n]).map((n) => [n, FERRAMENTAS[n]])),
         aoChamada: (nome, args, resultado) => {
@@ -1129,6 +1142,12 @@ async function perguntarAoPersonagem(q) {
       marca.aoPrimeiroTexto();
       texto = T.rag.naoSeiTema(quem.nome);
       falar(texto);
+    } else if (respostaDireta) {
+      // Pergunta que já tem resposta pronta na base (o trecho é um par pergunta e resposta e a pergunta é a mesma): fala a resposta guardada,
+      // sem chamar o Gemini. Custo zero e a mesma fala de sempre.
+      console.info('[rag] resposta pronta da base, sem Gemini:', rgBruto.resultados[0].id);
+      texto = prontaDaBase('direta');
+      falar(texto);
     } else if (modoEconomicoAtivo()) {
       const s = situacaoOrcamento(), r = custo.resumo();
       avisarOperador(O.avisoModo(economicoManual() ? O.motivoManual : O.motivoTeto(r.acumuladoReais, tetoReais())));
@@ -1140,9 +1159,19 @@ async function perguntarAoPersonagem(q) {
       texto = regraDoTema ? T.rag.naoSeiTema(quem.nome) : T.rag.naoSei(quem.nome);
       falar(texto);
     } else {
-      // Cadeia: modelo principal, depois o reserva mais barato, depois a resposta pronta da base.
-      try {
+      // Pergunta repetida, sem conversa anterior: repete a resposta guardada (economiza a chamada). Só guarda o que o Gemini respondeu de verdade.
+      const pedido = { quemId: quem.id, persona: ef.persona + instrucaoGestos(diretor ? diretor.gestosValidos() : []) + instrucaoEmocao(), modelo: config.modelo, limitePalavras: ef.limitePalavras, temperatura: ef.temperatura, trechos: rg ? trechosParaOPrompt(rg) : [], pergunta: q };
+      const chaveCache = hist.length === 1 ? chaveDaPergunta(pedido) : null;
+      const guardada = chaveCache ? cacheRespostas.obter(chaveCache) : null;
+      if (guardada) {
+        console.info('[cache] resposta repetida, sem Gemini');
+        marca.aoPrimeiroTexto();
+        texto = guardada.texto;
+        for (const c of guardada.contas) { contas.push(c); quadro.adicionarConta(c); }
+        if (leitor) leitor.adicionar(texto); else falar(texto);
+      } else try {
         texto = await chamar(config.modelo);
+        if (chaveCache) cacheRespostas.guardar(chaveCache, texto, contas);
       } catch (e1) {
         if (!tentavel(e1)) throw e1;
         const reserva = modeloReserva();
@@ -1152,6 +1181,7 @@ async function perguntarAoPersonagem(q) {
           if (tetoDoProxy(e1) || [401, 403].includes(e1.status) || !reserva || reserva === config.modelo) throw e1; // a mesma chave recusada ou o mesmo teto valem para o reserva
           console.warn(`[gemini] ${config.modelo} falhou (${e1.status || e1.message}); tentando o reserva ${reserva}`);
           texto = await chamar(reserva, LENTO_RESERVA_MS);
+          if (chaveCache) cacheRespostas.guardar(chaveCache, texto, contas);
           avisarOperador(T.evento.aviso.reserva);
         } catch (e2) {
           if (!tentavel(e2) || !(rgBruto && rgBruto.confiante)) throw e2;
@@ -1594,18 +1624,12 @@ function desenharCorpo(e) {
   elCorpo.estado.textContent = e.estado === 'erro' ? f(e.motivo) : (e.aviso ? `${f} ${e.aviso}` : f);
   elCorpo.stats.textContent = ligado ? `${TC.stats(corpo.stats)} ${TC.confianca(corpo.stats.confianca)}` : '';
 }
-// Gestos do usuário (câmera ligada por ele): acenar faz o personagem acenar de volta, mão levantada o convida a perguntar (respeitando o limite
-// de perguntas e de tempo da sessão), joinha dispara a comemoração.
+// Gestos do usuário (câmera ligada por ele): acenar faz o personagem acenar de volta e joinha dispara a comemoração. (A mão levantada que
+// dizia "Pode perguntar!" saiu: repetia a frase em laço.)
 function aoGestoDoUsuario(nome) {
   if (!sessaoAtiva || !personagem || etapa !== 'conversa') return;
   if (nome === 'aceno') pedirGesto('aceno', 'usuario');
   else if (nome === 'joinha') pedirGesto('comemora', 'usuario');
-  else if (nome === 'convite') {
-    if (ocupado || voz.falando || politica.estado().motivo) return;
-    const ef = efetivo(personagem);
-    elHeard.textContent = ''; elAnswer.textContent = TC.convite;
-    voz.falarTexto(TC.convite, ef.voz);
-  }
 }
 const corpo = criarRastreadorCorpo({
   obterAvatar: () => avatar,

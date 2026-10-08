@@ -101,13 +101,10 @@ test('aceno do usuário: precisa do pulso acima do cotovelo oscilando, tem inter
   for (let i = 0; i < 60; i++) ev = ev.concat(parado.alimentar({ t: i * 33, norm: poseNorm({ 15: { x: 0.3, y: 0.5 } }) }));
   assert.ok(!ev.includes('aceno'), 'mão parada não é aceno');
 });
-test('mão levantada: pulso acima do ombro por 0,8 s dispara o convite uma vez', () => {
+test('mão levantada NÃO dispara mais nenhum gesto (o convite "Pode perguntar!" foi removido: repetia em laço)', () => {
   const det = criarDetectorGestos(); let ev = [];
-  for (let i = 0; i < 80; i++) ev = ev.concat(det.alimentar({ t: i * 33, norm: poseNorm({ 16: { x: 0.7, y: 0.25 } }) }));
-  assert.deepEqual(ev, ['convite']);
-  const baixa = criarDetectorGestos(); ev = [];
-  for (let i = 0; i < 80; i++) ev = ev.concat(baixa.alimentar({ t: i * 33, norm: poseNorm() }));
-  assert.deepEqual(ev, []);
+  for (let i = 0; i < 300; i++) ev = ev.concat(det.alimentar({ t: i * 33, norm: poseNorm({ 16: { x: 0.7, y: 0.25 } }) }));
+  assert.deepEqual(ev, [], 'dez segundos de mão levantada parada não geram evento');
 });
 test('joinha: polegar para cima e dedos fechados por 5 quadros', () => {
   const joinha = () => { const m = Array.from({ length: 21 }, () => ({ x: 0, y: 0, z: 0 })); m[2] = { x: 0.02, y: 0, z: 0 }; m[4] = { x: 0.02, y: -0.06, z: 0 };

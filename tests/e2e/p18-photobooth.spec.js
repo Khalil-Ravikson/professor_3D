@@ -132,3 +132,17 @@ test('reduzir movimento: a tela do Photo Booth não anima', async ({ page }) => 
   const anim = await page.evaluate(() => [...document.querySelectorAll('.pb *')].filter((e) => getComputedStyle(e).animationName !== 'none' && getComputedStyle(e).animationDuration !== '0s').length);
   expect(anim).toBe(0);
 });
+
+test('as animações novas do Overte aparecem na faixa, com a marca Novo, e o seletor lista todas', async ({ page }) => {
+  await abrir(page);
+  const r = await page.evaluate(() => {
+    const ids = [...document.querySelectorAll('.pb-mini[data-id]')].map((b) => b.dataset.id);
+    const novos = [...document.querySelectorAll('.pb-mini[data-id]')].filter((b) => b.querySelector('.pb-mini-novo')).map((b) => b.dataset.id);
+    const ativos = window.__prof3d.catalogo.clipes.filter((c) => c.status === 'ativo').map((c) => c.id);
+    return { ids, novos, ativos, opcoes: [...document.querySelectorAll('#pbClipe option')].length };
+  });
+  expect(r.ids.length).toBe(r.ativos.length); // todos os clipes ativos, não só os 6 primeiros
+  for (const id of ['fala-leve', 'fala-base', 'assentir', 'pensar', 'aplauso']) { expect(r.ids).toContain(id); expect(r.novos).toContain(id); }
+  expect(r.novos).not.toContain('aceno');
+  expect(r.opcoes).toBe(r.ativos.length);
+});

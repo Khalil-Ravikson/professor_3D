@@ -35,7 +35,17 @@ test('Luma e Teo: UEMA só com a base, perguntas livres seguem para o Gemini, e 
   await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar) && document.getElementById('loading').hidden, null, { timeout: 90_000 });
   await page.evaluate(() => window.__prof3d.irParaConversa('nao'));
   await page.evaluate(() => window.__prof3d.rag.verificar('luma'));
+  // 3a. Pergunta que já tem resposta pronta na base (par pergunta e resposta, mesma pergunta): fala a resposta guardada, SEM chamar o Gemini.
   await perguntar('Lema e significado da UEMA');
+  await expect(page.locator('#answer')).toContainText('Produzir saberes para transformar vidas', { timeout: 20_000 });
+  await expect(page.locator('#answer')).not.toContainText('Resposta-base');
+  await expect(page.locator('#answer')).not.toContainText('## ');
+  expect(chamadas).toBe(0);
+  await expect(page.locator('#fontes')).toBeVisible();
+  await page.evaluate(() => window.__prof3d.voz.parar()); // a resposta pronta é longa e o sintetizador do Chromium sem voz não termina de falar
+  await page.waitForTimeout(500);
+  // 3b. Pergunta do assunto com outras palavras: vai ao Gemini COM o trecho da base.
+  await perguntar('Qual é o lema da UEMA e o que ele quer dizer?');
   await expect(page.locator('#answer')).toContainText('Claro!', { timeout: 20_000 });
   expect(chamadas).toBe(1);
   expect(corpos[0]).toContain('Produzir saberes para transformar vidas'); // o trecho da base foi para o prompt
@@ -44,7 +54,25 @@ test('Luma e Teo: UEMA só com a base, perguntas livres seguem para o Gemini, e 
   await perguntar('Por que o céu é azul?');
   await expect(page.locator('#answer')).toContainText('Claro!', { timeout: 20_000 });
   expect(chamadas).toBe(2);
-  expect(corpos[1]).not.toContain('Produzir saberes para transformar vidas'); // pergunta geral: sem trecho da UEMA
+  expect(corpos[1]).not.toContain('<fonte '); // pergunta geral: sem bloco da base no prompt (a fala anterior segue no histórico, que é normal)
+
+  // 3c. Cache de respostas: a mesma pergunta feita de novo, sem conversa anterior, repete a resposta guardada e não chama o Gemini.
+  const recarregar = async () => {
+    await page.reload();
+    await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar) && document.getElementById('loading').hidden, null, { timeout: 90_000 });
+    await page.evaluate(() => window.__prof3d.irParaConversa('nao'));
+    await page.evaluate(() => window.__prof3d.rag.verificar('luma'));
+  };
+  await recarregar();
+  await perguntar('Como as nuvens ficam no céu?'); // primeira vez, primeiro turno: chama e guarda
+  await expect(page.locator('#answer')).toContainText('Claro!', { timeout: 20_000 });
+  expect(chamadas).toBe(3);
+  await recarregar();
+  await perguntar('como as nuvens ficam no ceu');  // mesma pergunta (sem acento e sem pontuação), primeiro turno: vem do cache
+  await expect(page.locator('#answer')).toContainText('Claro!', { timeout: 20_000 });
+  expect(chamadas).toBe(3);
+  // O prompt de uma pergunta do assunto leva no máximo 2 trechos da base (eram 4).
+  expect((corpos[0].match(/<fonte /g) || []).length).toBeLessThanOrEqual(2);
 
   // 4. Modo econômico (a trava): a resposta da base sai sem Gemini, e a pergunta geral explica o motivo ao operador em vez de só repetir a frase.
   await page.evaluate(() => localStorage.setItem('prof3d_modo_economico', 'sim'));

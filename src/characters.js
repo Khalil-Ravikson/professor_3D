@@ -81,7 +81,7 @@ export const PERSONAGENS = [
     selecao: { distancia: 3.6, altura: -0.62 }, // corpo inteiro, na tela de seleção
     // Base de conhecimento (knowledge/luma/): complemento. Pergunta do assunto da base só se responde com ela; as demais seguem normais.
     conhecimento: { modo: 'complemento' },
-    estados: { talking: 'fala-leve' }, // Luma: fala de braços baixos, mais calma
+    estados: { talking: 'fala-leve', thinking: 'pensar' }, // Luma: fala de braços baixos, mais calma
     gestos: null,
     atalhos: [
       { rotulo: 'Uma história', pergunta: 'Me conte uma história curtinha' },
@@ -133,7 +133,7 @@ export const PERSONAGENS = [
     ferramentas: ['calcular'],
     enquadramento: { distancia: 2.4, altura: 0.22 },
     selecao: { distancia: 3.8, altura: -0.64 }, // corpo inteiro, na tela de seleção
-    estados: { talking: 'fala-base' }, // Teo: fala com gestos pequenos de mão ao explicar
+    estados: { talking: 'fala-base', thinking: 'pensar' }, // Teo: fala com gestos pequenos de mão ao explicar
     gestos: null,
     atalhos: [
       { rotulo: 'Equação do 1º grau', pergunta: 'Resolva 3x + 7 = 25' },

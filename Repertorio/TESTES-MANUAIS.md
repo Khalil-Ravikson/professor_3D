@@ -172,7 +172,7 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 80 | Mostrar as duas mãos, uma de cada vez. | Cada mão move a mão certa do personagem (no espelho, a sua direita move a que aparece do lado direito da tela). | |
 | 81 | Dar um passo para o lado e para trás, devagar. | O personagem anda um pouco no mesmo sentido, no máximo cerca de 30 cm para os lados e 20 cm em profundidade, e volta ao centro quando você volta. | |
 | 82 | Acenar com a mão levantada, acima do cotovelo. | O personagem acena de volta, uma vez, e só de novo depois de cerca de 8 segundos. | |
-| 83 | Levantar a mão acima do ombro e segurar quase 1 segundo, sem balançar. | O personagem diz "Pode perguntar!". Não diz se a sessão já bateu no limite de perguntas. | |
+| 83 | Levantar a mão acima do ombro e segurar por 10 segundos, sem balançar. | Nada acontece: o convite "Pode perguntar!" foi removido (repetia em laço). O personagem não fala sozinho. | |
 | 84 | Fazer joinha (polegar para cima, outros dedos fechados) por meio segundo. | O personagem comemora. Com a mão aberta, não. | |
 | 85 | Desligar "Gestos" e "Movimento do corpo" no painel e repetir. | Os gestos e o deslocamento param. | |
 
