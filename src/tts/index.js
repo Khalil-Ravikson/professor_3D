@@ -16,6 +16,7 @@ import { aplicarLexico } from './lexico.js';
 import { dividirFrases, limparParaFala, normalizarParaFala } from './frases.js';
 import { extrairGestos } from '../gestos.js';
 import { extrairEmocao } from '../emocao.js';
+import { vozComProsodia, pausaAposFrase } from './prosodia.js';
 import { removerMarcaFonte } from '../rag/prompt.js';
 import { lerAudio, gravarAudio, paraAudioBuffer } from './cache-audio.js';
 import { criarMesa, PAUSA_ENTRE_FRASES_MS } from '../audio.js';
@@ -183,7 +184,7 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
       if (pronta) { anotar('sintese-cache', { turno: t.id, i }); t.audios.enviar({ i, texto, buffer: pronta, gestos, emocao }); continue; }
       anotar('sintese-inicio', { turno: t.id, i, motor: motor.id });
       try {
-        const buffer = await motor.sintetizar(texto, t.voz, { signal: t.ctl.signal, ctx });
+        const buffer = await motor.sintetizar(texto, vozComProsodia(t.voz, texto, emocao, config.prosodia !== false && motor !== gemini && motor !== eleven), { signal: t.ctl.signal, ctx });
         if (t.cancelado) break;
         anotar('sintese-fim', { turno: t.id, i, duracao: +buffer.duration.toFixed(2) });
         t.audios.enviar({ i, texto, buffer, gestos, emocao });
@@ -201,17 +202,19 @@ export function criarVoz({ config, volumeInicial, mudoInicial, aoMudarMesa, aoCo
   }
 
   async function lacoReproducao(t) {
+    let anterior = null; // a frase que acabou de tocar (para a pausa e a prosódia da próxima)
     for (;;) {
       const { valor: item, fim } = await t.audios.receber();
       if (fim || t.cancelado) break;
       if (!t.comecou) { t.comecou = true; aoComecarFala(); }
-      // Intervalo curto e constante entre sentenças: antes de cada uma, menos da primeira,
-      // para não somar atraso no fim da fala.
-      else { await esperar(t, PAUSA_ENTRE_FRASES_MS); if (t.cancelado) break; }
+      // Intervalo curto entre sentenças: antes de cada uma, menos da primeira, para não somar atraso no fim da fala.
+      // O tamanho do respiro depende da frase que acabou de tocar (pergunta, reticências, exclamação) e da emoção dela.
+      else { await esperar(t, config.prosodia === false || !anterior ? PAUSA_ENTRE_FRASES_MS : pausaAposFrase(anterior.texto, anterior.emocao, PAUSA_ENTRE_FRASES_MS)); if (t.cancelado) break; }
+      anterior = item;
       anotar('toca-inicio', { turno: t.id, i: item.i });
       if ((item.gestos && item.gestos.length) || item.emocao) aoInicioFrase(item.gestos || [], item.emocao);
       if (item.buffer) await tocarBuffer(t, item.buffer, item.texto.slice(0, 40));
-      else await item.motor.falar(item.texto, t.voz, { signal: t.ctl.signal, aoPalavra });
+      else await item.motor.falar(item.texto, vozComProsodia(t.voz, item.texto, item.emocao, config.prosodia !== false && item.motor !== gemini && item.motor !== eleven), { signal: t.ctl.signal, aoPalavra });
       anotar('toca-fim', { turno: t.id, i: item.i, cancelado: !!t.cancelado });
       // Fronteira de sentença: único momento em que um gesto pendente pode começar.
       if (!t.cancelado) aoFimFrase(item.i);

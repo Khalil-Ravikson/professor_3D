@@ -235,3 +235,11 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 112 | Conversar com a Luma e deixá-la falar uma resposta longa. | Enquanto fala, ela balança de leve de braços baixos (clipe `fala-leve`), sem o corpo andar do lugar e sem pulo ao começar e ao parar. | |
 | 113 | Conversar com o Teo e pedir uma conta. | Ele fala com pequenos gestos de mão (clipe `fala-base`); ao acabar a volta de 16 s não há salto visível. | |
 | 114 | No visualizador, tocar `assentir`, `pensar` e `aplauso`. | Sim com a cabeça, olhar ao redor e palmas, nos dois personagens. Anote se algum fica torto num dos modelos. | |
+
+## Voz mais expressiva (prosódia por frase)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 115 | Perguntar algo à Luma com o Kokoro e depois com a voz do sistema (Microsoft). Ouvir uma resposta com pergunta ("Você sabia?"), uma exclamação e reticências. | A pergunta sobe um pouco o tom, a exclamação vai um pouco mais rápida, as reticências mais devagar e com respiro maior. Nada de caricatura. Anote onde ficou exagerado. | |
+| 116 | Mesma coisa com o Teo e com o Gemini TTS ligado. | A fala do Teo também varia (pergunta, exclamação, reticências). O Gemini TTS e o ElevenLabs não mudam: têm estilo próprio. Não há interruptor na tela para desligar a prosódia (só `config.prosodia = false` no código); diga se quer um. | |
+

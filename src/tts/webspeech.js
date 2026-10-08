@@ -57,7 +57,7 @@ export function criarWebSpeech({ aoMudarVozes } = {}) {
         const v = vozPara(voz);
         u.lang = v ? v.lang : 'pt-BR';
         u.rate = 0.97 * ((voz && voz.speed) || 1);
-        u.pitch = 1;
+        u.pitch = (voz && voz.pitch) || 1; // vem da prosódia da frase (tts/prosodia.js); a voz neural do Edge pode ignorar o tom
         if (v) u.voice = v;
         const aoAbortar = () => synth.cancel();
         const fim = () => { if (signal) signal.removeEventListener('abort', aoAbortar); resolver(); };
