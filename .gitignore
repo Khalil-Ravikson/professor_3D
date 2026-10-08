@@ -28,10 +28,7 @@ relatorios/voz/audio/
 # Anime Boy (Kaosvs): licenca Redistribution_Prohibited, OnlyAuthor, uso comercial proibido. Nunca commitar.
 assets/avatars/teo3.vrm
 
-# Corpus da UEMA do dono: licença não informada e fatos não verificados, num repositório público (decisão de 07/10/2026).
-# Para commitar depois, remova estas linhas. O knowledge/index.json local lista esses arquivos; não commitar a versão local.
-knowledge/luma/
-knowledge/*.pdf
+# Corpus da UEMA (knowledge/luma e o PDF do dono): liberado pelo dono em 08/10/2026, não é sensível. Os fatos seguem SEM fonte oficial verificada (ver Repertorio/DIVERGENCIAS-UEMA.md).
 
 # Pacote de movimentos VRMA do VRoid: termos proíbem redistribuir, e este repositório é público. Nunca commitar.
 assets/animations/VRMA_*.vrma
@@ -45,3 +42,6 @@ tools/proxy/uso.json
 
 # Áudio exportado de terceiros (U4): a licença é de quem exportou, e o repositório é público.
 assets/voz-importada/
+
+# Fotos e vídeos gerados nos testes de captura
+relatorios/captura/
