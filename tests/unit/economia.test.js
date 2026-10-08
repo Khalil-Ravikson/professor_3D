@@ -94,3 +94,20 @@ test('chunker v2: seções curtas seguidas se juntam e o corte é em fim de fras
   assert.ok(t2.length > 1);
   for (const t of t2) assert.match(t.texto, /[.!?]$/, `termina em fim de frase: ...${t.texto.slice(-30)}`);
 });
+
+// ---- Clipe sem arquivo num clone limpo (pacote do VRoid e aceno do Mixamo não vão no git) ----
+import { marcarAusentes, aplicarEscolhas } from '../../src/animacoes.js';
+test('clipe ativo sem arquivo (404) vira ausente e some das listas; rede fora do ar não decide', async () => {
+  const cat = { clipes: [
+    { id: 'a', arquivo: 'x/a.vrma', status: 'ativo' }, { id: 'b', arquivo: 'x/b.vrma', status: 'ativo' },
+    { id: 'c', arquivo: 'x/c.vrma', status: 'ativo' }, { id: 'd', arquivo: 'x/d.vrma', status: 'desligado' }, { id: 'e', arquivo: 'enviado:e', status: 'ativo' },
+  ] };
+  const buscar = async (url) => { if (url.endsWith('b.vrma')) return { status: 404 }; if (url.endsWith('c.vrma')) throw new Error('rede'); return { status: 200 }; };
+  const ausentes = await marcarAusentes(cat, buscar);
+  assert.deepEqual(ausentes, ['b']);
+  const lista = aplicarEscolhas(cat, { b: { status: 'ativo' } }); // o operador tinha ligado o b antes: continua ausente
+  assert.equal(lista.find((c) => c.id === 'b').status, 'ausente');
+  assert.equal(lista.find((c) => c.id === 'c').status, 'ativo', 'erro de rede não derruba o clipe');
+  assert.equal(lista.find((c) => c.id === 'd').status, 'desligado');
+  assert.equal(lista.find((c) => c.id === 'e').status, 'ativo', 'movimento enviado pelo operador não é conferido por HEAD');
+});

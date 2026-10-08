@@ -170,6 +170,10 @@ Roda, nesta ordem: detector anti-slop, testes unitários, política de seguranç
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Num computador novo (git clone)
+
+O que **vem** no clone: os 4 personagens `.vrm`, as bibliotecas em `assets/vendor/`, o corpus da Luma, os 8 clipes do Overte e o `idle.vrma`. O que **não vem**, por licença: o pacote `VRMA_MotionPack/` do VRoid (clipes `mostrar-corpo`, `giro`, `sinal-paz`, `pose-modelo`) e os `aceno*.vrma` do Mixamo. Clipe ativo cujo arquivo não existe é marcado **ausente** ao abrir (`marcarAusentes` em `src/animacoes.js`): some da faixa do Photo Booth e dos loops, aparece desabilitado na galeria com o motivo, e o console avisa uma vez. O app abre e funciona só com o que veio. Para ter os quatro clipes do VRoid e o aceno, baixe o pacote na BOOTH e coloque `VRMA_MotionPack/` na raiz; o aceno do Mixamo vai em `assets/animations/aceno2.vrma` (ver `assets/animations/CREDITS.md`). Testado em 08/10/2026 com um clone limpo do GitHub servido por `python serve.py`: Luma e Teo abrem e o Photo Booth lista os 5 clipes novos e o `idle`. **Antes dessa correção** o clone dava 404 e miniaturas vazias para os clipes sem arquivo.
+
 ## Voz mais expressiva (prosódia por frase, 08/10/2026)
 
 `src/tts/prosodia.js`: cada frase ganha um fator de ritmo e de tom pela emoção marcada pelo modelo (`[emo:alegre]` etc.) e pela pontuação (pergunta sobe o tom, exclamação acelera um pouco, reticências desaceleram), e o respiro entre frases também varia. Vale para o **Kokoro** (velocidade) e para a **voz do sistema/Microsoft** (velocidade e tom; a voz neural do Edge pode ignorar o tom). O Gemini TTS e o ElevenLabs têm estilo próprio e não são alterados. Os fatores são pequenos e **não foram ouvidos num dispositivo real** (itens 115 e 116 do roteiro). **Por que a voz muda de um computador para outro:** o Kokoro roda num servidor local (Docker); sem ele o app cai para a voz do sistema (Microsoft) ou, se estiver configurado, para o Gemini TTS, e cada uma tem timbre diferente. Para ter a mesma voz em todo lugar, ligue o Docker ou fixe o motor nas configurações.

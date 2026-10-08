@@ -462,6 +462,7 @@ export const T = {
   },
   galeria: {
     semCatalogo: 'Catálogo de animações não carregou.',
+    ausente: 'Arquivo ausente neste computador (a licença impede de ir no git: baixe o pacote e coloque na pasta indicada no README).',
     naoAbriu: (arquivo) => `Não abriu ${arquivo}. Confira se o arquivo está na pasta.`,
     pausar: 'Pausar',
     continuar: 'Continuar',

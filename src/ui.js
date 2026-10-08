@@ -4,7 +4,7 @@ import {
   verificarArquivo, gerarMiniatura, carregarClipes, clipeDoArquivo, registrarEnviado, esquecerEnviado, AvatarAusenteError,
 } from './avatar.js';
 import { listarMovimentos, salvarMovimento, apagarMovimento, idDoNome, medirClipe, avisosDasMedidas } from './movimentos.js';
-import { carregarCatalogo, aplicarEscolhas, gravarEscolha } from './animacoes.js';
+import { carregarCatalogo, aplicarEscolhas, gravarEscolha, marcarAusentes } from './animacoes.js';
 import { criarDiretor, removerMarcas, instrucaoGestos, ESTADOS_BASE } from './gestos.js';
 import { instrucaoEmocao } from './emocao.js';
 import { criarPoliticaSessao, itensAprovados } from './evento.js';
@@ -2329,6 +2329,7 @@ function renderizarGaleria() {
     li.querySelector('.g-desc').textContent = c.descricao;
     const ligado = li.querySelector('.g-ligado'), crianca = li.querySelector('.g-crianca');
     ligado.checked = c.status === 'ativo';
+    if (c.ausente) { ligado.disabled = true; li.dataset.status = 'ausente'; li.querySelector('.g-tocar').disabled = true; li.querySelector('.g-desc').textContent = `${T.galeria.ausente} ${c.descricao}`; }
     crianca.checked = !!c.infantilOk;
     ligado.addEventListener('change', () => { gravarEscolha(catalogo, c.id, 'status', ligado.checked ? 'ativo' : 'desligado'); li.dataset.status = ligado.checked ? 'ativo' : 'desligado'; });
     crianca.addEventListener('change', () => { gravarEscolha(catalogo, c.id, 'infantilOk', crianca.checked); if (modoInfantil.checked && !crianca.checked) renderizarGaleria(); });
@@ -2572,7 +2573,12 @@ if (new URLSearchParams(location.search).has('debug')) {
 
 /* ---------- Início ---------- */
 // Sem catálogo o corpo fica na pose do arquivo e não há gestos; o motivo vai para o console.
-try { catalogo = await carregarCatalogo(); await carregarEnviados(); } catch (e) { console.error('[animacoes] catálogo não carregou:', e); }
+try {
+  catalogo = await carregarCatalogo();
+  const ausentes = await marcarAusentes(catalogo);
+  if (ausentes.length) console.warn(`[animacoes] ${ausentes.length} clipe(s) sem arquivo neste computador (pacote do VRoid e aceno do Mixamo não vêm no git): ${ausentes.join(', ')}`);
+  await carregarEnviados();
+ } catch (e) { console.error('[animacoes] catálogo não carregou:', e); }
 const checagens = await Promise.all(PERSONAGENS.map(async (p) => [p, await verificarArquivo(p.arquivoVrm)]));
 for (const [p, versao] of checagens) if (versao && !p.emBreve) { disponiveis.push(p); versoes.set(p.id, versao); }
 renderizarSelecao();

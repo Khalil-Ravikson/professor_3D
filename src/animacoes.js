@@ -10,9 +10,24 @@ export async function carregarCatalogo(url = 'assets/animations/animacoes.json')
   return resp.json();
 }
 
-// Junta o catálogo com as escolhas salvas. Não altera o objeto original.
+// Num clone limpo faltam os arquivos que a licença impede de commitar (pacote do VRoid, aceno do Mixamo). Clipe ativo cujo arquivo não existe vira
+// `ausente` (c.ausente = true): some das listas e do loop, em vez de dar 404 e miniatura vazia. Só um 404 conta; rede fora do ar não decide nada.
+export async function marcarAusentes(catalogo, buscar = (u, o) => fetch(u, o)) {
+  const ausentes = [];
+  await Promise.all(catalogo.clipes.filter((c) => c.status === 'ativo' && c.arquivo && !String(c.arquivo).startsWith('enviado:')).map(async (c) => {
+    try {
+      const r = await buscar(c.arquivo, { method: 'HEAD' });
+      if (r.status === 404) { c.ausente = true; ausentes.push(c.id); }
+    } catch (e) {
+      console.warn(`[animacoes] não consegui conferir "${c.arquivo}":`, e);
+    }
+  }));
+  return ausentes;
+}
+
+// Junta o catálogo com as escolhas salvas. Não altera o objeto original. Clipe ausente fica ausente, mesmo que o operador o tenha ligado antes.
 export function aplicarEscolhas(catalogo, escolhas = lerJSON(CHAVE, {})) {
-  return catalogo.clipes.map((c) => ({ ...c, ...(escolhas[c.id] || {}) }));
+  return catalogo.clipes.map((c) => { const m = { ...c, ...(escolhas[c.id] || {}) }; if (c.ausente) m.status = 'ausente'; return m; });
 }
 
 // Grava a escolha de um clipe; se voltar ao padrão do JSON, apaga a entrada.
