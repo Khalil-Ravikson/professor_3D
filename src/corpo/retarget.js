@@ -9,7 +9,7 @@
 //
 // Índices do Pose Landmarker (documentação oficial, 07/10/2026): 11 e 12 ombros esquerdo e direito, 13 e 14 cotovelos, 15 e 16 punhos,
 // 17 e 18 mindinhos, 19 e 20 indicadores, 21 e 22 polegares, 23 e 24 quadris. Esquerdo e direito são os da PESSOA.
-import { sub, add, mul, norm, len, dot, meio, QID, qMul, qConj, qDeParaDirecao, qRotaciona, qLimitar, qSlerp } from './matematica.js';
+import { sub, add, mul, norm, len, dot, cross, meio, QID, qMul, qConj, qDeParaDirecao, qRotaciona, qLimitar, qSlerp, qEixoAngulo } from './matematica.js';
 
 export const IDX = { ombroE: 11, ombroD: 12, cotoveloE: 13, cotoveloD: 14, punhoE: 15, punhoD: 16, mindE: 17, mindD: 18, indE: 19, indD: 20, quadrilE: 23, quadrilD: 24 };
 export const EIXOS = { x: 1, y: -1, z: -1 }; // pontos do MediaPipe -> quadro do avatar (sinais por eixo)
@@ -22,10 +22,13 @@ export function repousoDoModelo(posicao, { vrm0 = false } = {}) {
   // posicao(nome) -> [x, y, z] local do nó normalizado, ou null
   const conv = (v) => (v ? norm(vrm0 ? [-v[0], v[1], -v[2]] : v) : null);
   const filhoMao = (lado) => { for (const d of ['middleProximal', 'ringProximal', 'indexProximal', 'littleProximal']) { const v = posicao(lado + d[0].toUpperCase() + d.slice(1)); if (v) return v; } return null; };
+  // Lado da palma no repouso: do indicador para o mindinho (posição local dos dois no osso da mão), para a rotação do punho incluir a torção.
+  const ladoPalma = (l) => { const i = posicao(l + 'IndexProximal'), m = posicao(l + 'LittleProximal'); return i && m ? conv([m[0] - i[0], m[1] - i[1], m[2] - i[2]]) : null; };
   const lado = (l, padrao) => ({
     upperArm: conv(posicao(l + 'LowerArm')) || padrao,
     lowerArm: conv(posicao(l + 'Hand')) || padrao,
     hand: conv(filhoMao(l)) || padrao,
+    handLado: ladoPalma(l),
   });
   return { esq: lado('left', REPOUSO.esq), dir: lado('right', REPOUSO.dir) };
 }
@@ -38,8 +41,21 @@ export const LIMITES = {
   cotovelo: (150 * Math.PI) / 180, // dobra máxima do antebraço em relação ao braço
   ombro: (170 * Math.PI) / 180,
   encolher: 0.05, // metros que o ombro sobe, no máximo (não usado como posição: vira rotação pequena)
+  punho: (105 * Math.PI) / 180, // rotação total da mão em relação ao antebraço (dobra e torção)
   raioPeito: 0.1, // metros: distância mínima do punho ao eixo do tronco
 };
+
+// Rotação que leva o par (frente, lado) de repouso ao par observado: primeiro alinha a frente (rotação mínima), depois gira em volta dela
+// o que falta para o lado coincidir (a torção). Os lados são projetados no plano perpendicular à frente antes de medir o ângulo.
+export function qComTorcao(frenteRep, ladoRep, frenteObs, ladoObs) {
+  const q1 = qDeParaDirecao(frenteRep, frenteObs);
+  const f = norm(frenteObs);
+  const perp = (v) => norm(sub(v, mul(f, dot(v, f))));
+  const a = perp(qRotaciona(q1, ladoRep)), b = perp(ladoObs);
+  if (len(a) < 1e-6 || len(b) < 1e-6) return q1;
+  const ang = Math.atan2(dot(cross(a, b), f), dot(a, b));
+  return qMul(qEixoAngulo(f, ang), q1);
+}
 
 const ponto = (lm, i, eixos, espelho) => [(espelho ? -1 : 1) * eixos.x * lm[i].x, eixos.y * lm[i].y, eixos.z * lm[i].z];
 const vis = (lm, i) => (lm[i] && Number.isFinite(lm[i].visibility) ? lm[i].visibility : 1);
@@ -61,7 +77,9 @@ export function retargetTronco(lm, { eixos = EIXOS, espelho = true, base = null 
   const qE = ponto(lm, IDX.quadrilE, eixos, espelho), qD = ponto(lm, IDX.quadrilD, eixos, espelho);
   // No espelho a pessoa direita vira o lado esquerdo do avatar: troca os papéis para a linha dos ombros apontar para +X.
   const ombroEsqAv = espelho ? oD : oE, ombroDirAv = espelho ? oE : oD;
-  const eixoTronco = norm(sub(meio(oE, oD), meio(qE, qD)));
+  // Webcam de mesa: o quadril fica fora de quadro e o MediaPipe o chuta. Sem quadril confiável, não há inclinação (só a guinada dos ombros).
+  const quadrilVisivel = Math.min(vis(lm, IDX.quadrilE), vis(lm, IDX.quadrilD)) >= 0.5;
+  const eixoTronco = quadrilVisivel ? norm(sub(meio(oE, oD), meio(qE, qD))) : [0, 1, 0];
   const inclina = qDeParaDirecao([0, 1, 0], eixoTronco);
   const linha = qRotaciona(qConj(inclina), sub(ombroEsqAv, ombroDirAv));
   const guinada = qDeParaDirecao([1, 0, 0], norm([linha[0], 0, linha[2]]));
@@ -69,17 +87,19 @@ export function retargetTronco(lm, { eixos = EIXOS, espelho = true, base = null 
   let total = base ? qMul(qConj(base), bruto) : bruto; // calibração: o que ficou parado na pose neutra vira zero
   total = qLimitar(total, LIMITES.tronco);
   const terco = qSlerp(QID, total, 1 / 3);
-  return { total, bruto, spine: terco, chest: terco, upperChest: terco, confianca: Math.min(vis(lm, IDX.ombroE), vis(lm, IDX.ombroD), vis(lm, IDX.quadrilE), vis(lm, IDX.quadrilD)) };
+  return { total, bruto, spine: terco, chest: terco, upperChest: terco, confianca: Math.min(vis(lm, IDX.ombroE), vis(lm, IDX.ombroD)), quadrilVisivel };
 }
 
 // Braços e mãos (punho): rotações LOCAIS de upperArm, lowerArm e hand, dadas as do tronco (para descontar a inclinação do peito).
-export function retargetBracos(lm, { eixos = EIXOS, espelho = true, tronco = null, repouso = null } = {}) {
+export function retargetBracos(lm, { eixos = EIXOS, espelho = true, tronco = null, repouso = null, dirMaos = null } = {}) {
   const rep = repouso || { esq: { upperArm: REPOUSO.esq, lowerArm: REPOUSO.esq, hand: REPOUSO.esq }, dir: { upperArm: REPOUSO.dir, lowerArm: REPOUSO.dir, hand: REPOUSO.dir } };
   const oE = ponto(lm, IDX.ombroE, eixos, espelho), oD = ponto(lm, IDX.ombroD, eixos, espelho);
   const qE = ponto(lm, IDX.quadrilE, eixos, espelho), qD = ponto(lm, IDX.quadrilD, eixos, espelho);
   const topo = meio(oE, oD), base = meio(qE, qD);
   const chestMundo = tronco ? tronco.total : QID;
-  const lado = (rotulo, ombro, cotovelo, punho, dedoI, dedoM, rp) => {
+  // dirMaos: direção pulso -> base do dedo médio dos pontos da própria mão (por lado da PESSOA), em coordenadas de mundo da mão.
+  const conv = (v) => [(espelho ? -1 : 1) * eixos.x * v[0], eixos.y * v[1], eixos.z * v[2]];
+  const lado = (rotulo, ombro, cotovelo, punho, dedoI, dedoM, rp, dirMaoExt, ladoMaoExt) => {
     let pPunho = punho;
     pPunho = afastarDoPeito(pPunho, cotovelo, topo, base, LIMITES.raioPeito);
     const dirBraco = norm(sub(cotovelo, ombro)), dirAntebraco = norm(sub(pPunho, cotovelo));
@@ -88,18 +108,22 @@ export function retargetBracos(lm, { eixos = EIXOS, espelho = true, tronco = nul
     const bracoLocal = qMul(qConj(chestMundo), qBracoMundo);
     const anteLocal = qLimitar(qMul(qConj(qBracoMundo), qAnteMundo), LIMITES.cotovelo);
     // Mão: direção do punho para o meio entre indicador e mindinho (a palma); só inclina o punho, pouco.
-    const dirMao = norm(sub(meio(dedoI, dedoM), pPunho));
-    const maoLocal = qLimitar(qMul(qConj(qAnteMundo), qDeParaDirecao(rp.hand, dirMao)), (60 * Math.PI) / 180);
+    const dirMao = dirMaoExt ? norm(conv(dirMaoExt)) : norm(sub(meio(dedoI, dedoM), pPunho));
+    // Com a mão detectada há dois vetores (pulso -> dedo médio e indicador -> mindinho): a rotação inclui a torção do punho (palma para cima,
+    // para baixo, de lado). Sem eles só a direção vale, sem torção, e o limite é menor.
+    const lMao = ladoMaoExt && rp.handLado ? norm(conv(ladoMaoExt)) : null;
+    const qMaoMundo = lMao ? qComTorcao(rp.hand, rp.handLado, dirMao, lMao) : qDeParaDirecao(rp.hand, dirMao);
+    const maoLocal = qLimitar(qMul(qConj(qAnteMundo), qMaoMundo), lMao ? LIMITES.punho : (60 * Math.PI) / 180);
     return { upperArm: bracoLocal, lowerArm: anteLocal, hand: maoLocal, dirBraco, dirAntebraco, confianca: rotulo };
   };
   // Ombro/cotovelo/punho da PESSOA; no espelho o lado direito da pessoa comanda o esquerdo do avatar.
   const pessoa = {
-    E: { ombro: oE, cotovelo: ponto(lm, IDX.cotoveloE, eixos, espelho), punho: ponto(lm, IDX.punhoE, eixos, espelho), i: ponto(lm, IDX.indE, eixos, espelho), m: ponto(lm, IDX.mindE, eixos, espelho), v: Math.min(vis(lm, IDX.ombroE), vis(lm, IDX.cotoveloE), vis(lm, IDX.punhoE)) },
-    D: { ombro: oD, cotovelo: ponto(lm, IDX.cotoveloD, eixos, espelho), punho: ponto(lm, IDX.punhoD, eixos, espelho), i: ponto(lm, IDX.indD, eixos, espelho), m: ponto(lm, IDX.mindD, eixos, espelho), v: Math.min(vis(lm, IDX.ombroD), vis(lm, IDX.cotoveloD), vis(lm, IDX.punhoD)) },
+    E: { sd: dirMaos && dirMaos.ladoEsq, ombro: oE, cotovelo: ponto(lm, IDX.cotoveloE, eixos, espelho), punho: ponto(lm, IDX.punhoE, eixos, espelho), i: ponto(lm, IDX.indE, eixos, espelho), m: ponto(lm, IDX.mindE, eixos, espelho), v: Math.min(vis(lm, IDX.ombroE), vis(lm, IDX.cotoveloE), vis(lm, IDX.punhoE)), dm: dirMaos && dirMaos.esq },
+    D: { sd: dirMaos && dirMaos.ladoDir, ombro: oD, cotovelo: ponto(lm, IDX.cotoveloD, eixos, espelho), punho: ponto(lm, IDX.punhoD, eixos, espelho), i: ponto(lm, IDX.indD, eixos, espelho), m: ponto(lm, IDX.mindD, eixos, espelho), v: Math.min(vis(lm, IDX.ombroD), vis(lm, IDX.cotoveloD), vis(lm, IDX.punhoD)), dm: dirMaos && dirMaos.dir },
   };
   const paraEsq = espelho ? pessoa.D : pessoa.E, paraDir = espelho ? pessoa.E : pessoa.D;
-  const esq = lado(paraEsq.v, paraEsq.ombro, paraEsq.cotovelo, paraEsq.punho, paraEsq.i, paraEsq.m, rep.esq);
-  const dir = lado(paraDir.v, paraDir.ombro, paraDir.cotovelo, paraDir.punho, paraDir.i, paraDir.m, rep.dir);
+  const esq = lado(paraEsq.v, paraEsq.ombro, paraEsq.cotovelo, paraEsq.punho, paraEsq.i, paraEsq.m, rep.esq, paraEsq.dm, paraEsq.sd);
+  const dir = lado(paraDir.v, paraDir.ombro, paraDir.cotovelo, paraDir.punho, paraDir.i, paraDir.m, rep.dir, paraDir.dm, paraDir.sd);
   return { esq: { ...esq, confianca: paraEsq.v }, dir: { ...dir, confianca: paraDir.v } };
 }
 

@@ -72,6 +72,7 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
   // o que deixa o pódio em CSS embaixo e a cabeça abaixo da faixa de botões do topo.
   let corpo = null;
   const FRACAO_PES = 0.84, FRACAO_TOPO = 0.13;
+  const DIST_MAX_ORBITA = 6;
 
   function calcularAlvo() {
     if (corpo) {
@@ -80,6 +81,7 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
       const yCentro = corpo.topo - (0.5 - FRACAO_TOPO) * visivel;
       alvoPos.set(corpo.x, yCentro, corpo.z + d);
       alvoOlhar.set(corpo.x, yCentro, corpo.z);
+      if (orbita) orbita.maxDistance = Math.max(DIST_MAX_ORBITA, d * 1.1); // enquadramento largo (Photo Booth no retrato) não pode ser travado pelo limite
     } else {
       // Em tela estreita (totem em pé) afasta para caber os ombros.
       const dist = camera.aspect < 0.75 ? distancia * 1.24 : distancia;
@@ -126,7 +128,7 @@ export function criarCena(container, { aoPerderContexto, aoRestaurarContexto } =
     orbita.enableDamping = true;
     orbita.dampingFactor = 0.08;
     orbita.minDistance = 0.7;
-    orbita.maxDistance = 6;
+    orbita.maxDistance = Math.max(DIST_MAX_ORBITA, alvoPos.distanceTo(alvoOlhar) * 1.1); // o enquadramento largo do Photo Booth no retrato fica além de 6
     orbita.minPolarAngle = THREE.MathUtils.degToRad(15);
     orbita.maxPolarAngle = THREE.MathUtils.degToRad(95); // um pouco abaixo do horizonte: dá para ver os pés, não o chão por baixo
     orbita.screenSpacePanning = true;

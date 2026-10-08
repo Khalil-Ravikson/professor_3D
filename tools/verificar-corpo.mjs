@@ -27,9 +27,10 @@ const sessao = (subir) => {
   for (let i = 0; i < 60; i++) {
     const k = Math.min(1, i / 30); // 0 a 1 em 1 s, depois segura
     const pose = Array.from({ length: 33 }, () => [0, 0, 0, 1]);
-    const set = (idx, x, y, z = 0) => { pose[idx] = [x, y, z, 1]; };
-    set(11, 0.2, -0.5); set(12, -0.2, -0.5); set(23, 0.1, 0); set(24, -0.1, 0);
-    set(13, 0.2, -0.2); set(15, 0.2, 0.05); set(19, 0.2, 0.12); set(17, 0.18, 0.1);
+    // Como numa webcam de mesa: o quadril e o braço esquerdo da pessoa ficam FORA de quadro (visibilidade baixa).
+    const set = (idx, x, y, z = 0, v = 1) => { pose[idx] = [x, y, z, v]; };
+    set(11, 0.2, -0.5); set(12, -0.2, -0.5); set(23, 0.1, 0, 0, 0.1); set(24, -0.1, 0, 0, 0.1);
+    set(13, 0.2, -0.2, 0, 0.1); set(15, 0.2, 0.05, 0, 0.1); set(19, 0.2, 0.12, 0, 0.1); set(17, 0.18, 0.1, 0, 0.1);
     // braço direito da pessoa (lado -x): sobe de baixo até a horizontal, aberto para o lado
     const a = k * (Math.PI / 2); // 0 = caído, 90 graus = horizontal
     const cx = -0.2 - 0.3 * Math.sin(a), cy = -0.5 + 0.3 * Math.cos(a);

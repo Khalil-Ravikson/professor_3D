@@ -17,6 +17,7 @@ test('429 do Gemini: sinal Problema, botão Tentar de novo reenvia a mesma pergu
     localStorage.setItem('prof3d_gemini_key', 'chave-de-teste');
     localStorage.setItem('prof3d_personagem', 'luma');
     localStorage.setItem('prof3d_motor', 'webspeech');
+    localStorage.setItem('prof3d_modelo_reserva', ''); // sem modelo reserva: o erro do principal aparece (a cadeia de modelos é testada em p14-modelo404)
   });
   await page.goto('/?debug');
   await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar) && document.getElementById('loading').hidden, null, { timeout: 90_000 });
@@ -44,6 +45,7 @@ test('encerrar a conversa esconde o botão e esquece a pergunta que falhou', asy
     localStorage.setItem('prof3d_gemini_key', 'chave-de-teste');
     localStorage.setItem('prof3d_personagem', 'luma');
     localStorage.setItem('prof3d_motor', 'webspeech');
+    localStorage.setItem('prof3d_modelo_reserva', ''); // sem modelo reserva: o erro do principal aparece (a cadeia de modelos é testada em p14-modelo404)
   });
   await page.goto('/?debug');
   await page.waitForFunction(() => !!(window.__prof3d && window.__prof3d.avatar) && document.getElementById('loading').hidden, null, { timeout: 90_000 });

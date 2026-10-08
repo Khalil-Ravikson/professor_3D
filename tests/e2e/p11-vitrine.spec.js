@@ -12,7 +12,7 @@ async function kokoroNoAr() {
 async function abrir(page, viewport, extra = {}) {
   await page.setViewportSize(viewport);
   const erros = [];
-  page.on('console', (m) => { if (m.type() === 'error') erros.push(m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/ERR_CONNECTION_REFUSED/.test(m.text())) erros.push(m.text()); }); // sem o servidor Kokoro (Docker desligado) a conexão recusada é do ambiente, não do app
   page.on('pageerror', (e) => erros.push('pageerror: ' + e.message));
   await page.addInitScript((e) => {
     if (localStorage.getItem('prof3d_teste_vit')) return;
@@ -104,6 +104,7 @@ test('I3 vitrine: toque leva à escolha; parado na escolha, volta à vitrine', a
 test('I3 vitrine: o tempo de cada personagem é configurável pelo operador', async ({ page }) => {
   await abrir(page, { width: 1280, height: 720 }, { motor: 'webspeech' });
   await page.click('#gear');
+  await page.click('#abas button[data-aba="sessao"]');
   await expect(page.locator('#opVitrineTempo')).toHaveValue('10');
   await expect(page.locator('#opSelecaoOcioso')).toHaveValue('60');
   await page.fill('#opVitrineTempo', '2');

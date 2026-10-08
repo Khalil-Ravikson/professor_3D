@@ -82,3 +82,7 @@ Pacote VRoid e arquivos do Mixamo ficam fora do repositório (`.gitignore`). Fra
 ## Problemas
 
 - modelo teo3.vrm: só o autor pode usar este avatar; redistribuição proibida: o arquivo não pode ir para o repositório público
+
+## Clipes de animação do Overte (`assets/animations/overte/`)
+
+Oito arquivos `.vrma` (falas, assentir, pensar e palmas) do projeto Overte, obtidos pela biblioteca do Undi95/Hanami. Licença **Apache-2.0**, © 2013-2019 High Fidelity, Inc., © 2019-2021 Vircadia contributors, © 2022-2026 Overte e.V. Sem edição. Aviso completo, origem de cada clipe e SHA-256 em `assets/animations/CREDITS.md`.

@@ -3,8 +3,9 @@
 const arred = (v) => Math.round(v * 1e4) / 1e4;
 const lmNum = (lm) => lm.map((p) => [arred(p.x), arred(p.y), arred(p.z), arred(p.visibility ?? 1)]);
 
-export function quadroDeNumeros(t, pose, maos = null) {
+export function quadroDeNumeros(t, pose, maos = null, norm = null) {
   const q = { t: Math.round(t), pose: lmNum(pose) };
+  if (norm && norm.length) q.norm = lmNum(norm); // pontos normalizados da pose: servem ao movimento do corpo e aos gestos
   if (maos) q.maos = { esq: maos.esq ? lmNum(maos.esq) : null, dir: maos.dir ? lmNum(maos.dir) : null };
   return q;
 }
@@ -12,11 +13,11 @@ export function quadroDeNumeros(t, pose, maos = null) {
 export function soNumeros(q) {
   const ok = (v) => Number.isFinite(v);
   const lista = (l) => Array.isArray(l) && l.every((p) => Array.isArray(p) && p.length === 4 && p.every(ok));
-  return ok(q.t) && lista(q.pose) && (!q.maos || ((q.maos.esq === null || lista(q.maos.esq)) && (q.maos.dir === null || lista(q.maos.dir))));
+  return ok(q.t) && lista(q.pose) && (!q.norm || lista(q.norm)) && (!q.maos || ((q.maos.esq === null || lista(q.maos.esq)) && (q.maos.dir === null || lista(q.maos.dir))));
 }
 export function deNumeros(q) {
   const lm = (l) => l.map(([x, y, z, visibility]) => ({ x, y, z, visibility }));
-  return { t: q.t, pose: lm(q.pose), maos: q.maos ? { esq: q.maos.esq && lm(q.maos.esq), dir: q.maos.dir && lm(q.maos.dir) } : null };
+  return { t: q.t, pose: lm(q.pose), norm: q.norm ? lm(q.norm) : null, maos: q.maos ? { esq: q.maos.esq && lm(q.maos.esq), dir: q.maos.dir && lm(q.maos.dir) } : null };
 }
 
 export function criarGravador({ maxQuadros = 900 } = {}) { // 30 s a 30 quadros por segundo
@@ -24,10 +25,10 @@ export function criarGravador({ maxQuadros = 900 } = {}) { // 30 s a 30 quadros 
   return {
     iniciar() { quadros = []; t0 = null; gravando = true; },
     parar() { gravando = false; return quadros; },
-    adicionar(tMs, pose, maos = null) {
+    adicionar(tMs, pose, maos = null, norm = null) {
       if (!gravando || quadros.length >= maxQuadros) return false;
       if (t0 === null) t0 = tMs;
-      quadros.push(quadroDeNumeros(tMs - t0, pose, maos));
+      quadros.push(quadroDeNumeros(tMs - t0, pose, maos, norm));
       return true;
     },
     get gravando() { return gravando; },

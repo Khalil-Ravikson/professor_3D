@@ -16,9 +16,10 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
     await page.setViewportSize(viewport);
     const erros = await abrirLuma(page);
     await page.click('#gear');
+    await page.click('#abas button[data-aba="animacoes"]'); // a galeria mora na aba Animações do console
     const itens = page.locator('#galeria li');
     // Modo infantil ligado por padrão: o clipe "dedo-arma" (Shoot) fica fora.
-    await expect(itens).toHaveCount(9);
+    await expect(itens).toHaveCount(17); // 10 do catálogo antigo menos o dedo-arma, mais os 8 clipes do Overte
     await expect(page.locator('#galeria li[data-id="dedo-arma"]')).toHaveCount(0);
 
     const giro = page.locator('#galeria li[data-id="giro"]');
@@ -45,7 +46,7 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
 
     // Modo infantil desligado: aparecem os 8.
     await page.uncheck('#modoInfantil');
-    await expect(itens).toHaveCount(10);
+    await expect(itens).toHaveCount(18);
     expect(erros).toEqual([]);
   });
 }

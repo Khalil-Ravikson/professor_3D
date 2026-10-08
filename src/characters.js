@@ -20,6 +20,7 @@
 // quadro: mostra o quadro de resolução. ferramentas: nomes de funções do Gemini (ver calcular.js).
 // O usuário pode sobrescrever persona, voz, temperatura e limite nas configurações
 // (ver aplicarAjustes); este arquivo continua sendo o padrão.
+// estados: mapa estado ou gesto -> id de clipe que vale SÓ para este personagem, por cima do catálogo (ex.: o clipe do estado "talking").
 // gestos: inventário do personagem, nomes de gesto de assets/animations/animacoes.json (campo "estados").
 //   null = todos os gestos com clipe ativo. Os clipes de cada estado e gesto vêm do catálogo, não daqui.
 
@@ -69,6 +70,8 @@ export const PERSONAGENS = [
     despedida: 'Tchau! Foi muito bom conversar com você.',
     persona: RULES_LUMA,
     regrasDeSeguranca: 'infantil',
+    // Entrada no visualizador (prompt 07, V2, aprovada pelo dono em 08/10/2026): abre acenando, uma vez, e segue em loop por estes clipes.
+    amostraEntrada: { clipe: 'aceno', modo: 'lista-depois' }, loopAnimacoes: ['mostrar-corpo', 'giro', 'sinal-paz'],
     voz: { motor: 'kokoro-server', id: 'pf_dora', speed: 0.95, genero: 'f', gemini: { voz: 'Kore' } },
     temperatura: null, // null = padrão do modelo (a Google recomenda 1.0 no Gemini 3)
     limitePalavras: 80,
@@ -78,6 +81,7 @@ export const PERSONAGENS = [
     selecao: { distancia: 3.6, altura: -0.62 }, // corpo inteiro, na tela de seleção
     // Base de conhecimento (knowledge/luma/): complemento. Pergunta do assunto da base só se responde com ela; as demais seguem normais.
     conhecimento: { modo: 'complemento' },
+    estados: { talking: 'fala-leve' }, // Luma: fala de braços baixos, mais calma
     gestos: null,
     atalhos: [
       { rotulo: 'Uma história', pergunta: 'Me conte uma história curtinha' },
@@ -87,10 +91,10 @@ export const PERSONAGENS = [
       { rotulo: 'Uma piada', pergunta: 'Me conte uma piada' },
     ],
     paleta: {
-      fundo1: '#0c1c3e', fundo2: '#1d4175',
-      tinta: '#ffffff', tintaSuave: '#aab6d3', cartao: '#0f2a57',
-      acao: '#e0224a', acaoTinta: '#ffffff', acaoSombra: '#8f1230', realce: '#ffffff', realceTinta: '#0c1c3e',
-      ok: '#3fbf6a',
+      fundo1: '#f7f9fd', fundo2: '#e4eaf5',
+      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      acao: '#c81e45', acaoTinta: '#ffffff', acaoSombra: '#8f1230', realce: '#182033', realceTinta: '#ffffff',
+      ok: '#1f7a46',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',
     },
   },
@@ -120,6 +124,8 @@ export const PERSONAGENS = [
       "Se faltar dado, não resolva: faça uma única pergunta, só em FALA. " +
       "Se a pergunta não for de matemática, responda curto em FALA e convide para um problema. " + SEGURANCA_GERAL,
     regrasDeSeguranca: 'geral',
+    // Entrada no visualizador (V2, aprovada em 08/10/2026): mais contido, abre na pose de modelo e repete só ela.
+    amostraEntrada: { clipe: 'pose-modelo', modo: 'repetir' }, loopAnimacoes: ['pose-modelo'],
     voz: { motor: 'kokoro-server', id: 'pm_alex', speed: 0.98, genero: 'm', gemini: { voz: 'Puck' } },
     temperatura: null,
     limitePalavras: 90,
@@ -127,6 +133,7 @@ export const PERSONAGENS = [
     ferramentas: ['calcular'],
     enquadramento: { distancia: 2.4, altura: 0.22 },
     selecao: { distancia: 3.8, altura: -0.64 }, // corpo inteiro, na tela de seleção
+    estados: { talking: 'fala-base' }, // Teo: fala com gestos pequenos de mão ao explicar
     gestos: null,
     atalhos: [
       { rotulo: 'Equação do 1º grau', pergunta: 'Resolva 3x + 7 = 25' },
@@ -135,10 +142,10 @@ export const PERSONAGENS = [
       { rotulo: 'Frações', pergunta: 'Quanto é 2/3 mais 3/4?' },
     ],
     paleta: {
-      fundo1: '#0a2036', fundo2: '#144a6e',
-      tinta: '#ffffff', tintaSuave: '#b4cde0', cartao: '#0d2d4a',
-      acao: '#c24a16', acaoTinta: '#ffffff', acaoSombra: '#85310d', realce: '#ffffff', realceTinta: '#0a2036',
-      ok: '#3fbf6a',
+      fundo1: '#f6f9fc', fundo2: '#e1edf6',
+      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      acao: '#b3420f', acaoTinta: '#ffffff', acaoSombra: '#85310d', realce: '#182033', realceTinta: '#ffffff',
+      ok: '#1f7a46',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
     },
   },
@@ -181,10 +188,10 @@ export const PERSONAGENS = [
       { rotulo: 'Caixa d’água', pergunta: 'Qual tamanho de caixa d’água para uma casa com 4 pessoas?' },
     ],
     paleta: {
-      fundo1: '#0d2230', fundo2: '#1b5a63',
-      tinta: '#ffffff', tintaSuave: '#b4d3d6', cartao: '#0f3340',
-      acao: '#b5471b', acaoTinta: '#ffffff', acaoSombra: '#7a2f11', realce: '#ffffff', realceTinta: '#0d2230',
-      ok: '#3fbf6a',
+      fundo1: '#f5faf9', fundo2: '#dfeeee',
+      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      acao: '#a63d14', acaoTinta: '#ffffff', acaoSombra: '#7a2f11', realce: '#182033', realceTinta: '#ffffff',
+      ok: '#1f7a46',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
     },
   },
@@ -224,10 +231,10 @@ export const PERSONAGENS = [
       { rotulo: 'Ímãs', pergunta: 'Por que o ímã gruda na geladeira?' },
     ],
     paleta: {
-      fundo1: '#102040', fundo2: '#2a4a86',
-      tinta: '#ffffff', tintaSuave: '#bcc8e6', cartao: '#16305f',
-      acao: '#d03a3a', acaoTinta: '#ffffff', acaoSombra: '#8e2424', realce: '#ffffff', realceTinta: '#102040',
-      ok: '#3fbf6a',
+      fundo1: '#f7f8fd', fundo2: '#e5e9f6',
+      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      acao: '#b83030', acaoTinta: '#ffffff', acaoSombra: '#8e2424', realce: '#182033', realceTinta: '#ffffff',
+      ok: '#1f7a46',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',
     },
   },

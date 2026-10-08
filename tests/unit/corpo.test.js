@@ -104,18 +104,60 @@ test('filtro de pontos reduz tremor e osso suavizado respeita a velocidade angul
   const r = suavizarOsso(QID, alvo, 1 / 60, { velMax: 8, tau: 0.001 });
   assert.ok(qAngulo(r) <= (8 / 60) * 1.01, `andou ${qAngulo(r)} rad num quadro`);
 });
-test('calibração: só termina com amostras suficientes e guarda a média', () => {
-  const c = criarCalibracao({ duracaoMs: 2000, minAmostras: 8 });
+test('calibração: termina com tempo e amostras mínimos, mostra o progresso e guarda a média', () => {
+  const c = criarCalibracao({ duracaoMinMs: 1500, minAmostras: 6 });
   c.iniciar(0);
   const q = qEixoAngulo([0, 1, 0], 0.1);
-  let r;
-  for (let t = 0; t <= 2000; t += 100) r = c.alimentar({ tronco: q, centro: [0.5, 0.5], escala: 0.3 }, t);
-  assert.ok(r.pronto);
+  const amostra = { tronco: q, centro: [0.5, 0.5], escala: 0.3 };
+  let r = c.alimentar(amostra, 100);
+  assert.ok(r.fazendo && r.progresso > 0 && r.progresso < 1 && r.parado);
+  for (let t = 200; t <= 1700; t += 100) r = c.alimentar(amostra, t);
+  assert.ok(r.pronto && !r.fazendo && r.progresso === 1);
   assert.ok(Math.abs(qAngulo(c.base.tronco) - 0.1) < 1e-6);
-  const c2 = criarCalibracao({ duracaoMs: 2000, minAmostras: 8 });
-  c2.iniciar(0); c2.alimentar({ tronco: q, centro: [0, 0], escala: 1 }, 100);
-  const fim = c2.alimentar({ tronco: q, centro: [0, 0], escala: 1 }, 2100);
-  assert.ok(fim.falhou);
+  assert.ok(Math.abs(c.base.escala - 0.3) < 1e-9);
+});
+test('calibração só conta com a pessoa parada: mexer zera o progresso e o tempo recomeça', () => {
+  const c = criarCalibracao({ duracaoMinMs: 1500, minAmostras: 6, limiteMovimentoRad: 0.12 });
+  c.iniciar(0);
+  const parado = { tronco: qEixoAngulo([0, 1, 0], 0.0), centro: [0.5, 0.5], escala: 0.3 };
+  let r;
+  for (let t = 0; t <= 1000; t += 100) r = c.alimentar(parado, t);
+  assert.ok(r.progresso > 0.5);
+  r = c.alimentar({ ...parado, tronco: qEixoAngulo([0, 1, 0], 0.5) }, 1100); // tranco de quase 30 graus
+  assert.equal(r.parado, false);
+  assert.equal(r.progresso, 0);
+  // um mínimo de 1500 ms CONTADO DEPOIS do tranco
+  for (let t = 1200; t <= 2500; t += 100) r = c.alimentar({ ...parado, tronco: qEixoAngulo([0, 1, 0], 0.5) }, t);
+  assert.ok(!r.pronto || r.progresso === 1);
+  for (let t = 2600; t <= 3000; t += 100) r = c.alimentar({ ...parado, tronco: qEixoAngulo([0, 1, 0], 0.5) }, t);
+  assert.ok(r.pronto);
+  assert.ok(Math.abs(qAngulo(c.base.tronco) - 0.5) < 0.02);
+});
+test('calibração ignora um tranco no meio da janela (média sem os 20% mais distantes) e falha com o corpo fora de quadro', () => {
+  const c = criarCalibracao({ duracaoMinMs: 1500, minAmostras: 6, limiteMovimentoRad: 0.3 });
+  c.iniciar(0);
+  const base = { tronco: qEixoAngulo([0, 1, 0], 0.05), centro: [0.5, 0.5], escala: 0.3 };
+  let r;
+  for (let t = 0; t <= 1000; t += 100) r = c.alimentar(base, t);
+  r = c.alimentar({ ...base, tronco: qEixoAngulo([0, 1, 0], 0.25) }, 1100); // dentro do limite, mas fora da média
+  for (let t = 1200; t <= 1800; t += 100) r = c.alimentar(base, t);
+  assert.ok(r.pronto);
+  assert.ok(Math.abs(qAngulo(c.base.tronco) - 0.05) < 0.02, `base ${qAngulo(c.base.tronco)}`);
+  const f = criarCalibracao({ duracaoMinMs: 1500, minAmostras: 6, duracaoMaxMs: 3000 });
+  f.iniciar(0); f.alimentar(base, 100); f.alimentar(base, 200);
+  assert.ok(f.alimentar(base, 4000).falhou);
+});
+test('calibração refina devagar para a postura de repouso e ignora gesto grande', () => {
+  const c = criarCalibracao({ duracaoMinMs: 1500, minAmostras: 6 });
+  c.iniciar(0);
+  const a0 = { tronco: qEixoAngulo([0, 1, 0], 0.0), centro: [0.5, 0.5], escala: 0.3 };
+  for (let t = 0; t <= 1700; t += 100) c.alimentar(a0, t);
+  const alvo = { tronco: qEixoAngulo([0, 1, 0], 0.06), centro: [0.5, 0.5], escala: 0.3 };
+  for (let i = 0; i < 1500; i++) c.refinar(alvo);
+  assert.ok(Math.abs(qAngulo(c.base.tronco) - 0.06) < 0.01, 'a base chegou perto da postura nova');
+  const antes = qAngulo(c.base.tronco);
+  assert.equal(c.refinar({ ...alvo, tronco: qEixoAngulo([0, 1, 0], 0.9) }), false);
+  assert.equal(qAngulo(c.base.tronco), antes, 'gesto grande não vira postura neutra');
 });
 test('gravador guarda só números, recusa o que não for número e o repetidor devolve os quadros no ritmo original', () => {
   const g = criarGravador({ maxQuadros: 3 });
@@ -164,4 +206,18 @@ test('com braço em A, o braço caído da pessoa fecha 45 graus e o braço horiz
 test('qParaLocal só troca o sinal de x e z no VRM 0.x', () => {
   assert.deepEqual(qParaLocal([0.1, 0.2, 0.3, 0.9], false), [0.1, 0.2, 0.3, 0.9]);
   assert.deepEqual(qParaLocal([0.1, 0.2, 0.3, 0.9], true), [-0.1, 0.2, -0.3, 0.9]);
+});
+
+test('webcam de mesa: sem quadril visível o tronco não inclina (só a guinada dos ombros) e a confiança vem dos ombros', () => {
+  const lm = pessoa({ [IDX.quadrilE]: { x: 0.5, y: 0.9, visibility: 0.1 }, [IDX.quadrilD]: { x: -0.7, y: 0.8, visibility: 0.1 } });
+  const t = retargetTronco(lm, { espelho: false });
+  assert.ok(qAngulo(t.total) < 0.02, 'quadril chutado não pode entortar o tronco');
+  assert.ok(t.confianca > 0.9);
+  assert.equal(t.quadrilVisivel, false);
+});
+test('cada braço tem a sua confiança: mão fora de quadro derruba só aquele braço', () => {
+  const lm = pessoa({ [IDX.punhoE]: { visibility: 0.1 }, [IDX.cotoveloE]: { visibility: 0.2 } });
+  const r = retargetCorpo(lm, { espelho: false });
+  assert.ok(r.ossos.leftUpperArm.confianca <= 0.2);
+  assert.ok(r.ossos.rightUpperArm.confianca > 0.9);
 });

@@ -54,9 +54,16 @@ for (const p of PERSONAGENS) {
   });
 }
 
-test('a paleta padrão do CSS é a da primeira personagem', () => {
-  // Se divergirem, a tela pisca com outra cor até o ui.js aplicar a paleta.
-  assert.equal(PERSONAGENS[0].paleta.fundo1, '#0c1c3e');
-  assert.equal(PERSONAGENS[0].paleta.tinta, '#ffffff');
-  assert.equal(PERSONAGENS[0].paleta.acao, '#e0224a');
+test('a paleta padrão do CSS é a da primeira personagem', async () => {
+  // Se divergirem, a tela pisca com outra cor até o ui.js aplicar a paleta. Compara com o :root do index.html, não com valores fixos.
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const raiz = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')));
+  const v = (nome) => (raiz.match(new RegExp(String.raw`--${nome}:\s*(#[0-9a-fA-F]{3,6})`)) || [])[1];
+  const c = PERSONAGENS[0].paleta;
+  assert.equal(v('fundo-1'), c.fundo1);
+  assert.equal(v('fundo-2'), c.fundo2);
+  assert.equal(v('tinta'), c.tinta);
+  assert.equal(v('acao'), c.acao);
+  assert.equal(v('cartao'), c.cartao);
 });

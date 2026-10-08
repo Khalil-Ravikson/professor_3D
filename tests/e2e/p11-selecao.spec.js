@@ -7,7 +7,7 @@ const ALVO_TOQUE = 56; // regra I6 do prompt da fase 5
 async function abrir(page, viewport) {
   await page.setViewportSize(viewport);
   const erros = [];
-  page.on('console', (m) => { if (m.type() === 'error') erros.push(m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/ERR_CONNECTION_REFUSED/.test(m.text())) erros.push(m.text()); }); // Kokoro (Docker) desligado: conexão recusada é do ambiente
   page.on('pageerror', (e) => erros.push('pageerror: ' + e.message));
   await page.addInitScript(() => {
     if (localStorage.getItem('prof3d_teste_p11')) return;
@@ -55,7 +55,7 @@ for (const [nome, viewport] of [['paisagem', { width: 1280, height: 720 }], ['re
     await expect(page.locator('#selOuvirMotivo')).not.toBeEmpty();
 
     // O pódio é CSS: não há geometria nova na cena (3 luzes, modelo, alvo do olhar).
-    expect(await page.evaluate(() => window.__prof3d.cena.scene.children.length)).toBe(5);
+    expect(await page.evaluate(() => window.__prof3d.cena.scene.children.length)).toBe(6);
 
     // Corpo inteiro: os pés caem perto de 84% da altura do palco, onde o CSS põe o pódio.
     const pes = await page.evaluate(() => {
@@ -124,7 +124,7 @@ test('I2 seleção: trocar por clique, seta, teclado e deslize; botão grande co
   await expect(page.locator('#selConversar')).toHaveText('Conversar com Teo');
   await expect(page.locator('#selContador')).toHaveText('2/2');
   // A paleta vem dos dados do personagem.
-  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--acao').trim())).toBe('#c24a16');
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--acao').trim())).toBe('#b3420f');
   await page.waitForTimeout(700);
   await page.screenshot({ path: 'relatorios/p11-selecao-teo-paisagem.png' });
 
@@ -209,7 +209,7 @@ test('I2 seleção: 20 trocas seguidas sem erro e sem crescer a memória', async
   await page.waitForTimeout(800);
   const depois = await medir();
   console.log('antes', JSON.stringify(antes), 'depois', JSON.stringify(depois));
-  expect(depois.filhos).toBe(5);
+  expect(depois.filhos).toBe(6);
   expect(depois.geometries).toBe(antes.geometries);
   expect(depois.textures).toBe(antes.textures);
   expect(depois.heapMb - antes.heapMb, `heap subiu de ${antes.heapMb} para ${depois.heapMb} MB`).toBeLessThan(8);

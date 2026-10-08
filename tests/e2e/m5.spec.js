@@ -100,6 +100,7 @@ test('M5: ajustes do personagem (temperatura, limite, persona) chegam à requisi
   const pedidos = await simularGemini(page);
   await abrir(page, { personagem: 'matematico' });
   await page.click('#gear');
+  await page.click('#abas button[data-aba="personagem"]'); // os ajustes moram na aba Personagem do console do operador
   await expect(page.locator('#ajPersonagem')).toHaveValue('matematico');
   await page.uncheck('#ajTempPadrao');
   await page.locator('#ajTemp').fill('0.7');
@@ -114,6 +115,7 @@ test('M5: ajustes do personagem (temperatura, limite, persona) chegam à requisi
   expect(corpo.systemInstruction.parts[0].text).toContain('no máximo 50 palavras');
 
   await page.click('#gear');
+  await page.click('#abas button[data-aba="personagem"]');
   await page.click('#ajRestaurar');
   await expect(page.locator('#ajTempPadrao')).toBeChecked();
   await expect(page.locator('#ajLimite')).toHaveValue('90');

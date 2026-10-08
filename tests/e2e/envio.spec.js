@@ -28,6 +28,7 @@ test('envio de FBX do Mixamo: converte, mede, entra na galeria, vira o aceno e s
   await page.setViewportSize({ width: 1280, height: 720 });
   const erros = await abrir(page);
   await page.click('#gear');
+  await page.click('#abas button[data-aba="animacoes"]'); // o envio de movimento e a galeria moram na aba Animações
   await page.setInputFiles('#envArquivo', FBX);
   await page.fill('#envNome', 'Aceno teste');
   await page.selectOption('#envUso', 'aceno');
@@ -46,6 +47,7 @@ test('envio de FBX do Mixamo: converte, mede, entra na galeria, vira o aceno e s
 
   // Apagar devolve o aceno ao do catálogo.
   await page.click('#gear');
+  await page.click('#abas button[data-aba="animacoes"]'); // o envio de movimento e a galeria moram na aba Animações
   await page.locator('#galeria li[data-id^="env-aceno-teste"] .g-apagar').click();
   await expect(page.locator('#galeria li[data-id^="env-aceno-teste"]')).toHaveCount(0);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('prof3d_estados_extra') || '{}'))).toEqual({});

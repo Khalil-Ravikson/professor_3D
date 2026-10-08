@@ -71,6 +71,7 @@ Onde procurar mais (seção 28.5 do REPERTORIO): Game UI Database (filtrar Chara
 - **Não levar:** o gradiente violeta e a névoa roxa, o brilho nos cartões e botões, o botão "Upgrade Plan", o logotipo, a personagem, os textos. **Tudo o que a regra I1 proíbe está nesta imagem**, então ela só serve como padrão de estrutura, nunca de aparência.
 - **Paleta (amostrada):** fundo do app `#0a0c10`, cartões `#0f1016`, botão principal `#796bcd` (violeta, **não usar**).
 - **Uso no projeto:** só o console do operador, e só a estrutura.
+- **Resultado em 08/10/2026 (prompt 07, V1 a V8):** a estrutura foi levada para o Photo Booth do visualizador (`src/photobooth.js`): faixa de miniaturas geradas dos próprios clipes, painel com abas (Animações, Expressões, Rastreamento, Fundo e foto), pausa e botões em pílula. **A cor não foi levada**: o dono decidiu seguir o visual claro do Photo Booth, e esse visual passou a valer para todas as telas (fundo `#f7f9fd` a `#e4eaf5`, texto `#182033`, o nome do personagem em contorno ao fundo, ação em `#c81e45` para a Luma e `#b3420f` para o Teo). A captura do Photo Booth do VRoid Hub (`03-vroidhub-photobooth.png`) **continua faltando**; as decisões vieram dos wireframes aprovados (`wireframes/photobooth.html`) e da descrição do prompt.
 
 ---
 
@@ -88,3 +89,16 @@ Onde procurar mais (seção 28.5 do REPERTORIO): Game UI Database (filtrar Chara
 - Tipografia (a identificar):
 - Uso no projeto:
 ```
+
+---
+
+## 04. Painel "AI Studio" de criação de personagem (captura sem marca de origem clara)
+
+- **Arquivo:** `Repertorio/ui/Repertorio3.webp` (1600 x 1199; enviado pelo dono; **não é** a captura do Photo Booth do VRoid Hub que o prompt 07 pede como `03-vroidhub-photobooth.png`, que continua faltando)
+- **Fonte:** captura enviada pelo dono. Autor e página original não informados. Privada: não redistribuir nem commitar.
+- **Tipo:** painel escuro de criação de personagem 3D, paisagem.
+- **Levar (só estrutura):** trilho vertical de ferramentas à esquerda do palco (girar, zoom, pose, luz, fundo); categorias à direita; tira de miniaturas de expressão com barra de reprodução embaixo; passos numerados no topo.
+- **Não levar:** o roxo e o gradiente violeta, o painel escuro, o nome "AI Studio", o logotipo, os créditos, o botão de plano, os textos e a arte do personagem.
+- **Paleta (amostrada por olho, não medida):** fundo quase preto, acento violeta, laranja nas peças. Fora das regras do projeto (sem gradiente violeta, sem cara de IA).
+- **Uso no projeto:** decisão do dono em 08/10/2026: seguir o Photo Booth claro do prompt 07 e aproveitar desta imagem só a estrutura (V1, `wireframes/photobooth.html`).
+

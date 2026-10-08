@@ -118,6 +118,10 @@ Na conversa, o ícone do olho (canto superior direito) abre o visualizador; no p
 
 Só entram os clipes `ativos` do catálogo (e, no modo infantil, os marcados "ok para criança"). Com "reduzir movimento" do sistema o loop começa pausado.
 
+### Entrada por personagem (prompt 07, V2)
+
+Cada personagem abre o visualizador com o **seu** clipe, definido em `characters.js`: `amostraEntrada: { clipe, modo }` e `loopAnimacoes: [ids]`. `modo: 'repetir'` repete só aquele clipe; `modo: 'lista-depois'` toca o clipe uma vez e segue em loop pelos ids de `loopAnimacoes`. Atribuição aprovada pelo dono em 08/10/2026: **Luma** abre acenando e segue por `mostrar-corpo`, `giro` e `sinal-paz`; **Teo** abre em `pose-modelo` e repete só ela. Os botões anterior e próximo continuam passando por todos os clipes ativos; só o avanço automático segue a lista do personagem. Se o clipe de entrada não estiver ativo (modo infantil, arquivo ausente num clone novo), cai para o `idle` e a lacuna aparece em `visualizador.estado.lacuna` e no console. Personagem sem entrada definida abre no primeiro clipe, como antes.
+
 ### Como mexer nos clipes
 
 O catálogo é `assets/animations/animacoes.json`. Cada clipe tem `id`, `arquivo`, `descricao`, `casoDeUso`, `loop`, `duracao`, `intensidade` (1 a 3), `infantilOk`, `origem`, `licenca` e `status` (`ativo`, `desligado`, `lacuna`, `procedural`). A seção `estados` liga cada estado ou gesto a um id de clipe, ou a uma lista (o diretor alterna). `null` é lacuna: o estado cai para o `idle` e o gesto é ignorado.
@@ -166,15 +170,36 @@ Roda, nesta ordem: detector anti-slop, testes unitários, política de seguranç
 
 `voz.id` aceita mistura de vozes no formato do servidor, por exemplo `pm_alex(1)+pm_santa(1)`.
 
+## Animações de fala (Overte)
+
+Os estados do corpo vêm de `assets/animations/animacoes.json`; cada personagem pode trocar o clipe de um estado em `estados` (`src/characters.js`): a Luma fala com `fala-leve`, o Teo com `fala-base`. Os clipes são do projeto Overte (Apache-2.0, via Undi95/Hanami), sem edição, em `assets/animations/overte/`; o aviso de licença, a origem e o SHA-256 estão em `assets/animations/CREDITS.md`. `assentir`, `pensar` e `aplauso` são os gestos "agradece", "nao-sei" e "aplaude". Falas de reserva (`fala-media`, `fala-mao-esq`, `fala-mao-dir`) ficam desligadas e podem ser ligadas na galeria. **A fala ao vivo, com áudio, NÃO foi testada** (itens 112 a 114 do roteiro).
+
+## Expressões, olhar, foto e vídeo (prompt 7, V3 e V4)
+
+Engrenagem, aba **Animações**, só para o operador.
+
+- **Expressões:** um controle de 0 a 100 para cada expressão que o `.vrm` realmente tem (no modelo da Luma: neutral, angry, relaxed, happy, sad e `Surprised`; os visemas da boca, a piscada e o olhar não aparecem). O valor manual **sobrescreve** a expressão do clipe e a da emoção; a boca falando continua mandando nos visemas. "Zerar expressões" devolve o comando ao clipe.
+- **Olhar:** Automático (segue o rosto da câmera ou faz sacadas), Olhar para a câmera, ou Escolher a direção (esquerda e direita, para baixo e para cima). O olhar tem um dono só: o seu código, nunca o clipe.
+- **Foto e vídeo:** só do **personagem** (nunca a imagem da webcam nem a interface), salvos neste computador, sem envio. **Desligados por padrão** e sempre desligados no modo totem; o operador marca "Permitir foto e vídeo". Só funcionam se a licença do modelo e a do clipe em uso permitirem (`src/captura-licenca.js`): modelo bloqueado, clipe com texto que proíbe o uso, ou licença em "conferir" sem confirmação do operador bloqueiam, e o crédito exigido aparece na tela e pode ser escrito na imagem. Foto em PNG com fundo transparente, branco ou a cor do personagem, nas proporções 1:1, 4:5, 16:9 e 9:16, com moldura opcional e contagem de 3 segundos. Vídeo por `captureStream` e `MediaRecorder` (WebM ou MP4, o primeiro formato que o navegador grava; sem suporte, o app avisa), com duração máxima configurável (15 s por padrão) e contagem de segundos restantes. O nome do arquivo leva só o personagem e a data.
+- **Interpretação de licença (não é parecer jurídico):** "proibido distribuir o arquivo solto" (Mixamo) e "proibido redistribuir" (pacote VRoid) falam do arquivo do clipe, não de uma foto que o mostra em uso; por isso não bloqueiam. Confirme com o dono dos termos antes de usar fora do evento.
+
 ## Rastreamento do corpo (braços e tronco)
 
-- **Desligado por padrão.** Engrenagem, aba **Sessão**, "Rastreamento do corpo", ou o botão do boneco na barra do visualizador. Só liga a câmera quando você pede; nenhum quadro é guardado, gravado ou enviado (o worker fecha cada imagem logo depois de usar e só devolve números); ao desligar, as tracks e o worker param.
+- **Desligado por padrão.** Botão do **boneco** no topo da tela (na conversa, ao lado do olho e da câmera), botão do boneco na barra do visualizador, ou engrenagem, aba **Sessão**, "Rastreamento do corpo". Não confundir com a câmera do rosto (cabeça, olhos e boca), que é outro módulo. Só liga a câmera quando você pede; nenhum quadro é guardado, gravado ou enviado (o worker fecha cada imagem logo depois de usar e só devolve números); ao desligar, as tracks e o worker param.
 - **Como funciona:** o Pose Landmarker do MediaPipe (modelos locais em `assets/vendor/mediapipe/modelos/`) roda num worker; os 33 pontos de mundo são filtrados (One Euro) e viram rotações dos ossos humanoides normalizados do VRM **por direção** (não por posição), lidas do repouso do próprio modelo (braço em T ou em A, VRM 0.x com x e z invertidos). Entra por cima do clipe, entre `mixer.update` e `vrm.update`, com peso por parte do corpo (braços e tronco), queda gradual em 300 ms quando a confiança cai e volta suave.
-- **Calibração:** ao ligar, "Fique em pose neutra por 2 segundos". O botão Recalibrar repete.
+- **Webcam de mesa:** cada braço tem a sua confiança (mão fora do quadro derruba só aquele braço) e o tronco não depende do quadril (fora de quadro, não inclina; só a guinada dos ombros). A linha de estado mostra a confiança de cada parte.
+- **Calibração:** ao ligar, o app espera o corpo aparecer (ombros e braços), pede para ficar parado e mostra o progresso em porcentagem. Só conta a pessoa PARADA: se o tronco se mexe, a janela recomeça com "Você se mexeu". Leva no mínimo 1,5 s, descarta as amostras mais distantes (um tranco não entorta a base) e, depois de pronta, a base acompanha devagar a postura de repouso (cerca de 20 s), então a calibração não "envelhece". O botão Recalibrar repete.
+- **Mãos e dedos fluidos:** os pontos da mão passam por filtro One Euro, a última mão vista continua valendo por 350 ms (a detecção pisca) e some de vez depois de 1 s, cada mão fica no lado dela (continuidade do pulso; sem pulso visível vale o rótulo do modelo, trocado), os dedos usam suavização mais rápida (24 rad/s e 30 ms) e o osso da mão usa a direção dos pontos da própria mão. Se o computador não acompanhar, as mãos passam a rodar em quadros alternados antes de os dedos serem desligados. `fluido: false` na configuração do rastreador volta ao comportamento antigo, para comparar.
 - **Espelho** (padrão): a sua mão direita move o braço que aparece do lado direito da tela. Desligado, o personagem age como uma pessoa de frente para você.
 - **Qualidade:** Leve (pose lite, 5,8 MB) ou Equilibrada (pose full, 9,4 MB). Se a inferência passar do orçamento do quadro, a taxa cai para 15 e depois 10 por segundo, com aviso.
 - **Gravar e repetir (só números):** o painel grava os pontos (nunca vídeo) num JSON e repete o arquivo no mesmo caminho do ao vivo. Serve para regressão e para você me mandar uma sessão curta para ajuste.
-- **Ainda não feito (marco V6):** mãos e dedos, deslocamento do corpo, gestos que disparam clipes (aceno, mão levantada, joinha) e pernas experimentais.
+- **Mãos e dedos (V6):** o Hand Landmarker (modelo local) dá 21 pontos por mão; cada junta dobra pelo ângulo entre segmentos e vira rotação dos ossos dos dedos do VRM. Cada mão detectada vai para o pulso da pose mais próximo (a documentação diz que o rótulo "Left" ou "Right" assume imagem espelhada, e o vídeo da webcam aqui não é espelhado). Dedos que o clipe não anima voltam ao repouso quando o rastreamento solta. **O polegar é aproximado e não foi validado com uma mão real.**
+- **Torção do punho e dedos estáveis:** a mão do personagem recebe a rotação completa do punho (inclusive a torção, palma para cima ou para baixo) a partir de dois vetores da própria mão, pulso até o dedo médio e indicador até o mindinho; sem a mão detectada só a direção vale, como antes. Os dedos são medidos no plano em que dobram, com zona morta macia de cerca de 6 graus, e a junta da ponta é misturada com a do meio (acoplamento natural do dedo). Medido com mão sintética: tremor 0,0753 para 0,0128, quedas 5 para 0. **Ao vivo: NÃO TESTADO** (itens 103 a 106 do roteiro).
+- **Movimento do corpo (V6):** deslocamento lateral (até 30 cm) e de profundidade (até 20 cm) da cena do avatar, a partir da posição e da escala dos ombros na imagem contra a base da calibração, com zona morta de 3 cm e retorno suave ao centro.
+- **Gestos que disparam clipes (V6):** acenar com o pulso acima do cotovelo faz o personagem acenar de volta; mão levantada acima do ombro por 0,8 s faz o personagem dizer "Pode perguntar!" (só se a sessão não bateu no limite de perguntas ou de tempo); joinha dispara a comemoração. Exigem vários quadros seguidos, têm intervalo mínimo entre disparos e um interruptor.
+- **Qualidade adaptativa:** inferência acima do orçamento do quadro reduz a taxa, depois desliga os dedos, depois o movimento, com aviso.
+- **Pernas:** **não implementadas** (o prompt as pede experimentais e desligadas; ficam fora desta rodada).
+- **Photo Booth (desempenho):** `node tools/medir-photobooth.mjs` mede a abertura, o FPS e o vazamento em 20 aberturas e fechamentos. No Chromium com render por software: abertura de 2,2 s e sem crescimento de geometrias, texturas ou DOM. A latência do rastreamento em máquina real **não foi medida**.
 - **Verificação:** `node tools/medir-rastreamento.mjs` (pipeline do worker com a imagem do próprio avatar) e `node tools/verificar-corpo.mjs` (sessão sintética de números, capturas antes e depois e ligar e desligar com a câmera falsa). Sem webcam real, o rastreamento ao vivo fica **NÃO TESTADO**: o roteiro do dono está em `Repertorio/TESTES-MANUAIS.md`.
 
 ## Painel do operador: onde fica cada coisa
@@ -241,6 +266,22 @@ node tools/avaliar-respostas.mjs --gastar      # pergunta de verdade (gasta cré
 ```
 
 O detector (`src/frases-proibidas.js`) procura travessão, emoji, markdown, abertura genérica, pergunta repetida, "sou uma IA" sem terem perguntado, pedido de dado pessoal e marca de controle que vazou. As notas de voz, método, concisão e segurança são do dono, na tabela de `relatorios/avaliacao-respostas.md`.
+
+## A trava "Agora só consigo responder o que já está pronto" (modo econômico)
+
+Essa frase **não é um filtro de segurança**: é o **modo econômico**. Ele liga quando o interruptor "Modo econômico" da aba Orçamento está marcado **ou** quando o gasto acumulado chega ao teto. Nesse modo, a pergunta livre não chama o Gemini e só sai resposta pronta da base; sem base, sai a frase. Agora:
+- a aba Orçamento mostra **por que** o modo está ligado (à mão, ou teto atingido com os valores) e tem o botão **Zerar o gasto acumulado**;
+- a cada pergunta nesse modo, o operador recebe o aviso com o motivo (ponto na engrenagem e lista "Avisos do evento");
+- a resposta pronta da base só vale se a pergunta for do assunto da base (antes, "história de dragão" pegava um trecho do ENSINAR).
+
+## Base da Luma: UEMA e CTIC em linguagem infantil
+
+- Fonte única: o PDF `knowledge/Base de Conhecimento RAG Expansiva - UEMA e CTIC.pdf`. Os 9 documentos `knowledge/luma/uema-infantil-*.md` (só locais, fora do git) são a versão simples para crianças: os de 01 a 08 vêm do PDF; o 09 traz as 10 perguntas oficiais (4 a 6 palavras) com as **respostas esperadas do dono, como ele as escreveu** (sem travessões). Em 4 pontos elas **divergem do PDF** (lema, Coordenadoria, Processo Seletivo Simplificado, mais de 20 cidades) e **não têm documento oficial que as confirme**; o dono decidiu usar as dele, e os documentos 01, 02, 03 e 06 foram alinhados a elas. Detalhes em `Repertorio/DIVERGENCIAS-UEMA.md`.
+- `npm run conhecimento` valida os documentos e deriva do próprio texto o vocabulário do assunto: siglas (UEMA, CTIC, PAES...), nomes em CamelCase (SigUema, UemaNet, HelpDesk) e nomes próprios compostos das linhas "Pergunta:" (Campus Paulo VI). `ENSINAR` fica de fora (é palavra comum). Em modo complemento, só pergunta que cita um desses termos exige a base; o resto a Luma responde como sempre.
+- **Pergunta do assunto sem a base preparada não vai ao Gemini** (ele inventaria): a Luma diz que não encontrou na base e o operador recebe o aviso. A base se prepara com "Preparar a base" (baixa o modelo de 118 MB na primeira vez) e **sozinha, ao abrir o app, se o modelo já estiver no cache do navegador**.
+- **Teo e os outros não respondem sobre UEMA e CTIC**: mandam para a Luma, sem Gemini. Matemática do Teo segue normal.
+- `node tools/benchmark-uema.mjs` indexa a base no Chromium e confere as 10 perguntas oficiais (assunto reconhecido, busca confiante, trecho certo em primeiro) e 7 perguntas gerais (nenhuma pode cair no assunto da UEMA). Gasta 0 de Gemini.
+- Respostas da demonstração guiada (modo evento): `node tools/guiada.mjs listar luma` e `node tools/guiada.mjs aprovar luma --todos` (ou `--ids`), depois `npm run conhecimento`. Os 10 itens estão **pendentes de aprovação**.
 
 ## Base de conhecimento (RAG)
 
@@ -321,7 +362,7 @@ Roda sessões simuladas em sequência pelo número de horas pedido, troca de per
 
 ## Design
 
-Direção visual, tipografia e paleta (com o motivo de cada escolha) em `DESIGN.md`. A interface funciona em retrato (totem 1080×1920, celular) e em paisagem (avatar à esquerda, quadro e conversa à direita).
+Direção visual, tipografia e paleta (com o motivo de cada escolha) em `DESIGN.md`. Desde 08/10/2026 todas as telas (atração, escolha do personagem, conversa e visualizador) usam o visual claro do Photo Booth: fundo claro, o nome do personagem repetido em contorno ao fundo, botões brancos em pílula e a cor de ação de cada personagem. A interface funciona em retrato (totem 1080×1920, celular) e em paisagem (avatar à esquerda, quadro e conversa à direita).
 
 ## Pendências conhecidas (sem suavizar)
 
@@ -355,7 +396,7 @@ Estado em 07/10/2026, ao fim do prompt 03 parcial (U1, U4, U5, U6 e U8; U2, U3 e
 - As bibliotecas (Three.js, three-vrm, wLipSync, mathjs, MediaPipe e transformers.js) já são locais (`assets/vendor/`). **Ainda na CDN:** só o kokoro-js (motor opcional em inglês). O Whisper foi religado ao transformers.js local mas **não foi testado com o modelo** (só os embeddings do RAG, que usam o mesmo carregador).
 - **Três testes e2e falham mesmo sem as mudanças da hospedagem local** (confirmado desfazendo-as): `app.spec.js` M1 (espera 5 filhos na cena e há 6) e M2, e `p13-visualizador` "galeria abre o visualizador tocando os clipes". Não investigados.
 - Cache de respostas do Gemini: não feito.
-- O prompt 07 (Photo Booth e rastreamento do corpo) não existe no repositório.
+- Prompt 07: feitos V0 a V6 e a tela do Photo Booth (V1); faltam o V7 (adaptar, endurecer, otimizar, polir, auditar) e o V8 (fechamento). Pernas experimentais não foram feitas. Webcam real e mão real: NÃO TESTADO.
 - Decisões antigas suas: `MAX_RODADAS` do Rafa, aceno do Mixamo, eSpeak (GPL), `PROPOSTA-SKILL-VRM.md` e `references/` da skill vrm-avatar-web.
 
 ## Testes

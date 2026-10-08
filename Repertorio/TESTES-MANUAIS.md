@@ -145,8 +145,8 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 
 | # | O que fazer | O que precisa acontecer | Resultado |
 |---|---|---|---|
-| 66 | Engrenagem, aba Sessão, "Imitar meus movimentos". Permitir a câmera e ficar de frente, de corpo inteiro ou da cintura para cima, em pose neutra por 2 segundos. | Estado vai de "Ligando" a "Fique em pose neutra" e a "Rastreando". A linha de estado mostra quadros por segundo e o atraso em ms. | |
-| 67 | Com Espelho ligado, levantar a SUA mão direita. | O braço do personagem que aparece do lado DIREITO da tela levanta. Se levantar o outro, o eixo está trocado: me diga. | |
+| 66 | **Botão do boneco no topo da tela** (ao lado do olho e da câmera; só aparece na conversa) ou, na engrenagem, aba Sessão, "Imitar meus movimentos". **Não é o botão da câmera do rosto: aquele só mexe cabeça, olhos e boca.** Permitir a câmera e ficar de frente, de corpo inteiro ou da cintura para cima, em pose neutra por 2 segundos. | Estado vai de "Ligando" a "Fique em pose neutra" e a "Rastreando". A linha de estado mostra quadros por segundo e o atraso em ms. | |
+| 67 | Mostre os dois cotovelos e as duas mãos para a câmera (se uma mão sair do quadro, só aquele braço volta para a animação). Com Espelho ligado, levantar a SUA mão direita. | O braço do personagem que aparece do lado DIREITO da tela levanta. Se levantar o outro, o eixo está trocado: me diga. | |
 | 68 | Desligar o Espelho e repetir. | Agora levanta o braço do lado ESQUERDO da tela (o personagem age como uma pessoa de frente para você). | |
 | 69 | Abrir os braços de lado, levantar à frente, cruzar os braços. | Os braços acompanham sem tremer demais; o cruzamento não atravessa o peito; a cabeça e o rosto seguem no módulo da câmera. | |
 | 70 | Girar os ombros e inclinar o tronco. | O tronco acompanha pouco, no máximo cerca de 20 graus. | |
@@ -154,5 +154,84 @@ O navegador dos testes roda numa máquina ligada, com GPU disponível e sem ning
 | 72 | Recalibrar em pose torta e depois reta. | A postura calibrada vira o zero do tronco. | |
 | 73 | Desligar. | A luz da câmera apaga; nenhum arquivo de vídeo foi criado. | |
 | 74 | Gravar números da sessão, mexer os braços por 10 s, Parar e baixar, depois Repetir esse arquivo. | O personagem repete o movimento sem a câmera. Me mande o arquivo se algo estiver errado. | |
-| 75 | Anotar quadros por segundo e atraso mostrados, com Leve e com Equilibrada. | Meta: atraso abaixo de 150 ms. Me diga os números e a placa de vídeo. | |
+| 75 | Anotar quadros por segundo e atraso mostrados, com Leve e com Equilibrada. A linha de estado também mostra a **confiança** de cada braço e do tronco: se ficar abaixo de 50%, aquela parte não acompanha. Me diga esses números se os braços não mexerem. | Meta: atraso abaixo de 150 ms. Me diga os números e a placa de vídeo. | |
 
+## V2, entrada de Luma e Teo
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 76 | Escolher a Luma e abrir o visualizador (olho no topo, na conversa). | Ela abre acenando (uma vez) e depois alterna `mostrar-corpo`, `giro` e `sinal-paz` sozinha. | |
+| 77 | Escolher o Teo e abrir o visualizador. | Ele abre na pose de modelo (mão na cintura) e a repete. A entrada é diferente da da Luma. | |
+| 78 | Apertar próximo e anterior nos dois. | Passam por todos os clipes ativos, não só pela lista do personagem. | |
+
+## V6, mãos, movimento e gestos (precisa da webcam)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 79 | Rastreamento ligado, mostrar uma mão aberta e fechar o punho devagar, de frente para a câmera. | Os dedos do personagem dobram junto. Se o polegar ficar estranho, me diga (ele é aproximado). | |
+| 80 | Mostrar as duas mãos, uma de cada vez. | Cada mão move a mão certa do personagem (no espelho, a sua direita move a que aparece do lado direito da tela). | |
+| 81 | Dar um passo para o lado e para trás, devagar. | O personagem anda um pouco no mesmo sentido, no máximo cerca de 30 cm para os lados e 20 cm em profundidade, e volta ao centro quando você volta. | |
+| 82 | Acenar com a mão levantada, acima do cotovelo. | O personagem acena de volta, uma vez, e só de novo depois de cerca de 8 segundos. | |
+| 83 | Levantar a mão acima do ombro e segurar quase 1 segundo, sem balançar. | O personagem diz "Pode perguntar!". Não diz se a sessão já bateu no limite de perguntas. | |
+| 84 | Fazer joinha (polegar para cima, outros dedos fechados) por meio segundo. | O personagem comemora. Com a mão aberta, não. | |
+| 85 | Desligar "Gestos" e "Movimento do corpo" no painel e repetir. | Os gestos e o deslocamento param. | |
+
+## V3 e V4, expressões, olhar, foto e vídeo
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 86 | Engrenagem, aba Animações, "Expressões e olhar": levar "Feliz" a 100 enquanto um clipe toca. | O rosto fica feliz mesmo com o clipe; ao zerar, volta ao do clipe. A boca continua mexendo quando o personagem fala. | |
+| 87 | Trocar o Olhar entre Automático, Olhar para a câmera e Escolher a direção (mexer os controles). | O olhar obedece; só um modo manda por vez. | |
+| 88 | Marcar "Permitir foto e vídeo" e tirar uma foto, em cada proporção e com cada fundo. | Contagem de 3 s, arquivo PNG baixado, só o personagem (sem webcam, sem botões), crédito escrito embaixo se marcado. | |
+| 89 | Gravar um vídeo de 5 s e parar antes do tempo. | Contagem regressiva visível, arquivo WebM ou MP4 baixado, abre em outro programa. | |
+| 90 | Ligar o modo totem e voltar ao painel. | Foto e vídeo ficam desligados, com o aviso. | |
+| 91 | Trocar para um modelo cuja licença esteja em "conferir" ou "bloqueado". | Bloqueado: botões desligados e o motivo escrito. Conferir: aparece a caixa de confirmação do operador. | |
+
+## Base da Luma e a trava do modo econômico
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 92 | Engrenagem, aba Orçamento: ler a linha de estado no topo. | Ela diz se o modo econômico está ligado e por quê (à mão ou teto atingido). Se for teto, "Zerar o gasto acumulado" ou aumentar o teto volta ao normal. | |
+| 93 | Aba Personagem, Base de conhecimento, "Preparar a base" (só na primeira vez; baixa 118 MB). | Os 9 documentos da Luma indexam. Depois, ao reabrir o app com o modelo já no cache, a base se prepara sozinha. | |
+| 94 | Com a Luma, perguntar as 10 perguntas oficiais, uma por vez. | Cada resposta é simples, curta e bate com `Repertorio/DIVERGENCIAS-UEMA.md` (lema Scientia ad Vitam, CTIC é Coordenação, PAES é Acesso à Educação Superior, 20 cidades). | |
+| 95 | Com a Luma, perguntar "Por que o céu é azul?" e "Me conta uma história de dragão". | Responde normalmente, sem citar a UEMA. | |
+| 96 | Com o Teo, perguntar "O que é a UEMA?" e depois "Quanto é 7 vezes 8?". | A primeira manda chamar a Luma, sem Gemini; a segunda ele resolve. | |
+
+## Calibração e dedos fluidos (precisa da webcam)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 97 | Ligar "Imitar meus movimentos" e ficar de frente. | Primeiro aparece "Mostre o corpo para a câmera"; quando o corpo entra, "Calibrando, fique parado: N%" sobe até 100% em cerca de 2 s. | |
+| 98 | Durante a calibração, balançar o tronco. | Aparece "Você se mexeu" e a porcentagem volta a zero; ao parar, calibra. | |
+| 99 | Fechar e abrir a mão devagar, depois rápido, mostrando-a de frente por 10 s. | Os dedos acompanham sem tremer e sem soltar por um instante. Anote se o dedo do meio ainda trava. | |
+| 100 | Tirar a mão da câmera por 1 segundo e voltar. | O dedo segura a última posição por um instante e volta a seguir, sem pular. | |
+| 101 | Mostrar as duas mãos e cruzar uma sobre a outra. | Cada mão continua no seu lado do personagem (ou, se trocar, me diga quando). | |
+| 102 | Ficar sentado uns 30 s e depois voltar a calibrar a postura. | A base acompanha a sua postura de repouso, sem o personagem ficar torto. | |
+
+
+## Torção do punho e dedos estáveis (precisa da webcam)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 103 | Ligar "Imitar meus movimentos", calibrar e esticar o braço à frente com a palma para baixo; girar a mão devagar até a palma ficar para cima. | A mão do personagem gira junto, em volta do antebraço, sem pular. Anote em que ângulo ela passa a travar ou inverter (o limite é cerca de 105 graus). | |
+| 104 | Com a palma de frente para a câmera, inclinar a mão para os lados e para cima e para baixo. | O punho do personagem acompanha a inclinação e a torção juntas. | |
+| 105 | Mão aberta e parada por 10 s. | Os dedos ficam esticados, sem "respirar" (a zona morta de cerca de 6 graus deve sumir com o tremor). | |
+| 106 | Fechar o punho e abrir devagar. | A ponta de cada dedo dobra junto com a junta do meio, sem a ponta soltar antes. Anote se o dedo mindinho ou o anelar ainda travam. | |
+
+## Photo Booth: tela do visualizador
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 107 | Abrir o visualizador da Luma em paisagem. | Faixa de miniaturas à esquerda (uma por clipe ativo, a do clipe em cena com borda), painel de abas à direita, nome LUMA em contorno ao fundo. | |
+| 108 | No celular em pé, abrir o visualizador. | Barra de uma linha no topo, personagem de corpo inteiro com o rosto livre, faixa de miniaturas na horizontal e o painel como folha embaixo. | |
+| 109 | Tocar numa miniatura. | O clipe troca; a miniatura tocada fica selecionada. | |
+| 110 | Ligar o modo público e abrir o visualizador. | Só as abas Animações e Expressões; Foto e Vídeo aparecem desligados com a frase do motivo. | |
+| 111 | Abrir a tela inicial, a escolha do personagem e a conversa (Luma e Teo). | Fundo claro com o nome do personagem em contorno, botões brancos em pílula e a cor de ação de cada um (vermelho da Luma, laranja do Teo). Textos legíveis em todas. | |
+
+## Animações de fala do Overte (Luma e Teo)
+
+| # | O que fazer | O que precisa acontecer | Resultado |
+|---|---|---|---|
+| 112 | Conversar com a Luma e deixá-la falar uma resposta longa. | Enquanto fala, ela balança de leve de braços baixos (clipe `fala-leve`), sem o corpo andar do lugar e sem pulo ao começar e ao parar. | |
+| 113 | Conversar com o Teo e pedir uma conta. | Ele fala com pequenos gestos de mão (clipe `fala-base`); ao acabar a volta de 16 s não há salto visível. | |
+| 114 | No visualizador, tocar `assentir`, `pensar` e `aplauso`. | Sim com a cabeça, olhar ao redor e palmas, nos dois personagens. Anote se algum fica torto num dos modelos. | |

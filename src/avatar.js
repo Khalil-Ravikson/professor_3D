@@ -340,11 +340,22 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
   const LIMITE_CABECA = 0.6; // rad
   const limitar = (v) => Math.max(-LIMITE_CABECA, Math.min(LIMITE_CABECA, v));
 
-  let sobreposicao = null;
+  let sobreposicao = null, antesDoMixer = null;
+  // Expressões manuais (prompt 7, V3): sobrescrevem as do clipe e as da emoção; a boca falando (visemas) vem antes de tudo e nunca é mexida aqui.
+  const manuais = new Map();
+  const VISEMAS_E_PISCADA = new Set(['aa', 'ih', 'ou', 'ee', 'oh', 'blink', 'blinkLeft', 'blinkRight', 'lookUp', 'lookDown', 'lookLeft', 'lookRight']);
+  // Dono único do olhar: 'auto' (a câmera do rosto ou as sacadas), 'camera' (olha para a câmera da cena) ou 'direcao' (yaw e pitch escolhidos).
+  let olharModo = 'auto', olharYaw = 0, olharPitch = 0;
+  const alvoDirecao = new THREE.Vector3();
   function atualizar(dt, t, { estado = 'idle', visemas = null } = {}) {
     if (!gesto && !previa) tocarBase(BASE_DO_ESTADO[estado] || 'idle');
     else estadoBase = BASE_DO_ESTADO[estado] || 'idle';
     if (cabecaNorm) cabecaNorm.quaternion.multiply(qDesfazer.copy(qAplicada).invert());
+    // Alvo do olhar deste quadro (um dono só): o modo manual manda; em 'auto' vale o alvo externo da câmera do rosto, se houver.
+    let alvoExt = alvoExterno;
+    if (olharModo === 'camera') alvoExt = cena.camera.position;
+    else if (olharModo === 'direcao') alvoExt = alvoDirecao.set(olharBase.x + Math.sin(olharYaw) * 2, olharBase.y + Math.sin(olharPitch) * 2, olharBase.z + Math.cos(olharYaw) * 2);
+    if (antesDoMixer) antesDoMixer(); // desfaz a sobreposição do quadro anterior: osso que o clipe não anima (dedos) volta ao repouso
     mixer.update(dt);
     if (quadrilNorm && fixarNoLugar()) { quadrilNorm.position.x = quadrilDescanso.x; quadrilNorm.position.z = quadrilDescanso.z; }
     qAplicada.identity();
@@ -356,9 +367,9 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
     } else if (cabecaNorm) {
       // Seguir o rosto: a cabeça vira metade do caminho até o alvo; os olhos (lookAt) completam.
       let alvoYaw = 0, alvoPitch = 0;
-      if (alvoExterno) {
+      if (alvoExt) {
         cabecaRaw.getWorldPosition(posCabecaMundo);
-        const dx = alvoExterno.x - posCabecaMundo.x, dy = alvoExterno.y - posCabecaMundo.y, dz = Math.max(0.3, alvoExterno.z - posCabecaMundo.z);
+        const dx = alvoExt.x - posCabecaMundo.x, dy = alvoExt.y - posCabecaMundo.y, dz = Math.max(0.3, alvoExt.z - posCabecaMundo.z);
         alvoYaw = Math.max(-LIMITE_SEGUIR, Math.min(LIMITE_SEGUIR, Math.atan2(dx, dz) * 0.5));
         alvoPitch = Math.max(-LIMITE_SEGUIR, Math.min(LIMITE_SEGUIR, -Math.atan2(dy, dz) * 0.5));
       }
@@ -384,8 +395,8 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
       if (tPiscada > 0.15) tPiscada = -1;
     }
 
-    if (alvoExterno) {
-      alvoOlhar.position.copy(alvoExterno);
+    if (alvoExt) {
+      alvoOlhar.position.copy(alvoExt);
     } else {
       proximaSacada -= dt;
       if (proximaSacada <= 0) {
@@ -428,6 +439,7 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
     }
     // Rastreamento do corpo (prompt 7): por cima do clipe, antes de o VRM propagar os ossos. Ordem: mixer, sobreposição, vrm.update.
     if (sobreposicao) sobreposicao(dt);
+    if (em && manuais.size) for (const [nome, v] of manuais) em.setValue(nome, v);
     vrm.update(dt);
   }
 
@@ -474,10 +486,35 @@ export function montarAvatar(vrm, cena, { bases = {}, tetoBoca = {}, fixarNoLuga
       parar() { aoFimPrevia = null; pararPrevia(); },
       aoTerminar(fn) { aoFimPrevia = fn; },
       get ativa() { return !!previa; },
+      // Põe o clipe da prévia num instante e aplica a pose já, sem andar o relógio (para a miniatura do Photo Booth).
+      // Sem relógio andando, o fadeIn da prévia fica no peso 0 e o fadeOut da base no 1: a pose saía da base (ou T-pose). Aqui o clipe vale inteiro.
+      buscar(tempo) {
+        if (!previa) return;
+        previa.stopFading(); previa.setEffectiveWeight(1);
+        for (const a of Object.values(acoesBase)) if (a !== previa) { a.stopFading(); a.setEffectiveWeight(0); }
+        previa.time = Math.max(0, tempo); mixer.update(0); vrm.update(0);
+      },
+      get duracao() { return previa ? previa.getClip().duration : 0; },
       get tempo() { return previa ? previa.time : 0; },
     },
     atualizar,
-    definirSobreposicao(fn) { sobreposicao = fn; },
+    definirSobreposicao(fn, antes = null) { sobreposicao = fn; antesDoMixer = antes; },
+    // Expressões que o .vrm realmente tem (sem visemas, piscada e olhar), para os controles de 0 a 100.
+    expressoesDisponiveis() { return em ? em.expressions.map((e) => e.expressionName).filter((n) => !VISEMAS_E_PISCADA.has(n)) : []; },
+    definirExpressaoManual(nome, valor) {
+      if (!em || VISEMAS_E_PISCADA.has(nome) || !em.getExpression(nome)) return false;
+      const v = Math.max(0, Math.min(1, Number(valor) || 0));
+      if (v === 0) manuais.delete(nome); else manuais.set(nome, v);
+      if (v === 0) em.setValue(nome, 0); // sem o valor manual, a emoção e o clipe voltam a mandar no quadro seguinte
+      return true;
+    },
+    zerarExpressoesManuais() { for (const n of manuais.keys()) em.setValue(n, 0); manuais.clear(); },
+    get expressoesManuais() { return Object.fromEntries(manuais); },
+    definirOlhar({ modo = 'auto', yaw = 0, pitch = 0 } = {}) {
+      olharModo = ['auto', 'camera', 'direcao'].includes(modo) ? modo : 'auto';
+      olharYaw = Math.max(-0.8, Math.min(0.8, yaw)); olharPitch = Math.max(-0.5, Math.min(0.5, pitch));
+    },
+    get olhar() { return { modo: olharModo, yaw: olharYaw, pitch: olharPitch }; },
     // Posição da cabeça AGORA no mundo (posicaoCabeca é a do carregamento). Para o rastreamento da câmera.
     cabecaAgora(alvo) {
       const osso = hum.getRawBoneNode('head');

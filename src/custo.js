@@ -95,6 +95,8 @@ export function criarMedidorDeCusto({ estadoInicial = null, cambio = CAMBIO_PADR
     resumo,
     precoDe(modelo) { return precoVigente(tabela[chaveDoModelo(modelo)]); },
     // Gasto de fora do texto (voz paga) entra no mesmo teto acumulado.
+    // Zera o gasto acumulado (o teto atravessa os dias): o operador faz isso quando começa um orçamento novo.
+    zerarAcumulado() { estado.acumUsd = 0; aoMudar(resumo()); },
     somarExtra(usd) { estado.acumUsd = (estado.acumUsd || 0) + (Number(usd) || 0); aoMudar(resumo()); },
     definirCambio(v) { taxa = Number(v) || CAMBIO_PADRAO; aoMudar(resumo()); },
     definirPreco(modelo, entrada, saida) {

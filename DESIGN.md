@@ -39,10 +39,10 @@ A base do texto escala com a tela: 16 px no celular e ~22 px no totem (`clamp(16
 ## Paleta (e por quê)
 | Personagem | Fundo | Ação | Motivo |
 |---|---|---|---|
-| Luma | azul-céu claro | coral | Luz de dia, sala de aula. O coral do microfone é o botão óbvio para criança pequena. |
-| Teo | grafite escuro | laranja | Quadro-negro: o quadro de contas fica em destaque, e o laranja chama sem cansar. |
-| Rafa | papel-cru | azul-prancheta | Papel de desenho técnico. Sóbrio. |
-| Nina | verde-menta | verde-laboratório + âmbar | Ciência, natureza, experimento. |
+| Luma | branco-azulado claro | coral escuro | Luz de dia, sala de aula. O coral do microfone é o botão óbvio para criança pequena. |
+| Teo | azul-gelo claro | laranja queimado | O quadro de contas fica em destaque sobre o fundo claro, e o laranja chama sem cansar. |
+| Rafa | verde-gelo claro | terracota | Papel de desenho técnico. Sóbrio. |
+| Nina | lavanda clara | vermelho-tijolo | Ciência, natureza, experimento. |
 
 Os textos sobre fundo seguem contraste AA. O "?" de número não conferido usa laranja-claro com texto marrom, igual ao alerta do selo de voz: um único sinal de atenção no app inteiro.
 
@@ -66,21 +66,22 @@ Tudo abaixo é proposta. Enquanto o dono não aprovar, vale o que está acima.
 - **Editor claro (02):** leva a árvore da cena à esquerda, propriedades à direita, barra flutuante, barra de comando embaixo. É a base do console do operador.
 - **Estúdio escuro (03):** só a estrutura (trilha de etapas, abas de expressão e animação, ficha do personagem). Violeta e brilho ficam de fora: é o que a regra I1 proíbe.
 
-## Paleta (medida nas imagens, ajustada por contraste)
-| Papel | Valor | Origem e ajuste |
-|---|---|---|
-| Fundo, topo | `#0c1c3e` | amostrado (01) |
-| Fundo, meio | `#14315f` | entre o topo e o meio amostrado (`#24518a`), mais escuro para o texto branco ficar acima de 10:1 |
-| Fundo, base | `#1d4175` | idem, 10,17:1 com branco |
-| Texto | `#ffffff` | 12,85:1 sobre o fundo do meio |
-| Texto suave | `#aab6d3` | 5,01:1 sobre a base, o pior caso |
-| **Acento (botão)** | `#e0224a` | o coral amostrado (`#ff2c59`) dava **3,65:1** com texto branco, abaixo do AA; este dá 4,67:1 |
-| Acento (anel, foco) | `#ff4d6d` | só para linha sobre o fundo escuro: 5,22:1 no topo |
-| Perfil 1, 2, 3 | `#f2c230`, `#3fbf6a`, `#35b6d6` | amostrado amarelo, verde e ciano, **sem o neon** (`#ffea44`, `#43fd4c`, `#49fffb`), chapados |
-| Pódio | `#e1e2e7` | amostrado (01) |
-| Console | `#f6f6f6` fundo, `#ffffff` cartão, `#1a1a1a` texto, `#4d4d4d` suave, `#e3e3e3` linha | amostrado (02); um acento quente `#c9531f` |
+## Paleta (visual claro do Photo Booth, desde 08/10/2026)
+Todas as telas (atração, escolha do personagem, conversa e visualizador) usam o visual claro do Photo Booth, por decisão do dono: fundo claro, o nome do personagem repetido em contorno ao fundo (só contorno, sem animação), botões brancos em pílula e uma cor de ação por personagem. A paleta azul-escura anterior foi substituída; os valores abaixo estão em `src/characters.js` e nas variáveis `:root` de `index.html` (um teste confere que as duas coincidem).
 
-Um acento só (o coral) no público. O tema por personagem varia **o matiz do fundo** dentro da família azul e o acento, vindos dos dados; os três indicadores são iguais para todos.
+| Papel | Valor (Luma) | Observação |
+|---|---|---|
+| Fundo, topo e base | `#f7f9fd` e `#e4eaf5` | gradiente leve; cada personagem muda só o matiz |
+| Texto | `#182033` | contraste AA com o fundo e com o cartão |
+| Texto suave | `#46506a` | AA no pior caso, a base do gradiente |
+| **Ação (botão)** | `#c81e45` | texto branco em cima, AA medido por `tests/unit/contraste.test.js` |
+| Cartão | `#ffffff` | balões, quadro, painéis |
+| Realce (Enviar) | `#182033` com texto `#ffffff` | |
+| Perfil 1, 2, 3 | `#f2c230`, `#3fbf6a`, `#35b6d6` | chapados, sem neon |
+| Pódio | `#e1e2e7` | elipse em CSS |
+| Padrão do nome | traço de 2 px em 15% da cor do texto suave | decorativo, `aria-hidden`, some no visualizador (que tem o seu) |
+
+Cores de ação: Luma `#c81e45` (coral escuro), Teo `#b3420f` (laranja queimado), Rafa `#a63d14`, Nina `#b83030`. Um acento só por personagem. Os três indicadores de perfil são iguais para todos.
 
 ## Tipografia
 **Proposta: manter Baloo 2 (nomes e botões) e Atkinson Hyperlegible (texto e números).** Motivo: já são as fontes do projeto, a Baloo é arredondada e amigável para criança de 5 a 14 anos, e a Atkinson foi desenhada para legibilidade e já serve Teo e Rafa. A referência usa uma neo-grotesca tipo Inter; copiar isso seria seguir a referência por seguir. JetBrains Mono fica só no quadro.

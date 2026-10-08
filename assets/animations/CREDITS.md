@@ -43,3 +43,40 @@ Neste pacote, a numeração do readme bateu com o que se vê.
 | `aceno.vrma` | convertido do `aceno.fbx` com fbx2vrma-converter (MIT, commit c645441) + FBX2glTF v0.9.7 | mesma do FBX. No `.gitignore` | 6c480fc38f088e0bcbfaf6d79055d1f42ac667ed3c73fca81e5ce996d86ac058 |
 | `aceno2.fbx` | Mixamo (Adobe), baixado pelo dono (versão longa) | Termos da Adobe, como acima. No `.gitignore` | f4ec1adfec2c8be0701d748a79872f9c167004363aef1506170ef616f77d7247 |
 | `aceno2.vrma` | convertido do `aceno2.fbx`, mesmo conversor | mesma do FBX. No `.gitignore` | acdf3c21897fef18adba112f19974076c5363734ec0faec023545f542b4d2aa0 |
+
+## Clipes do Overte (08/10/2026): falas, assentir, pensar e palmas
+
+Pasta `assets/animations/overte/`. Origem: biblioteca `.vrma` do projeto [Undi95/Hanami](https://github.com/Undi95/Hanami) (`vrma/`), que reúne clipes do **Overte** (github.com/overte-org/overte, feitos à mão no Maya por animador da High Fidelity), retargetados para o esqueleto humanoide VRM 1.0 a 30 fps. Os arquivos estão **como baixados, sem edição nossa**. O código do Hanami é AGPL-3.0, mas **os clipes têm licença própria**, conforme o `vrma/NOTICE.md` do repositório: Apache-2.0 (Overte). Aviso que acompanha a redistribuição:
+
+```
+Copyright (c) 2013-2019, High Fidelity, Inc.
+Copyright (c) 2019-2021, Vircadia contributors.
+Copyright (c) 2022-2026, Overte e.V.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use these files except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
+O Hanami informa que alterou cada clipe só por retarget, escala (cm para m), reamostragem e corte (lista no `NOTICE.md` dele, seção 1). Texto completo da licença: <http://www.apache.org/licenses/LICENSE-2.0>.
+
+| Arquivo | Origem no Overte | id no catálogo | Uso | SHA-256 |
+|---|---|---|---|---|
+| `idle-talking.vrma` | `talk_armsdown`, 7,13 s | fala-leve | estado "falando" da Luma | 74f50c1b63bb8c2b19276dd7db26c9e8096da72acb521d4e635b059730e78bd8 |
+| `idle-talking-5.vrma` | `talk04`, 16,63 s | fala-base | estado "falando" do Teo | 911f108951fba12ea151649b7749e2cee00ab7f9384ddde8a750c441886d0b91 |
+| `idle-talking-4.vrma` | `talk03`, 10,00 s | fala-media | reserva (desligado) | 36be8475c4eba974ea6da2268903cd9461536e24a7cbb98f457acc62a4098f12 |
+| `idle-talking-6.vrma` | `talk_lefthand`, 16,63 s | fala-mao-esq | reserva (desligado) | 1648d8a03d7e563cad203fa88b80cfd7629e70292cbcc406bc730ac1ffc8bf60 |
+| `idle-talking-7.vrma` | `talk_righthand`, 16,73 s | fala-mao-dir | reserva (desligado) | b5d9605ebb566fb811b52e81fa826ad3b47601d349994540c65a33a001ed1aac |
+| `nod.vrma` | `emote_agree_headnod`, 1,77 s | assentir | gesto "agradece" | c5f715092eacacc827b52c984ebd5c8b8d991b2e34102fbc03235b01c6bcbbe8 |
+| `think.vrma` | `idle_once_lookaround`, 3,37 s | pensar | gesto "nao-sei" | e28485c2606b4b27869dee84d0a4be7cff9d6eb1a573cf1ea33b3d5a4b5aa3f9 |
+| `happy.vrma` | `emote_clap01_all`, 5,30 s | aplauso | gesto "aplaude" | 55b69cf6ed4213adeba1279cb85015c136cbaa5ecefc5211f4f595fc454d6b39 |
+
+Descrições dos clipes tiradas do `NOTICE.md` do Hanami; **ainda não conferidas olhando o movimento no avatar daqui** (ver itens 112 a 114 de `Repertorio/TESTES-MANUAIS.md`).

@@ -2,7 +2,7 @@
 // do MediaPipe recomenda). Recebe ImageBitmap de cada quadro, devolve SÓ NÚMEROS (landmarks de mundo e visibilidade). O quadro é
 // fechado logo depois de usado: nenhuma imagem é guardada ou enviada.
 // Mensagens de entrada:  { tipo: 'iniciar', base, modelo, maos }   { tipo: 'quadro', bitmap, t }   { tipo: 'fechar' }
-// Mensagens de saída:    { tipo: 'pronto', delegado }  { tipo: 'erro', mensagem }  { tipo: 'resultado', t, pose, maos, ms }
+// Mensagens de saída:    { tipo: 'pronto', delegado }  { tipo: 'erro', mensagem }  { tipo: 'resultado', t, pose, normalizado, maos: [{ mundo, norm }], ms }
 // WORKER CLÁSSICO (não módulo): o carregador do wasm do MediaPipe usa importScripts, que não existe de verdade em worker módulo
 // (erro "ModuleFactory not set"). O bundle ESM entra por import() dinâmico, que funciona nos dois tipos.
 let pose = null, mao = null, ocupado = false, MP = null;
@@ -38,19 +38,17 @@ self.onmessage = async (ev) => {
       ocupado = true;
       const t0 = performance.now();
       const r = pose.detectForVideo(m.bitmap, m.t);
-      const mr = mao ? mao.detectForVideo(m.bitmap, m.t) : null;
+      // As maos podem rodar so em quadros alternados (m.maos === false): o resultado vem com maosAtualizadas false e o app segue com a ultima mao.
+      const mr = mao && m.maos !== false ? mao.detectForVideo(m.bitmap, m.t) : null;
       m.bitmap.close();
       const mundo = r.worldLandmarks && r.worldLandmarks[0];
       const norm = r.landmarks && r.landmarks[0];
       let maos = null;
       if (mr && mr.worldLandmarks) {
-        maos = { esq: null, dir: null };
-        mr.worldLandmarks.forEach((lm, i) => {
-          const lado = mr.handedness && mr.handedness[i] && mr.handedness[i][0] && mr.handedness[i][0].categoryName; // 'Left' ou 'Right' como o MediaPipe diz
-          maos[lado === 'Left' ? 'esq' : 'dir'] = lm.map(num);
-        });
+        // Sem rótulo de lado: a documentação diz que "Left" e "Right" assumem imagem espelhada. O app associa cada mão ao pulso da pose.
+        maos = mr.worldLandmarks.map((lm, i) => ({ mundo: lm.map(num), norm: ((mr.landmarks && mr.landmarks[i]) || []).map(num), rotulo: (mr.handedness && mr.handedness[i] && mr.handedness[i][0] && mr.handedness[i][0].categoryName) || null }));
       }
-      postMessage({ tipo: 'resultado', t: m.t, pose: mundo ? mundo.map(num) : null, normalizado: norm ? norm.map(num) : null, maos, ms: performance.now() - t0 });
+      postMessage({ tipo: 'resultado', t: m.t, pose: mundo ? mundo.map(num) : null, normalizado: norm ? norm.map(num) : null, maos, maosAtualizadas: !!mr, ms: performance.now() - t0 });
       ocupado = false;
     }
   } catch (e) {

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframes do Photo Booth</title>
+<style>
+  /* Wireframes de média fidelidade do prompt 07 (V1). Servem para aprovar ESTRUTURA e HIERARQUIA, não acabamento.
+     Blocos tracejados = vem do .vrm vivo ou de um render dele (nada de arte inventada). Referência: seção 32 do REPERTORIO e a
+     ideia estrutural da captura "AI Studio" (trilho de ferramentas, tira de miniaturas, barra de reprodução), sem o roxo. */
+  :root {
+    --fundo: #f3f5f9; --padrao: #dde2ec; --cartao: #ffffff; --tinta: #182033; --suave: #46506a; --linha: #e3e7ef;
+    --acento: #e0224a; /* acento da Luma (acao em characters.js); o Teo usa #c24a16. Cada personagem mantém o seu. */
+    --alvo: 56px; --raio: 20px; --sombra: 0 6px 24px rgba(24, 32, 51, .12);
+    --fonte: "Atkinson Hyperlegible", system-ui, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: #2b2f3a; color: #e8eaf0; font-family: var(--fonte); }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; }
+  h2 { font-size: 1rem; margin: 30px 0 10px; padding-top: 14px; border-top: 1px solid #ffffff22; }
+  .nota { margin: 0 0 14px; color: #b9c2d8; max-width: 96ch; line-height: 1.5; font-size: .95rem; }
+  .nota b { color: #fff; }
+  .linha { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .moldura > b { display: block; font-size: .8rem; color: #b9c2d8; margin-bottom: 6px; font-weight: 600; }
+  .tela { position: relative; overflow: hidden; transform-origin: top left; border-radius: 12px; background: var(--fundo); color: var(--tinta); font-family: var(--fonte); }
+  .paisagem { width: 1280px; height: 720px; } .retrato { width: 540px; height: 960px; }
+  .escala-p { width: 768px; height: 432px; } .escala-p .tela { transform: scale(.6); }
+  .escala-r { width: 324px; height: 576px; } .escala-r .tela { transform: scale(.6); }
+
+  /* Fundo com letras em contorno: o nome do personagem, repetido e cortado, em contraste mínimo, decorativo. */
+  .padrao { position: absolute; inset: -40px; display: grid; align-content: center; gap: 0; transform: rotate(-9deg); pointer-events: none; }
+  .padrao span { display: block; font-weight: 800; font-size: 150px; line-height: 1.02; letter-spacing: .04em; color: transparent; -webkit-text-stroke: 2px var(--padrao); white-space: nowrap; }
+  .padrao span:nth-child(even) { margin-left: -180px; }
+
+  .vivo { position: absolute; border: 2px dashed #8a93ab; border-radius: 16px; display: grid; place-content: center; text-align: center; color: #46506a; font-size: 15px; line-height: 1.4; padding: 8px; }
+  .sombra { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, rgba(24, 32, 51, .22), rgba(24, 32, 51, 0)); }
+
+  .cartao { position: absolute; background: var(--cartao); border-radius: var(--raio); box-shadow: var(--sombra); }
+  .botao { position: absolute; width: var(--alvo); height: var(--alvo); border-radius: 50%; background: var(--cartao); box-shadow: var(--sombra); display: grid; place-content: center; font-size: 22px; font-weight: 700; }
+  .pilula { position: absolute; height: var(--alvo); padding: 0 24px; border-radius: 28px; background: var(--acento); color: #fff; font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sombra); }
+  .pilula.off { background: #d6dbe7; color: #2f3850; }
+
+  /* Faixa de miniaturas */
+  .faixa { position: absolute; display: flex; gap: 12px; }
+  .faixa.v { flex-direction: column; }
+  .mini { width: 92px; height: 92px; border-radius: 16px; background: var(--cartao); border: 2px dashed #9aa3ba; box-shadow: var(--sombra); display: grid; place-content: center; text-align: center; font-size: 12px; color: #46506a; padding: 4px; line-height: 1.25; }
+  .mini.sel { border: 4px solid var(--acento); border-style: solid; color: var(--tinta); }
+  .mini.mais { border-style: solid; border-color: var(--linha); font-size: 30px; font-weight: 800; color: var(--suave); }
+
+  /* Painel com abas */
+  .abas { display: flex; gap: 4px; padding: 10px 14px 0; border-bottom: 1px solid var(--linha); }
+  .abas span { padding: 10px 10px 12px; font-size: 15px; font-weight: 700; color: var(--suave); border-bottom: 4px solid transparent; white-space: nowrap; }
+  .abas span.at { color: var(--tinta); border-bottom-color: var(--acento); }
+  .corpo { padding: 16px 18px; display: grid; gap: 14px; font-size: 15px; }
+  .corpo label { font-size: 13px; color: var(--suave); font-weight: 700; display: block; margin-bottom: 6px; }
+  .campo { height: 48px; border: 2px solid var(--linha); border-radius: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-weight: 700; }
+  .seg { display: flex; gap: 6px; }
+  .seg span { flex: 1; text-align: center; padding: 13px 4px; border: 2px solid var(--linha); border-radius: 12px; font-weight: 700; font-size: 14px; }
+  .seg span.on { border-color: var(--acento); color: var(--acento); }
+  .op { border: 2px dashed #b9a24a; background: #fff8dc; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: #6b5a14; line-height: 1.4; }
+  .barra { height: 8px; border-radius: 4px; background: var(--linha); position: relative; } .barra i { position: absolute; left: 0; top: 0; bottom: 0; width: 40%; border-radius: 4px; background: var(--acento); }
+  .grade6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .grade6 span { height: 56px; border: 2px solid var(--linha); border-radius: 12px; display: grid; place-content: center; font-size: 22px; }
+  .tit { position: absolute; font-size: 22px; font-weight: 800; }
+  .sub { position: absolute; font-size: 14px; color: var(--suave); }
+
+  /* Folha inferior (retrato) */
+  .folha { position: absolute; left: 0; right: 0; bottom: 0; background: var(--cartao); border-radius: 28px 28px 0 0; box-shadow: 0 -8px 28px rgba(24, 32, 51, .14); }
+  .puxador { width: 56px; height: 6px; border-radius: 3px; background: #c9cfdd; margin: 10px auto 0; }
+
+  .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; }
+  .caixa { background: #232837; border: 1px solid #ffffff1a; border-radius: 12px; padding: 14px 16px; font-size: .92rem; line-height: 1.5; color: #d4dbed; }
+  .caixa h3 { margin: 0 0 6px; font-size: .95rem; color: #fff; }
+  .caixa ul { margin: 0; padding-left: 18px; }
+  .caixa .ok { color: #7bd88f; } .caixa .nao { color: #ff8da0; }
+  .legenda { display: flex; gap: 18px; flex-wrap: wrap; font-size: .85rem; color: #b9c2d8; margin: 0 0 12px; }
+  .legenda i { display: inline-block; width: 18px; height: 12px; border: 2px dashed #8a93ab; border-radius: 4px; vertical-align: -2px; margin-right: 6px; }
+  .legenda i.op { border-color: #b9a24a; background: #fff8dc; }
+</style>
+</head>
+<body>
+<h1>Photo Booth: wireframes para aprovar (marco V1)</h1>
+<p class="nota"><b>Design Read.</b> Lendo como: tela de <b>experiência</b> de um visualizador de personagem, para crianças e para o operador de um evento, em linguagem clara e suave de estúdio de fotos, com sistema próprio (tokens do projeto, acento por personagem). Botões de controle: variância 4, movimento 3, densidade 3. A tela de seleção estilo jogo (prompt 05) <b>não muda</b>.</p>
+<p class="legenda"><span><i></i>vem do .vrm vivo ou de um render dele</span><span><i class="op"></i>só no painel do operador</span><span>Acento mostrado: Luma (#e0224a). Cada personagem mantém o seu.</span></p>
+
+<h2>1. Paisagem e retrato, modo público (aba Animações aberta)</h2>
+<div class="linha">
+  <div class="moldura"><b>Paisagem 1280 x 720</b>
+    <div class="escala-p"><div class="tela paisagem">
+      <div class="padrao" aria-hidden="true"><span>LUMA LUMA LUMA LUMA</span><span>LUMA LUMA LUMA LUMA</span><span>LUMA LUMA LUMA LUMA</span><span>LUMA LUMA LUMA LUMA</span><span>LUMA LUMA LUMA LUMA</span></div>
+      <div class="sombra" style="left:340px;top:640px;width:420px;height:46px"></div>
+      <div class="vivo" style="left:395px;top:40px;width:310px;height:630px">personagem de corpo inteiro<br>(.vrm vivo, câmera livre)</div>
+      <div class="faixa v" style="left:36px;top:120px">
+        <div class="mini sel">Pose de modelo<br>(clipe atual)</div><div class="mini">render do clipe</div><div class="mini">render do clipe</div><div class="mini">render do clipe</div><div class="mini mais">...</div>
+      </div>
+      <div class="pilula" style="left:36px;top:36px;background:var(--cartao);color:var(--tinta)">Imitar meus movimentos</div>
+      <div class="botao" style="right:36px;top:36px" aria-label="Pausa">II</div>
+      <div class="cartao" style="right:36px;top:112px;width:430px">
+        <div class="abas"><span class="at">Animações</span><span>Expressões</span><span>Rastreamento</span><span>Fundo e foto</span></div>
+        <div class="corpo">
+          <div><label>Clipe atual</label><div class="campo">Pose de modelo <span>v</span></div></div>
+          <div><label>Repetição</label><div class="seg"><span>Um</span><span class="on">Todos</span><span>Aleatório</span></div></div>
+          <div><label>Velocidade</label><div class="seg"><span>0,5x</span><span class="on">1x</span><span>1,5x</span></div></div>
+          <div class="op">Só operador: botão "Selecionar .vrma" (arquivo local, validado, marcado como temporário até aprovação) e o link para achar clipes.</div>
+        </div>
+      </div>
+      <div class="pilula off" style="right:176px;top:640px">Foto</div>
+      <div class="pilula off" style="right:36px;top:640px">Vídeo</div>
+      <div class="sub" style="right:36px;top:700px;text-align:right;font-size:12px">desligados no modo público</div>
+      <div class="sub" style="left:150px;top:640px">Pose de modelo, 7,5 s, em loop</div>
+    </div></div>
+  </div>
+  <div class="moldura"><b>Retrato 540 x 960</b>
+    <div class="escala-r"><div class="tela retrato">
+      <div class="padrao" aria-hidden="true"><span>LUMA LUMA</span><span>LUMA LUMA</span><span>LUMA LUMA</span><span>LUMA LUMA</span><span>LUMA LUMA</span><span>LUMA LUMA</span></div>
+      <div class="sombra" style="left:110px;top:520px;width:320px;height:40px"></div>
+      <div class="vivo" style="left:120px;top:60px;width:300px;height:480px">personagem de corpo inteiro<br>(.vrm vivo)</div>
+      <div class="pilula" style="left:20px;top:20px;height:48px;font-size:15px;padding:0 16px;background:var(--cartao);color:var(--tinta)">Imitar meus movimentos</div>
+      <div class="botao" style="right:20px;top:16px" aria-label="Pausa">II</div>
+      <div class="pilula off" style="right:20px;top:470px;height:48px;font-size:15px;padding:0 16px">Foto</div>
+      <div class="faixa" style="left:20px;top:560px"><div class="mini sel" style="width:76px;height:76px;font-size:11px">Pose de modelo</div><div class="mini" style="width:76px;height:76px">clipe</div><div class="mini" style="width:76px;height:76px">clipe</div><div class="mini" style="width:76px;height:76px">clipe</div><div class="mini mais" style="width:76px;height:76px">...</div></div>
+      <div class="folha" style="top:660px">
+        <div class="puxador"></div>
+        <div class="abas" style="padding-top:4px"><span class="at">Animações</span><span>Expr.</span><span>Rastr.</span><span>Fundo</span></div>
+        <div class="corpo" style="gap:10px"><div class="campo">Pose de modelo <span>v</span></div><div class="seg"><span>Um</span><span class="on">Todos</span><span>Aleatório</span></div></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+<p class="nota" style="margin-top:12px">No retrato o painel vira <b>folha inferior</b> (puxa para cima) e a faixa de miniaturas fica <b>horizontal</b>, entre o personagem e a folha. Alvos de 56 px ou mais, contraste AA, foco visível, atalhos de teclado (setas nas miniaturas, espaço para pausar).</p>
+
+<h2>2. As outras abas do painel</h2>
+<div class="linha">
+  <div class="cartao" style="position:relative;width:360px">
+    <div class="abas"><span>Animações</span><span class="at">Expressões</span><span>Rastr.</span><span>Fundo</span></div>
+    <div class="corpo">
+      <div class="grade6"><span>feliz</span><span>surpresa</span><span>triste</span><span>calma</span><span>curiosa</span><span>zerar</span></div>
+      <div><label>Olhar</label><div class="seg"><span class="on">Para a câmera</span><span>Escolher direção</span></div></div>
+      <div class="op">Operador: controles de 0 a 100 só das expressões que o .vrm realmente tem (feliz, bravo, triste, relaxado, surpreso e as demais). A expressão manual sobrescreve a do clipe; a boca falando vem antes de tudo.</div>
+    </div>
+  </div>
+  <div class="cartao" style="position:relative;width:360px">
+    <div class="abas"><span>Anim.</span><span>Expr.</span><span class="at">Rastreamento</span><span>Fundo</span></div>
+    <div class="corpo">
+      <div class="campo">Imitar meus movimentos <span>ligar</span></div>
+      <div class="sub" style="position:static">Fique em pose neutra por 2 segundos. A câmera só liga por este botão; nada é gravado.</div>
+      <div class="op">Operador: Braços, Mãos e dedos, Tronco, Movimento do corpo, Pernas (experimental, desligada), Espelho, Gestos. Recalibrar, prévia da câmera com o esqueleto (desligada), qualidade Leve ou Equilibrada, gravar e repetir números.</div>
+      <div><label>Estado</label><div class="campo">Rastreando, 24 quadros por segundo</div></div>
+    </div>
+  </div>
+  <div class="cartao" style="position:relative;width:360px">
+    <div class="abas"><span>Anim.</span><span>Expr.</span><span>Rastr.</span><span class="at">Fundo e foto</span></div>
+    <div class="corpo">
+      <div><label>Cor de fundo</label><div class="seg"><span class="on">Padrão</span><span>Paleta</span><span>Transparente</span></div></div>
+      <div><label>Tamanho</label><div class="seg"><span>1:1</span><span class="on">4:5</span><span>16:9</span><span>9:16</span></div></div>
+      <div class="campo">Mostrar moldura <span>sim</span></div>
+      <div class="op">Foto e vídeo só no operador, só do avatar (nunca a webcam), salvos no computador, e só se a licença do .vrm e a do clipe permitirem; mostram o crédito exigido. Vídeo até 15 s com indicador de gravação.</div>
+    </div>
+  </div>
+</div>
+
+<h2>3. Modo público e modo operador</h2>
+<div class="grade">
+  <div class="caixa"><h3>Modo público (quiosque)</h3><ul>
+    <li>Painel com 2 abas visíveis: <b>Animações</b> e <b>Expressões</b> (6 botões com ícone).</li>
+    <li>Um único interruptor <b>Imitar meus movimentos</b>, com a instrução de calibração em uma frase.</li>
+    <li>Sem link externo, sem seleção de arquivo, foto e vídeo desligados.</li>
+  </ul></div>
+  <div class="caixa"><h3>Modo operador</h3><ul>
+    <li>As 4 abas completas, controles de 0 a 100, seleção de .vrma, foto e vídeo, rastreamento detalhado.</li>
+    <li>Link para achar .vrma só aqui.</li>
+    <li>Tela de seleção do prompt 05 e demais painéis ficam como estão.</li>
+  </ul></div>
+  <div class="caixa"><h3 class="ok">Levo da referência</h3><ul>
+    <li>Painel flutuante com abas, faixa de miniaturas à esquerda, pausa no topo, foto e vídeo em pílula.</li>
+    <li>Fundo claro com letras em contorno (nome do personagem).</li>
+    <li>Da captura "AI Studio", só a estrutura: trilho de ferramentas e tira de miniaturas.</li>
+  </ul></div>
+  <div class="caixa"><h3 class="nao">Não levo</h3><ul>
+    <li>Marca, logotipo, textos, ícones e a redação do VRoid Hub; nada que sugira apoio da pixiv.</li>
+    <li>O roxo, o gradiente violeta, o painel escuro, os créditos e o botão de plano da captura "AI Studio".</li>
+    <li>Link do BOOTH na tela pública.</li>
+  </ul></div>
+</div>
+
+<h2>4. Para você decidir</h2>
+<div class="grade">
+  <div class="caixa"><h3>Aprovar</h3><ul>
+    <li>A estrutura (faixa à esquerda, painel à direita, pausa no topo, pílulas embaixo).</li>
+    <li>As 4 abas e o que fica no modo público.</li>
+    <li>O botão "Imitar meus movimentos" no canto superior esquerdo.</li>
+  </ul></div>
+  <div class="caixa"><h3>Não definido ainda</h3><ul>
+    <li>Paleta medida: a captura clara do Photo Booth não chegou; usei só a descrição da seção 32.1 e os tokens do projeto.</li>
+    <li>Entrada de Luma e Teo (V2): proponho a atribuição depois que você aprovar esta estrutura.</li>
+  </ul></div>
+</div>
+</body>
+</html>

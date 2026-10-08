@@ -12,6 +12,19 @@ import { carregarTransformers } from '../transformers-local.js';
 export const MODELO_EMB = 'Xenova/multilingual-e5-small';
 export const DIM = 384;
 export const TAMANHO_DOWNLOAD_MB = 118;
+
+// O modelo já está no cache do navegador (o operador já aceitou o download uma vez)? Então preparar a base não baixa nada.
+// O transformers.js guarda os arquivos na Cache Storage "transformers-cache".
+export async function modeloEmCache() {
+  try {
+    if (typeof caches === 'undefined') return false;
+    const c = await caches.open('transformers-cache');
+    return (await c.keys()).some((r) => r.url.includes('multilingual-e5-small') && r.url.endsWith('model_quantized.onnx'));
+  } catch (e) {
+    console.warn('[rag] não consegui olhar o cache do modelo:', e);
+    return false;
+  }
+}
 const LOTE = 4;
 
 export function criarEmbeddings({ aoProgresso = () => {} } = {}) {

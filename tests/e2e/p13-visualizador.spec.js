@@ -200,6 +200,7 @@ test('visualizador: teclado (R, T, F, Espaço, setas, Esc)', async ({ page }) =>
 test('visualizador: loop em sequência, repetir um, aleatório, velocidade e pausa', async ({ page }) => {
   test.setTimeout(150_000);
   await abrir(page);
+  await page.evaluate(() => window.__prof3d.visualizador.definirEntrada(null)); // sem a entrada por personagem (V2): testa o loop padrão da lista toda
   await entrar(page, true);
   const est = () => page.evaluate(() => { const e = window.__prof3d.visualizador.estado; return { indice: e.indice, modo: e.modo, total: e.total, tocando: e.tocando, clipe: e.clipe && e.clipe.id }; });
   const e0 = await est();

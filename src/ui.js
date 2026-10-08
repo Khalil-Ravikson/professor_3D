@@ -8,7 +8,7 @@ import { carregarCatalogo, aplicarEscolhas, gravarEscolha } from './animacoes.js
 import { criarDiretor, removerMarcas, instrucaoGestos, ESTADOS_BASE } from './gestos.js';
 import { instrucaoEmocao } from './emocao.js';
 import { criarPoliticaSessao, itensAprovados } from './evento.js';
-import { criarEmbeddings, MODELO_EMB } from './rag/embeddings.js';
+import { criarEmbeddings, modeloEmCache, MODELO_EMB } from './rag/embeddings.js';
 import { criarRag } from './rag/rag.js';
 import { instrucaoRag, fontesCitadas } from './rag/prompt.js';
 import { registrarSW, aplicarAtualizacao, pedirPersistencia, usoEcota, tamanhosPorCategoria, apagarCategoria, prontoOffline, baixarParaOffline, formatarBytes, temServiceWorker } from './armazenamento.js';
@@ -17,6 +17,9 @@ import { PERSONAGENS, buscarPersonagem, aplicarAjustes } from './characters.js';
 import { criarQuadro, criarLeitorMarcado, separarFalaEQuadro } from './board.js';
 import { calcular, DECLARACAO_CALCULAR } from './calcular.js';
 import { criarRastreadorCorpo } from './corpo/rastreador.js';
+import { criarCaptura, salvarArquivo, nomeDoArquivo } from './captura.js';
+import { criarPhotoBooth } from './photobooth.js';
+import { avaliarCaptura } from './captura-licenca.js';
 import { criarCamera, criarPresenca, criarDetectorSorriso, FiltroOneEuro } from './camera.js';
 import { perguntarEmFluxo, ErroGemini, MODELO_PADRAO } from './brain.js';
 import { criarVoz } from './tts/index.js';
@@ -212,6 +215,13 @@ const MAPA_PALETA = {
 function aplicarPaleta(p) {
   const raiz = document.documentElement.style;
   for (const [k, v] of Object.entries(MAPA_PALETA)) if (p[k]) raiz.setProperty(v, p[k]);
+}
+// Padrão do fundo: o nome do personagem repetido (decorativo, escondido do leitor de tela).
+function pintarFundoNome(nome) {
+  let f = $('fundoNome');
+  if (!f) { f = document.createElement('div'); f.id = 'fundoNome'; f.className = 'fundo-nome'; f.setAttribute('aria-hidden', 'true'); app.prepend(f); }
+  const n = (nome || '').toUpperCase();
+  f.replaceChildren(...Array.from({ length: 6 }, () => { const sp = document.createElement('span'); sp.textContent = `${n} `.repeat(6); return sp; }));
 }
 
 // motivo: texto próprio (ex.: licença); sem motivo, a mensagem padrão de arquivo ausente com o caminho.
@@ -546,6 +556,7 @@ async function trocarPersonagem(p) {
   atualizarTitulo();
   gravar('personagem', p.id);
   aplicarPaleta(efetivo(p).paleta);
+  pintarFundoNome(p.nome);
   cena.definirLuz(efetivo(p).luz);
   document.title = `${p.nome} 3D`;
   micBtn.setAttribute('aria-label', T.avatar.falar(p.nome));
@@ -588,7 +599,8 @@ async function trocarPersonagem(p) {
     if (minha !== carga) { descartarVrm(vrm); return; }
     registrarChecklist(p.nome, checarVrm(vrm, bytes));
     avatar = montarAvatar(vrm, cena, { bases, tetoBoca: p.tetoBoca, fixarNoLugar });
-  avatar.definirSobreposicao((dt) => corpo.aplicar(dt)); // rastreamento do corpo por cima do clipe (prompt 7)
+  avatar.definirSobreposicao((dt) => corpo.aplicar(dt), () => corpo.restaurar());
+  desenharExpressoes(); atualizarCaptura(); // controles do operador para o modelo recém-carregado // rastreamento do corpo por cima do clipe (prompt 7)
     cena.definirFoco(avatar.posicaoCabeca, efetivo(p).enquadramento);
     aplicarEnquadramento(false); // na seleção troca para corpo inteiro; o deslize é do canvas, não da câmera
     atualizarSelecao();
@@ -733,7 +745,7 @@ function mostrarStatusVoz({ motor, aviso, servidor }) {
 const modoCalmo = () => reduzirMovimento.matches || ler('modo_calmo', 'nao') === 'sim';
 const fixarNoLugar = () => ler('fixar_lugar', 'sim') === 'sim';
 // O operador pode apontar um gesto para um movimento enviado ("usar como aceno"); vale por cima do catálogo.
-const mapaEfetivo = () => ({ ...catalogo.estados, ...lerJSON('estados_extra', {}) });
+const mapaEfetivo = (p = null) => ({ ...catalogo.estados, ...((p && p.estados) || {}), ...lerJSON('estados_extra', {}) });
 function anotarGesto(msg) {
   registroGestos.push({ t: Math.round(performance.now()), msg });
   if (registroGestos.length > 50) registroGestos.shift();
@@ -742,7 +754,7 @@ function anotarGesto(msg) {
 function novoDiretor(p) {
   if (!catalogo) return criarDiretor({ clipes: [], mapa: {}, registrar: anotarGesto });
   return criarDiretor({
-    clipes: aplicarEscolhas(catalogo), mapa: mapaEfetivo(), inventario: p.gestos || null,
+    clipes: aplicarEscolhas(catalogo), mapa: mapaEfetivo(p), inventario: p.gestos || null,
     intervaloMinS: Number(ler('intervalo_gestos', String(catalogo.intervaloMinS ?? 8))), calmo: modoCalmo,
     infantil: () => ler('modo_infantil', 'sim') === 'sim', registrar: anotarGesto,
   });
@@ -1024,8 +1036,10 @@ async function perguntarAoPersonagem(q) {
   const ctl = new AbortController();
   abortCtl = ctl;
   // Base de conhecimento (R4): só consulta quando o índice deste personagem está pronto. Falha na busca não derruba a pergunta.
+  const modoComplemento = ((ef.conhecimento && ef.conhecimento.modo) === 'complemento');
   let rg = null, rgBruto = null; // rgBruto: o resultado da busca antes da regra do modo complemento, para a resposta pronta
   let regraDoTema = false; // pergunta do assunto da base: só pode ser respondida com ela
+  let baseIndisponivel = false; // pergunta do assunto da base, mas a base não está preparada
   if (rag.pronto(quem.id)) {
     try {
       rg = await rag.consultar(quem.id, q);
@@ -1036,7 +1050,14 @@ async function perguntarAoPersonagem(q) {
     // knowledge/index.json). Semelhança alta sozinha não basta: "por que o céu é azul?" passou do limiar com um trecho da UEMA.
     const complemento = (ef.conhecimento && ef.conhecimento.modo) === 'complemento';
     if (rg && complemento && !regraDoTema) rg = null;
+  } else if (((ef.conhecimento && ef.conhecimento.modo) === 'complemento')) {
+    // A base existe mas ainda não foi preparada neste navegador. Pergunta do assunto dela NÃO pode ir ao Gemini sem a base: ele inventaria fatos.
+    try { baseIndisponivel = await rag.ehDoTema(quem.id, q); } catch (e) { console.warn('[rag] não consegui checar o assunto:', e); }
+    if (baseIndisponivel) avisarOperador(T.rag.avisoSemBase(quem.nome));
   }
+  // Teo e os outros não respondem sobre a UEMA e o CTIC: isso é da Luma (vocabulário derivado dos documentos dela, em knowledge/index.json).
+  let eDaLuma = false;
+  if (quem.id !== 'luma') { try { eDaLuma = await rag.ehDoTema('luma', q); } catch (e) { console.warn('[rag] não consegui checar o assunto da Luma:', e); } }
   // Servidor fora do ar na última checagem? Tenta de novo rápido antes de cair para a voz do sistema.
   if (config.motor !== 'webspeech' && voz.statusServidor.ok !== true) await voz.verificarServidor({ timeoutMs: 800 });
   const falaTurno = voz.novoTurno(ef.voz);
@@ -1057,11 +1078,17 @@ async function perguntarAoPersonagem(q) {
     // Resposta pronta da base (U5/U6): sem chamar o Gemini. Usa o trecho mais próximo, com a fonte, só se a busca for confiante.
     const prontaDaBase = (motivo) => {
       marca.aoPrimeiroTexto();
-      if (rgBruto && rgBruto.confiante && rgBruto.resultados.length) {
+      // No modo complemento a resposta pronta só vale para pergunta do assunto da base: semelhança alta sozinha deixou "história de dragão" pegar um trecho do ENSINAR.
+      if (rgBruto && rgBruto.confiante && rgBruto.resultados.length && (!modoComplemento || regraDoTema)) {
         rg = rgBruto;
         const t0 = rgBruto.resultados[0];
-        const palavras = t0.texto.split(/\s+/);
-        return palavras.length > 50 ? palavras.slice(0, 50).join(' ') + '.' : t0.texto;
+        // Trecho de pergunta e resposta: fala só a resposta (sem "Pergunta:" nem "Resposta-base:"), até 90 palavras e terminando em frase.
+        const bruto = t0.texto.includes('Resposta-base:') ? t0.texto.split('Resposta-base:').pop().trim() : t0.texto;
+        const palavras = bruto.split(/\s+/);
+        if (palavras.length <= 90) return bruto;
+        const corte = palavras.slice(0, 90).join(' ');
+        const fim = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '));
+        return fim > 40 ? corte.slice(0, fim + 1) : corte + '.';
       }
       return motivo === 'orcamento' ? T.orcamento.semBase : T.resposta.semInternet;
     };
@@ -1093,7 +1120,18 @@ async function perguntarAoPersonagem(q) {
     // Falha que vale tentar o reserva ou a resposta pronta: cota, servidor fora, queda de rede. Nunca depois de já ter falado.
     const tentavel = (e) => !falado && e.name !== 'AbortError' && (e instanceof ErroGemini ? [401, 403, 404, 429, 500, 502, 503, 504].includes(e.status) : true);
     const tetoDoProxy = (e) => e instanceof ErroGemini && e.status === 429 && /teto/i.test(e.detalhe || '');
-    if (modoEconomicoAtivo()) {
+    if (eDaLuma) {
+      // Pergunta do assunto da Luma (UEMA e CTIC) feita a outro personagem: sem Gemini e sem inventar, manda para a Luma.
+      marca.aoPrimeiroTexto();
+      texto = T.rag.eDaLuma;
+      falar(texto);
+    } else if (baseIndisponivel) {
+      marca.aoPrimeiroTexto();
+      texto = T.rag.naoSeiTema(quem.nome);
+      falar(texto);
+    } else if (modoEconomicoAtivo()) {
+      const s = situacaoOrcamento(), r = custo.resumo();
+      avisarOperador(O.avisoModo(economicoManual() ? O.motivoManual : O.motivoTeto(r.acumuladoReais, tetoReais())));
       texto = prontaDaBase('orcamento');
       falar(texto);
     } else if (rg && !rg.confiante) {
@@ -1362,6 +1400,26 @@ for (const [id, rotulo] of [['entrar', TV.entrar], ['reset', TV.resetar], ['ante
 elViz.vel.setAttribute('aria-label', TV.velocidade);
 $('galeriaVisualizador').textContent = TV.galeria;
 
+// Photo Booth: corpo inteiro. No retrato a folha do painel e a faixa de miniaturas cobrem a parte de baixo, então o corpo ocupa 30% da altura, começando em 24%
+// (o topo medido inclui o braço levantado de alguns clipes, por isso a cabeça aparece um pouco abaixo).
+function medidaParaPhotoBooth(m) {
+  // fatia: quanto da altura da tela o corpo ocupa; comeco: onde o topo do corpo cai (o enquadramento padrão põe o topo em 13%).
+  let fatia, comeco;
+  if (matchMedia('(max-aspect-ratio: 1/1), (max-width: 700px)').matches) {
+    // Retrato: nome do clipe e barra ocupam ~196 px no topo; embaixo ficam a folha do painel (36% da altura, 30% em tela baixa) e a faixa de
+    // miniaturas. O corpo cabe no vão que sobra, medido em pixels, para valer do celular pequeno ao totem.
+    const H = innerHeight, miniAltura = Math.min(130, Math.max(62, innerWidth * 0.11)) * 1.26;
+    const topoLivre = 196, fundoLivre = H * (1 - (H < 700 ? 0.30 : 0.36)) - 8 - miniAltura - 6;
+    const vao = Math.max(90, fundoLivre - topoLivre);
+    fatia = Math.min(0.44, (vao / H) * 0.97); comeco = (topoLivre + vao * 0.02) / H;
+  } else if (matchMedia('(max-height: 480px)').matches) {
+    fatia = 0.62; comeco = 0.07; // celular deitado: a barra de baixo cobre os pés, então o corpo sobe e encolhe
+  } else return m;
+  const visivel = (m.topo - m.base) / fatia;
+  const topo = m.topo + (comeco - 0.13) * visivel;
+  return { ...m, topo, base: topo - 0.71 * visivel };
+}
+let pb = null; // Photo Booth do visualizador; criado mais abaixo, depois dos controles que ele espelha
 function desenharVisualizador(e) {
   // Olhar de perto também é estar usando: sem isto a sessão acabava por inatividade com a pessoa vendo o personagem.
   if (sessaoAtiva) tocarInatividade();
@@ -1378,6 +1436,7 @@ function desenharVisualizador(e) {
   elViz.vel.value = String(e.velocidade);
   elViz.reset.title = `${TV.resetar} (R)`;
   if (e.ativo && !e.total) elViz.nome.textContent = TV.semClipes;
+  if (pb) pb.atualizar(e);
 }
 
 const visualizador = criarVisualizador({
@@ -1385,11 +1444,20 @@ const visualizador = criarVisualizador({
   avatar: () => avatar,
   clipesAtivos: () => (catalogo ? aplicarEscolhas(catalogo).filter((c) => c.status === 'ativo' && (!modoInfantil.checked || c.infantilOk)) : []),
   carregarClipe: (c) => (avatar ? clipeDoArquivo(c.arquivo, avatar.vrm) : Promise.resolve(null)),
+  entrada: () => { const p = personagem && efetivo(personagem); return p && p.amostraEntrada ? { ...p.amostraEntrada, loop: p.loopAnimacoes || [] } : null; },
   reduzirMovimento,
   aoMudar: desenharVisualizador,
-  aoEntrar: () => { silenciar(); },
+  antesDeTocar: () => (pb ? pb.preparar() : Promise.resolve()),
+  aoEntrar: () => { silenciar(); if (avatar) cena.definirCorpo(medidaParaPhotoBooth(avatar.medidaCorpo()), true); }, // o Photo Booth mostra o corpo inteiro
+  aoSair: () => { if (pb) pb.sair(); aplicarEnquadramento(true); },
 });
 stage.addEventListener('pointerdown', () => { if (visualizador.ativo && sessaoAtiva) tocarInatividade(); });
+// Girar o aparelho com o Photo Booth aberto refaz o enquadramento do corpo inteiro (a medida depende do formato).
+let tReenquadrar = 0;
+addEventListener('resize', () => {
+  clearTimeout(tReenquadrar);
+  tReenquadrar = setTimeout(() => { if (visualizador.ativo && avatar) { cena.definirCorpo(medidaParaPhotoBooth(avatar.medidaCorpo()), false); cena.resetarCamera(0); } }, 200);
+});
 elViz.entrar.addEventListener('click', () => visualizador.entrar());
 elViz.reset.addEventListener('click', () => visualizador.resetar());
 elViz.seguir.addEventListener('click', () => visualizador.definirSeguir(!visualizador.estado.seguir));
@@ -1408,34 +1476,155 @@ $('galeriaVisualizador').addEventListener('click', () => {
 });
 desenharVisualizador(visualizador.estado);
 
+/* ---------- Expressões, olhar, foto e vídeo (prompt 7, V3 e V4): só no painel do operador ---------- */
+const TX = T.captura;
+const NOMES_EXPR = { happy: 'Feliz', angry: 'Bravo', sad: 'Triste', relaxed: 'Relaxado', surprised: 'Surpreso', neutral: 'Neutro' };
+const elX = { dica: $('exprDica'), caixa: $('exprControles'), zerar: $('exprZerar'), olhar: $('olharModo'), dir: $('olharDirecao'), yaw: $('olharYaw'), pitch: $('olharPitch') };
+$('exprDica').textContent = TX.exprDica; elX.zerar.textContent = TX.zerar; $('olharModoR').textContent = TX.olhar;
+elX.olhar.options[0].textContent = TX.olharAuto; elX.olhar.options[1].textContent = TX.olharCamera; elX.olhar.options[2].textContent = TX.olharDirecao;
+$('olharYawR').textContent = TX.yaw; $('olharPitchR').textContent = TX.pitch;
+elX.olhar.value = ler('olhar_modo', 'auto');
+function aplicarOlhar() {
+  elX.dir.hidden = elX.olhar.value !== 'direcao';
+  if (avatar) avatar.definirOlhar({ modo: elX.olhar.value, yaw: Number(elX.yaw.value) / 100, pitch: Number(elX.pitch.value) / 100 });
+}
+function desenharExpressoes() {
+  elX.caixa.replaceChildren();
+  if (!avatar) return;
+  for (const nome of avatar.expressoesDisponiveis()) {
+    const id = `expr_${nome}`;
+    const rot = document.createElement('label'); rot.htmlFor = id; rot.textContent = NOMES_EXPR[nome] || nome;
+    const r = document.createElement('input'); r.type = 'range'; r.id = id; r.min = '0'; r.max = '100'; r.value = String(Math.round((avatar.expressoesManuais[nome] || 0) * 100));
+    r.addEventListener('input', () => avatar.definirExpressaoManual(nome, Number(r.value) / 100));
+    elX.caixa.append(rot, r);
+  }
+  aplicarOlhar();
+}
+elX.zerar.addEventListener('click', () => { if (avatar) avatar.zerarExpressoesManuais(); desenharExpressoes(); });
+elX.olhar.addEventListener('change', () => { gravar('olhar_modo', elX.olhar.value); aplicarOlhar(); });
+for (const el of [elX.yaw, elX.pitch]) el.addEventListener('input', aplicarOlhar);
+
+// Foto e vídeo: só do avatar (nunca da webcam), salvos no computador. Desligados por padrão e no modo totem; só com a licença do modelo e a do clipe.
+const elF = { liberar: $('fotoLiberar'), prop: $('fotoProporcao'), fundo: $('fotoFundo'), moldura: $('fotoMoldura'), credito: $('fotoCredito'), dur: $('fotoDuracao'), conf: $('fotoConfirmar'), confLinha: $('fotoConfirmarLinha'), lic: $('fotoLicenca'), foto: $('fotoTirar'), video: $('videoGravar'), estado: $('fotoEstado') };
+$('fotoDica').textContent = TX.dica; $('fotoLiberarR').textContent = TX.liberar; $('fotoProporcaoR').textContent = TX.proporcao; $('fotoFundoR').textContent = TX.fundo;
+elF.fundo.options[0].textContent = TX.fundoTransparente; elF.fundo.options[1].textContent = TX.fundoBranco; elF.fundo.options[2].textContent = TX.fundoPaleta;
+$('fotoMolduraR').textContent = TX.moldura; $('fotoCreditoR').textContent = TX.credito; $('fotoDuracaoR').textContent = TX.duracao; $('fotoConfirmarR').textContent = TX.confirmar;
+elF.foto.textContent = TX.tirarFoto; elF.video.textContent = TX.gravarVideo;
+elF.liberar.checked = ler('foto_liberar', 'nao') === 'sim';
+for (const [el, k] of [[elF.prop, 'foto_prop'], [elF.fundo, 'foto_fundo']]) { el.value = ler(k, el.value); el.addEventListener('change', () => gravar(k, el.value)); }
+elF.moldura.checked = ler('foto_moldura', 'nao') === 'sim'; elF.credito.checked = ler('foto_credito', 'sim') === 'sim'; elF.dur.value = ler('foto_duracao', '15');
+elF.moldura.addEventListener('change', () => gravar('foto_moldura', elF.moldura.checked ? 'sim' : 'nao'));
+elF.credito.addEventListener('change', () => gravar('foto_credito', elF.credito.checked ? 'sim' : 'nao'));
+elF.dur.addEventListener('change', () => gravar('foto_duracao', String(Math.min(60, Math.max(3, Number(elF.dur.value) || 15)))));
+elF.liberar.addEventListener('change', () => { gravar('foto_liberar', elF.liberar.checked ? 'sim' : 'nao'); atualizarCaptura(); });
+elF.conf.addEventListener('change', atualizarCaptura);
+
+const captura = criarCaptura({ cena, aoEstado: (e) => {
+  if (e.contagem) elF.estado.textContent = TX.contagem(e.contagem);
+  else if (e.gravando) elF.estado.textContent = TX.gravando(e.restante);
+} });
+// Clipe em uso: o do visualizador, se estiver aberto; senão o idle da conversa.
+const clipeEmUso = () => {
+  const lista = catalogo ? catalogo.clipes : [];
+  const id = visualizador.ativo && visualizador.estado.clipe ? visualizador.estado.clipe.id : 'idle';
+  return lista.find((c) => c.id === id) || null;
+};
+function veredito() {
+  return avaliarCaptura({ modelo: personagem ? licencas.get(personagem.id) : null, clipe: clipeEmUso(), confirmouModelo: elF.conf.checked, confirmouClipe: elF.conf.checked });
+}
+function atualizarCaptura() {
+  const v = veredito();
+  const publico = totemLigado();
+  elF.confLinha.hidden = !(v.conferir.length && !v.motivos.length);
+  const partes = [];
+  if (publico) partes.push(TX.modoPublico);
+  else if (!elF.liberar.checked) partes.push(TX.desligada);
+  if (v.motivos.length) partes.push(TX.bloqueado(v.motivos.join('; ')));
+  else if (v.conferir.length) partes.push(TX.conferir(v.conferir.join('; ')));
+  if (v.credito) partes.push(TX.creditoExigido(v.credito));
+  elF.lic.textContent = partes.join(' ');
+  const pode = v.ok && elF.liberar.checked && !publico;
+  elF.foto.disabled = !pode || captura.gravando; elF.video.disabled = !pode && !captura.gravando;
+}
+function opcoesDaCaptura(v) {
+  const fundo = elF.fundo.value === 'branco' ? '#ffffff' : elF.fundo.value === 'paleta' ? efetivo(personagem).paleta.fundo1 : null;
+  return { proporcao: elF.prop.value, fundo, moldura: elF.moldura.checked, credito: elF.credito.checked ? v.credito : '' };
+}
+elF.foto.addEventListener('click', async () => {
+  const v = veredito(); atualizarCaptura();
+  if (!v.ok || !elF.liberar.checked || totemLigado() || !personagem) return;
+  elF.foto.disabled = true;
+  try { salvarArquivo(await captura.foto(opcoesDaCaptura(v)), nomeDoArquivo(personagem.id, 'png')); elF.estado.textContent = TX.fotoSalva; }
+  catch (e) { console.warn('[captura] foto falhou:', e); elF.estado.textContent = TX.erro(e.message); }
+  atualizarCaptura();
+});
+elF.video.addEventListener('click', async () => {
+  if (captura.gravando) { captura.pararVideo(); return; }
+  const v = veredito(); atualizarCaptura();
+  if (!v.ok || !elF.liberar.checked || totemLigado() || !personagem) return;
+  elF.video.textContent = TX.pararVideo; elF.foto.disabled = true;
+  try {
+    const r = await captura.video(opcoesDaCaptura(v), { duracaoMaxS: Math.min(60, Math.max(3, Number(elF.dur.value) || 15)) });
+    salvarArquivo(r.blob, nomeDoArquivo(personagem.id, r.mime.includes('mp4') ? 'mp4' : 'webm')); elF.estado.textContent = TX.videoSalvo;
+  } catch (e) { console.warn('[captura] vídeo falhou:', e); elF.estado.textContent = TX.erro(e.message); }
+  elF.video.textContent = TX.gravarVideo; atualizarCaptura();
+});
+dlg.addEventListener('toggle', () => { if (dlg.open) { desenharExpressoes(); atualizarCaptura(); } });
+// atualizarCaptura() só roda quando o painel abre ou o avatar carrega: totemLigado é declarada mais abaixo no módulo.
+
 /* ---------- Rastreamento do corpo (prompt 7, V5): braços e tronco, só com a câmera ligada por ação explícita ---------- */
 const TC = T.corpo;
-const elCorpo = { ligar: $('corpoLigar'), estado: $('corpoEstado'), bracos: $('corpoBracos'), tronco: $('corpoTronco'), espelho: $('corpoEspelho'), qual: $('corpoQualidade'), recal: $('corpoRecalibrar'), gravar: $('corpoGravar'), arq: $('corpoRepetirArq'), stats: $('corpoStats'), imitar: $('vizImitar') };
+const elCorpo = { ligar: $('corpoLigar'), estado: $('corpoEstado'), bracos: $('corpoBracos'), tronco: $('corpoTronco'), espelho: $('corpoEspelho'), qual: $('corpoQualidade'), maos: $('corpoMaos'), movimento: $('corpoMovimento'), gestos: $('corpoGestos'), recal: $('corpoRecalibrar'), gravar: $('corpoGravar'), arq: $('corpoRepetirArq'), stats: $('corpoStats'), imitar: $('vizImitar'), hud: $('corpoBtn') };
 $('corpoPrivacidade').textContent = TC.privacidade; $('corpoLigarR').textContent = TC.imitar; $('corpoBracosR').textContent = TC.bracos; $('corpoTroncoR').textContent = TC.tronco;
+$('corpoMaosR').textContent = TC.maos; $('corpoMovimentoR').textContent = TC.movimento; $('corpoGestosR').textContent = TC.gestos;
 $('corpoEspelhoR').textContent = TC.espelho; $('corpoQualidadeR').textContent = TC.qualidade; elCorpo.qual.options[0].textContent = TC.leve; elCorpo.qual.options[1].textContent = TC.equilibrada;
 elCorpo.recal.textContent = TC.recalibrar; elCorpo.gravar.textContent = TC.gravar; $('corpoRepetirR').textContent = TC.repetir;
-elCorpo.imitar.setAttribute('aria-label', TC.imitar); elCorpo.imitar.title = TC.imitar;
+for (const b of [elCorpo.imitar, elCorpo.hud]) { b.setAttribute('aria-label', TC.imitar); b.title = TC.imitar; }
 elCorpo.bracos.checked = ler('corpo_bracos', 'sim') === 'sim'; elCorpo.tronco.checked = ler('corpo_tronco', 'sim') === 'sim';
+elCorpo.maos.checked = ler('corpo_maos', 'sim') === 'sim'; elCorpo.movimento.checked = ler('corpo_movimento', 'sim') === 'sim'; elCorpo.gestos.checked = ler('corpo_gestos', 'sim') === 'sim';
 elCorpo.espelho.checked = ler('corpo_espelho', 'sim') === 'sim'; elCorpo.qual.value = ler('corpo_qualidade', 'leve');
 function desenharCorpo(e) {
   const ligado = !['desligado', 'erro'].includes(e.estado);
-  elCorpo.ligar.checked = ligado; elCorpo.imitar.setAttribute('aria-pressed', String(ligado));
-  const f = TC.estados[e.estado];
+  elCorpo.ligar.checked = ligado; for (const b of [elCorpo.imitar, elCorpo.hud]) b.setAttribute('aria-pressed', String(ligado));
+  let f = TC.estados[e.estado];
+  if (e.estado === 'calibrando') {
+    const st = corpo.stats; // calibragem: de 0 a 1; parado: falso quando a pessoa se mexe e a janela recomeça
+    f = !st.calibrando ? TC.estados.procurando : st.parado ? TC.estados.calibrandoPct(Math.round(st.calibragem * 100)) : TC.estados.calibrandoMexeu;
+  }
   elCorpo.estado.textContent = e.estado === 'erro' ? f(e.motivo) : (e.aviso ? `${f} ${e.aviso}` : f);
-  elCorpo.stats.textContent = ligado ? TC.stats(corpo.stats) : '';
+  elCorpo.stats.textContent = ligado ? `${TC.stats(corpo.stats)} ${TC.confianca(corpo.stats.confianca)}` : '';
+}
+// Gestos do usuário (câmera ligada por ele): acenar faz o personagem acenar de volta, mão levantada o convida a perguntar (respeitando o limite
+// de perguntas e de tempo da sessão), joinha dispara a comemoração.
+function aoGestoDoUsuario(nome) {
+  if (!sessaoAtiva || !personagem || etapa !== 'conversa') return;
+  if (nome === 'aceno') pedirGesto('aceno', 'usuario');
+  else if (nome === 'joinha') pedirGesto('comemora', 'usuario');
+  else if (nome === 'convite') {
+    if (ocupado || voz.falando || politica.estado().motivo) return;
+    const ef = efetivo(personagem);
+    elHeard.textContent = ''; elAnswer.textContent = TC.convite;
+    voz.falarTexto(TC.convite, ef.voz);
+  }
 }
 const corpo = criarRastreadorCorpo({
   obterAvatar: () => avatar,
-  config: { espelho: elCorpo.espelho.checked, qualidade: elCorpo.qual.value, pesos: { bracos: elCorpo.bracos.checked ? 1 : 0, tronco: elCorpo.tronco.checked ? 1 : 0 } },
+  config: { espelho: elCorpo.espelho.checked, qualidade: elCorpo.qual.value, gestos: elCorpo.gestos.checked, pesos: { bracos: elCorpo.bracos.checked ? 1 : 0, tronco: elCorpo.tronco.checked ? 1 : 0, maos: elCorpo.maos.checked ? 1 : 0, movimento: elCorpo.movimento.checked ? 1 : 0 } },
   aoEstado: desenharCorpo,
+  aoGesto: aoGestoDoUsuario,
 });
-setInterval(() => { if (corpo.ligado) desenharCorpo({ estado: corpo.estado }); }, 1000);
+setInterval(() => { if (corpo.ligado) desenharCorpo({ estado: corpo.estado }); }, 300);
 const alternarCorpo = () => (corpo.ligado ? corpo.desligar() : corpo.ligar({ fonteVideo: camera.video }));
 elCorpo.ligar.addEventListener('change', alternarCorpo);
 elCorpo.imitar.addEventListener('click', alternarCorpo);
-for (const [el, chave, parte] of [[elCorpo.bracos, 'corpo_bracos', 'bracos'], [elCorpo.tronco, 'corpo_tronco', 'tronco']]) {
-  el.addEventListener('change', () => { gravar(chave, el.checked ? 'sim' : 'nao'); corpo.configurar({ pesos: { [parte]: el.checked ? 1 : 0 } }); });
+elCorpo.hud.addEventListener('click', alternarCorpo);
+for (const [el, chave, parte] of [[elCorpo.bracos, 'corpo_bracos', 'bracos'], [elCorpo.tronco, 'corpo_tronco', 'tronco'], [elCorpo.maos, 'corpo_maos', 'maos'], [elCorpo.movimento, 'corpo_movimento', 'movimento']]) {
+  el.addEventListener('change', () => {
+    gravar(chave, el.checked ? 'sim' : 'nao'); corpo.configurar({ pesos: { [parte]: el.checked ? 1 : 0 } });
+    if (parte === 'maos' && el.checked && corpo.ligado) { corpo.desligar(); corpo.ligar({ fonteVideo: camera.video }); } // o modelo das mãos só carrega junto com o worker
+  });
 }
+elCorpo.gestos.addEventListener('change', () => { gravar('corpo_gestos', elCorpo.gestos.checked ? 'sim' : 'nao'); corpo.configurar({ gestos: elCorpo.gestos.checked }); if (elCorpo.gestos.checked && corpo.ligado) { corpo.desligar(); corpo.ligar({ fonteVideo: camera.video }); } });
 elCorpo.espelho.addEventListener('change', () => { gravar('corpo_espelho', elCorpo.espelho.checked ? 'sim' : 'nao'); corpo.configurar({ espelho: elCorpo.espelho.checked }); });
 elCorpo.qual.addEventListener('change', () => { gravar('corpo_qualidade', elCorpo.qual.value); corpo.configurar({ qualidade: elCorpo.qual.value }); if (corpo.ligado) { corpo.desligar(); corpo.ligar({ fonteVideo: camera.video }); } });
 elCorpo.recal.addEventListener('click', () => corpo.recalibrar());
@@ -1451,6 +1640,23 @@ elCorpo.arq.addEventListener('change', async () => {
   try { corpo.repetir(await f.text()); } catch (e) { console.warn('[corpo] sessão recusada:', e); elCorpo.estado.textContent = TC.sessaoInvalida; }
 });
 desenharCorpo({ estado: 'desligado' });
+
+// Photo Booth do visualizador (V1): camada sobre o visualizador, ligada aos mesmos controles da engrenagem.
+pb = criarPhotoBooth({
+  palco: stage, raiz: app, T, visualizador, cena,
+  avatar: () => avatar, personagem: () => personagem, publico: () => totemLigado(),
+  carregarClipe: (c) => (avatar ? clipeDoArquivo(c.arquivo, avatar.vrm) : Promise.resolve(null)),
+  controles: {
+    abrirEnvio: () => { abrirConfiguracoes(); mostrarAba('animacoes'); setTimeout(() => { const f = $('envArquivo'); if (f) f.focus(); }, 150); },
+    olharParaCamera: (sim) => { elX.olhar.value = sim ? 'camera' : 'auto'; elX.olhar.dispatchEvent(new Event('change')); },
+    corpoLigado: () => corpo.ligado, alternarCorpo: () => alternarCorpo(), estadoCorpo: () => elCorpo.estado.textContent,
+    chavesCorpo: [['bracos', TC.bracos], ['maos', TC.maos], ['tronco', TC.tronco], ['movimento', TC.movimento], ['gestos', TC.gestos], ['espelho', TC.espelho]],
+    valorCorpo: (id) => elCorpo[id].checked,
+    definirCorpo: (id, v) => { elCorpo[id].checked = v; elCorpo[id].dispatchEvent(new Event('change')); },
+    recalibrar: () => corpo.recalibrar(),
+    foto: { foto: elF.foto, video: elF.video, fundo: elF.fundo, prop: elF.prop, moldura: elF.moldura, lic: elF.lic },
+  },
+});
 
 /* ---------- Painel de diagnóstico (só o operador vê) ---------- */
 const elDiag = $('diag'), elDiagErros = $('diagErros'), elCambio = $('diagCambio');
@@ -1541,7 +1747,17 @@ function avisarOperador(mensagem) {
   console.warn('[evento] ' + mensagem);
   if (typeof desenharAvisosEvento === 'function') desenharAvisosEvento();
 }
+// Selo na tela enquanto o modo econômico está valendo: mostra o motivo e, se foi ligado à mão, desliga com um toque; se foi o teto, abre a aba Orçamento.
+function pintarSeloEconomico() {
+  const el = $('seloEco');
+  if (!el) return;
+  const manual = economicoManual(), teto = !manual && situacaoOrcamento().nivel === 'estourou';
+  el.hidden = !(manual || teto);
+  el.dataset.motivo = manual ? 'manual' : teto ? 'teto' : '';
+  el.textContent = manual ? T.orcamento.seloManual : teto ? T.orcamento.seloTeto(custo.resumo().acumuladoReais, tetoReais()) : '';
+}
 function atualizarAlertaOrcamento() {
+  pintarSeloEconomico();
   const s = situacaoOrcamento();
   alertaOrcamento = s.nivel === 'aviso' || s.nivel === 'estourou';
   pintarAlerta();
@@ -1777,7 +1993,7 @@ dlg.addEventListener('toggle', () => { if (dlg.open) desenharRag(); });
 /* ---------- Console do operador (I5): abas e cena ---------- */
 const ABA_DE = {
   Gemini: 'orcamento', Diagnóstico: 'orcamento', Voz: 'voz', 'Gemini TTS': 'voz', Personagem: 'personagem', 'Cena do personagem': 'cena', Orçamento: 'orcamento', 'Modo evento': 'evento', 'Base de conhecimento': 'personagem',
-  Câmera: 'sessao', 'Rastreamento do corpo': 'sessao', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
+  Câmera: 'sessao', 'Rastreamento do corpo': 'sessao', 'Expressões e olhar': 'animacoes', 'Foto e vídeo': 'animacoes', Boca: 'sessao', Sessão: 'sessao', 'Modo totem': 'sessao', Animações: 'animacoes', 'Enviar movimento': 'animacoes',
   'Armazenamento e uso offline': 'armazenamento', Licenças: 'armazenamento',
 };
 const elAbas = $('abas');
@@ -1943,8 +2159,21 @@ $('orcTeto').value = String(tetoReais()); $('orcReserva').value = modeloReserva(
 $('orcTeto').addEventListener('input', () => { gravar('teto_reais', String(Math.max(0, Number($('orcTeto').value) || 0))); atualizarAlertaOrcamento(); desenharDiagnostico(); });
 $('orcReserva').addEventListener('input', () => gravar('modelo_reserva', $('orcReserva').value.trim()));
 $('orcEconomico').addEventListener('change', () => { gravar('modo_economico', $('orcEconomico').checked ? 'sim' : 'nao'); atualizarAlertaOrcamento(); });
+$('seloEco').addEventListener('click', () => {
+  if ($('seloEco').dataset.motivo === 'manual') { gravar('modo_economico', 'nao'); $('orcEconomico').checked = false; atualizarAlertaOrcamento(); desenharEstadoOrcamento(); return; }
+  abrirConfiguracoes(); mostrarAba('orcamento');
+});
 $('orcProxy').addEventListener('input', () => gravar('proxy_url', $('orcProxy').value.trim()));
+function desenharEstadoOrcamento() {
+  const r = custo.resumo(), teto = tetoReais();
+  $('orcEstado').textContent = economicoManual() ? O.estadoManual : situacaoOrcamento().nivel === 'estourou' ? O.estadoTeto(r.acumuladoReais, teto) : O.estadoNormal(r.acumuladoReais, teto);
+}
+$('orcZerar').textContent = O.zerar;
+$('orcZerar').addEventListener('click', () => { custo.zerarAcumulado(); atualizarAlertaOrcamento(); desenharEstadoOrcamento(); desenharDiagnostico(); });
+dlg.addEventListener('toggle', () => { if (dlg.open) desenharEstadoOrcamento(); });
+for (const id of ['orcTeto', 'orcEconomico']) $(id).addEventListener(id === 'orcTeto' ? 'input' : 'change', desenharEstadoOrcamento);
 atualizarAlertaOrcamento();
+desenharEstadoOrcamento();
 
 /* ---------- Voz mãos-livres (R5) ---------- */
 const elML = { caixa: $('maosLivres'), rotulo: $('maosLivresRotulo'), dica: $('maosLivresDica') };
@@ -2297,7 +2526,7 @@ $('fecharCreditos').addEventListener('click', () => $('creditos').close());
 // Gancho para testes automatizados e inspeção no console; só existe com ?debug na URL.
 if (new URLSearchParams(location.search).has('debug')) {
   window.__prof3d = {
-    corpo, cena, historicos, trocarPersonagem, buscarPersonagem, voz, mesa, config, boca, quadro, camera, camCfg,
+    corpo, captura, rag, pb, cena, historicos, trocarPersonagem, buscarPersonagem, voz, mesa, config, boca, quadro, camera, camCfg,
     get presente() { return presenca.presente; },
     get ultimaLeitura() { return ultimaLeitura; },
     get ajustes() { return ajustes; },
@@ -2324,7 +2553,18 @@ const checagens = await Promise.all(PERSONAGENS.map(async (p) => [p, await verif
 for (const [p, versao] of checagens) if (versao && !p.emBreve) { disponiveis.push(p); versoes.set(p.id, versao); }
 renderizarSelecao();
 // Base de conhecimento: vê, sem baixar nada, quais personagens já têm o índice pronto.
-for (const p of disponiveis) rag.verificar(p.id).catch((e) => console.warn(`[rag] verificação de ${p.id} falhou:`, e));
+// Se há documentos novos e o modelo de embeddings já está no cache do navegador (o operador já aceitou o download uma vez), indexa sozinho,
+// sem baixar nada; sem o modelo em cache, continua pedindo o clique em "Preparar a base".
+for (const p of disponiveis) {
+  rag.verificar(p.id)
+    .then(async (e) => {
+      if (!e.documentos || !e.pendentes.length || !(await modeloEmCache())) return;
+      await new Promise((r) => setTimeout(r, 5000)); // depois da abertura, para o preparo não competir com o carregamento do personagem
+      await rag.preparar(p.id);
+      console.info(`[rag] base de ${p.id} preparada sozinha (modelo já estava no cache).`);
+    })
+    .catch((e) => console.warn(`[rag] verificação ou preparo de ${p.id} falhou:`, e));
+}
 cena.iniciar();
 // Qualidade adaptativa por FPS. Com ?debug fica desligada, para as medições não mudarem sozinhas (qualidade_auto=sim liga).
 cena.qualidadeAuto(!DEBUG || ler('qualidade_auto', 'nao') === 'sim');
@@ -2333,6 +2573,7 @@ vigia.iniciar();
 if (!disponiveis.length) {
   $('loading').hidden = true;
   aplicarPaleta(PERSONAGENS[0].paleta);
+  pintarFundoNome(PERSONAGENS[0].nome);
   mostrarErroAvatar(T.avatar.nenhum, PERSONAGENS.map((p) => p.arquivoVrm).join(', '));
   $('painel').hidden = true;
 } else {

@@ -15,15 +15,19 @@ const DUPLO_TOQUE_MS = 320;
 //   avatar() -> avatar atual ou null
 //   clipesAtivos() -> clipes do catálogo com status ativo (já com as escolhas da galeria e o modo infantil)
 //   carregarClipe(clipe) -> Promise<AnimationClip | null>
+//   entrada() -> { clipe, modo: 'repetir' | 'lista-depois', loop: [ids] } do personagem em cena, ou null (prompt 07, V2)
+//   antesDeTocar(): Promise opcional, esperada ao entrar e antes de o primeiro clipe tocar (o Photo Booth gera as miniaturas aqui)
 //   reduzirMovimento: MediaQueryList
 //   aoMudar({ ativo, tocando, ... }): a interface atualiza rótulos
-export function criarVisualizador({ cena, raiz, palco, el, T, avatar, clipesAtivos, carregarClipe, reduzirMovimento, aoMudar = () => {}, aoSair = () => {}, aoEntrar = () => {} }) {
+export function criarVisualizador({ cena, raiz, palco, el, T, avatar, clipesAtivos, carregarClipe, entrada = () => null, antesDeTocar = null, reduzirMovimento, aoMudar = () => {}, aoSair = () => {}, aoEntrar = () => {} }) {
   const s = {
     ativo: false, tocando: false, modo: 'todos', velocidade: 1, seguir: false,
     indice: -1, clipe: null, telaCheia: false, telaCheiaCss: false,
+    restringir: [], entradaPendente: false, lacuna: null, // entrada por personagem
   };
   let lista = [], pedido = 0, timerBarra = null, ultimoToque = 0, hiddenPausou = false;
 
+  let obterEntrada = entrada;
   const emitir = () => aoMudar({ ...s, total: lista.length });
   const nomeDoClipe = (c) => (c ? c.id : '');
 
@@ -50,8 +54,35 @@ export function criarVisualizador({ cena, raiz, palco, el, T, avatar, clipesAtiv
     if (s.indice >= lista.length) s.indice = lista.length - 1;
   }
 
-  function proximoIndice(passo) {
+  // Entrada do personagem (V2): qual clipe abre o visualizador. 'repetir' repete só esse clipe; 'lista-depois' toca uma vez e segue em
+  // loop pelos ids de loopAnimacoes. Clipe da entrada ausente (não ativo, filtrado pelo modo infantil ou sem arquivo): cai para o idle e
+  // registra a lacuna. Os botões anterior e próximo continuam passando por todos os clipes; só o avanço automático segue a lista.
+  function planoDeEntrada() {
+    const e = obterEntrada();
+    s.restringir = []; s.entradaPendente = false; s.lacuna = null;
+    if (!e || !lista.length) return 0;
+    let i = lista.findIndex((c) => c.id === e.clipe);
+    if (i < 0) {
+      s.lacuna = e.clipe;
+      console.warn(`[visualizador] clipe de entrada "${e.clipe}" indisponível; usando o idle`);
+      i = lista.findIndex((c) => c.id === 'idle');
+      if (i < 0) i = 0;
+    }
+    s.modo = e.modo === 'repetir' ? 'um' : 'todos';
+    s.restringir = (e.loop || []).filter((id) => lista.some((c) => c.id === id));
+    s.entradaPendente = e.modo === 'lista-depois' && s.restringir.length > 0;
+    return i;
+  }
+
+  function proximoIndice(passo, auto = false) {
     if (!lista.length) return -1;
+    if (auto && s.restringir.length) {
+      const cand = lista.map((c, i) => (s.restringir.includes(c.id) ? i : -1)).filter((i) => i >= 0);
+      s.entradaPendente = false;
+      if (s.modo === 'aleatorio' && cand.length > 1) { let i; do { i = cand[Math.floor(Math.random() * cand.length)]; } while (i === s.indice); return i; }
+      const depois = cand.find((i) => i > s.indice);
+      return depois !== undefined ? depois : cand[0]; // depois da entrada e no fim da lista, volta ao começo da lista do personagem
+    }
     if (s.modo === 'aleatorio' && lista.length > 1) {
       let i; do { i = Math.floor(Math.random() * lista.length); } while (i === s.indice);
       return i;
@@ -71,12 +102,20 @@ export function criarVisualizador({ cena, raiz, palco, el, T, avatar, clipesAtiv
     // Modo "um" repete o clipe; nos outros, cada clipe toca uma vez e o fim chama o próximo.
     a.previa.tocar(clipe, { velocidade: s.velocidade, laco: s.modo === 'um' });
     a.previa.pausar(!s.tocando);
-    a.previa.aoTerminar(() => { if (s.ativo && s.tocando && s.modo !== 'um') proximo(); });
+    a.previa.aoTerminar(() => { if (s.ativo && s.tocando && s.modo !== 'um') proximo({ auto: true }); });
     el.nome.textContent = nomeDoClipe(c);
     emitir();
   }
 
-  function proximo() { return tocarIndice(proximoIndice(1)); }
+  // Toca o clipe pelo id (miniatura do Photo Booth ou lista suspensa). Sai do avanço automático da entrada: o usuário escolheu.
+  function tocarPorId(id) {
+    const i = lista.findIndex((c) => c.id === id);
+    if (i < 0) return Promise.resolve(false);
+    s.entradaPendente = false;
+    s.tocando = true;
+    return tocarIndice(i).then(() => true);
+  }
+  function proximo({ auto = false } = {}) { return tocarIndice(proximoIndice(1, auto === true)); }
   function anterior() { return tocarIndice(proximoIndice(-1)); }
 
   function tocar() {
@@ -161,9 +200,16 @@ export function criarVisualizador({ cena, raiz, palco, el, T, avatar, clipesAtiv
     cena.ativarOrbita();
     atualizarLista();
     s.tocando = false;
+    if (antesDeTocar) { try { await antesDeTocar(); } catch (e) { console.warn('[visualizador] preparo antes de tocar falhou:', e); } if (!s.ativo) return false; }
     // Com "reduzir movimento" o loop começa pausado; a pessoa aperta tocar quando quiser.
-    if (tocarAgora && !reduzirMovimento.matches && lista.length) { s.tocando = true; await tocarIndice(0); }
-    else if (lista.length) { s.indice = 0; s.clipe = lista[0]; el.nome.textContent = nomeDoClipe(lista[0]); }
+    const inicio = planoDeEntrada();
+    if (tocarAgora && !reduzirMovimento.matches && lista.length) {
+      s.tocando = true; await tocarIndice(inicio);
+      if (!s.clipe && s.ativo) { // o arquivo da entrada não carregou: tenta o idle uma vez
+        const idle = lista.findIndex((c) => c.id === 'idle');
+        if (idle >= 0 && idle !== inicio) { s.lacuna = s.lacuna || (lista[inicio] && lista[inicio].id); await tocarIndice(idle); }
+      }
+    } else if (lista.length) { s.indice = inicio; s.clipe = lista[inicio]; el.nome.textContent = nomeDoClipe(lista[inicio]); }
     mostrarBarra();
     emitir();
     return true;
@@ -190,9 +236,10 @@ export function criarVisualizador({ cena, raiz, palco, el, T, avatar, clipesAtiv
     if (!s.ativo) return;
     pedido++;
     atualizarLista();
-    s.indice = lista.length ? 0 : -1; s.clipe = lista[0] || null;
+    const inicio = planoDeEntrada();
+    s.indice = lista.length ? inicio : -1; s.clipe = lista[inicio] || null;
     el.nome.textContent = nomeDoClipe(s.clipe);
-    if (s.tocando) tocarIndice(0);
+    if (s.tocando) tocarIndice(inicio);
     emitir();
   }
 
@@ -240,8 +287,11 @@ export function criarVisualizador({ cena, raiz, palco, el, T, avatar, clipesAtiv
     get estado() { return { ...s, total: lista.length }; },
     get ativo() { return s.ativo; },
     entrar, sair, resetar, definirSeguir, alternarTelaCheia, temTelaCheia,
-    tocar, pausar, alternar, proximo, anterior, definirModo, proximoModo, definirVelocidade,
+    tocar, pausar, alternar, proximo, anterior, tocarPorId,
+    get clipes() { return lista; }, definirModo, proximoModo, definirVelocidade,
     aoTrocarPersonagem,
+    // Troca a regra de entrada (null = sem entrada: abre no primeiro clipe e anda pela lista toda). Usado em testes e no painel do operador.
+    definirEntrada(fn) { obterEntrada = typeof fn === 'function' ? fn : () => null; },
     descartar() {
       sair();
       document.removeEventListener('keydown', aoTeclar);

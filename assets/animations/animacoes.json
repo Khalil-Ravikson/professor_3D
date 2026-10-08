@@ -150,6 +150,129 @@
       "origem": "Pacote VRMA_MotionPack do VRoid Project (BOOTH). Readme: Squat",
       "licenca": "Termos do pacote VRoid: uso livre e comercial com crédito; proibido redistribuir",
       "status": "desligado"
+    },
+    {
+      "id": "fala-leve",
+      "arquivo": "assets/animations/overte/idle-talking.vrma",
+      "descricao": "Fala de frente com os braços baixos, balançando a cabeça e o tronco de leve. Para o estado \"falando\" (volta sobre si mesmo).",
+      "casoDeUso": [
+        "falando"
+      ],
+      "loop": true,
+      "duracao": 7.13,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/idle-talking.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "ativo"
+    },
+    {
+      "id": "fala-base",
+      "arquivo": "assets/animations/overte/idle-talking-5.vrma",
+      "descricao": "Fala de frente com gestos pequenos de mão ao explicar. Para o estado \"falando\" (volta sobre si mesmo).",
+      "casoDeUso": [
+        "falando"
+      ],
+      "loop": true,
+      "duracao": 16.63,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/idle-talking-5.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "ativo"
+    },
+    {
+      "id": "fala-media",
+      "arquivo": "assets/animations/overte/idle-talking-4.vrma",
+      "descricao": "Fala de frente, ritmo médio, gestos curtos. Alternativa para \"falando\".",
+      "casoDeUso": [
+        "falando"
+      ],
+      "loop": true,
+      "duracao": 10.0,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/idle-talking-4.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "desligado"
+    },
+    {
+      "id": "fala-mao-esq",
+      "arquivo": "assets/animations/overte/idle-talking-6.vrma",
+      "descricao": "Fala de frente, com um gesto da mão esquerda. Alternativa para \"falando\".",
+      "casoDeUso": [
+        "falando"
+      ],
+      "loop": true,
+      "duracao": 16.63,
+      "intensidade": 2,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/idle-talking-6.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "desligado"
+    },
+    {
+      "id": "fala-mao-dir",
+      "arquivo": "assets/animations/overte/idle-talking-7.vrma",
+      "descricao": "Fala de frente, com um gesto da mão direita. Alternativa para \"falando\".",
+      "casoDeUso": [
+        "falando"
+      ],
+      "loop": true,
+      "duracao": 16.73,
+      "intensidade": 2,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/idle-talking-7.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "desligado"
+    },
+    {
+      "id": "assentir",
+      "arquivo": "assets/animations/overte/nod.vrma",
+      "descricao": "Balança a cabeça para dizer sim. Corpo parado.",
+      "casoDeUso": [
+        "agradecer",
+        "confirmar"
+      ],
+      "loop": false,
+      "duracao": 1.77,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/nod.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "ativo"
+    },
+    {
+      "id": "pensar",
+      "arquivo": "assets/animations/overte/think.vrma",
+      "descricao": "Olha ao redor com a cabeça e os olhos, como quem pensa. Corpo quase parado.",
+      "casoDeUso": [
+        "nao-sei",
+        "pensando"
+      ],
+      "loop": false,
+      "duracao": 3.37,
+      "intensidade": 1,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/think.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "ativo"
+    },
+    {
+      "id": "aplauso",
+      "arquivo": "assets/animations/overte/happy.vrma",
+      "descricao": "Bate palmas.",
+      "casoDeUso": [
+        "comemorar",
+        "aplaudir"
+      ],
+      "loop": false,
+      "duracao": 5.3,
+      "intensidade": 2,
+      "infantilOk": true,
+      "origem": "Overte (github.com/overte-org/overte), via github.com/Undi95/Hanami, vrma/happy.vrma. Retargetado para o esqueleto humanoide VRM 1.0 a 30 fps, sem edição nossa",
+      "licenca": "Apache-2.0, (c) 2013-2019 High Fidelity, Inc.; (c) 2019-2021 Vircadia contributors; (c) 2022-2026 Overte e.V. Aviso em assets/animations/CREDITS.md",
+      "status": "ativo"
     }
   ],
   "lacunas": [
@@ -235,11 +358,11 @@
       "pose-modelo",
       "giro"
     ],
-    "nao-sei": null,
-    "aplaude": null,
+    "nao-sei": "pensar",
+    "aplaude": "aplauso",
     "aponta-quadro": null,
     "desculpa": null,
-    "agradece": null
+    "agradece": "assentir"
   },
   "intervaloMinS": 8
 }
