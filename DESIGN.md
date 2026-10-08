@@ -71,9 +71,9 @@ Todas as telas (atração, escolha do personagem, conversa e visualizador) usam 
 
 | Papel | Valor (Luma) | Observação |
 |---|---|---|
-| Fundo, topo e base | `#f7f9fd` e `#e4eaf5` | gradiente leve; cada personagem muda só o matiz |
+| Fundo, topo e base | `#dbe4f2` e `#bccce4` | gradiente azul-acinzentado, **escurecido em 08/10/2026** porque o branco dos botões (engrenagem, câmera, chips) dava só 1,05 a 1,2:1 contra o fundo antigo e sumia; cada personagem muda o matiz |
 | Texto | `#182033` | contraste AA com o fundo e com o cartão |
-| Texto suave | `#46506a` | AA no pior caso, a base do gradiente |
+| Texto suave e contorno dos controles | `#3b465f` | AA no pior caso (a base do gradiente) e contorno de 2 px nos controles brancos (`--contorno`), 3:1 ou mais contra o fundo (WCAG 1.4.11) |
 | **Ação (botão)** | `#c81e45` | texto branco em cima, AA medido por `tests/unit/contraste.test.js` |
 | Cartão | `#ffffff` | balões, quadro, painéis |
 | Realce (Enviar) | `#182033` com texto `#ffffff` | |

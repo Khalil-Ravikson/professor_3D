@@ -91,8 +91,8 @@ export const PERSONAGENS = [
       { rotulo: 'Uma piada', pergunta: 'Me conte uma piada' },
     ],
     paleta: {
-      fundo1: '#f7f9fd', fundo2: '#e4eaf5',
-      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      fundo1: '#dbe4f2', fundo2: '#bccce4',
+      tinta: '#182033', tintaSuave: '#3b465f', cartao: '#ffffff',
       acao: '#c81e45', acaoTinta: '#ffffff', acaoSombra: '#8f1230', realce: '#182033', realceTinta: '#ffffff',
       ok: '#1f7a46',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',
@@ -142,8 +142,8 @@ export const PERSONAGENS = [
       { rotulo: 'Frações', pergunta: 'Quanto é 2/3 mais 3/4?' },
     ],
     paleta: {
-      fundo1: '#f6f9fc', fundo2: '#e1edf6',
-      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      fundo1: '#d6e6f2', fundo2: '#b4d0e6',
+      tinta: '#182033', tintaSuave: '#3b465f', cartao: '#ffffff',
       acao: '#b3420f', acaoTinta: '#ffffff', acaoSombra: '#85310d', realce: '#182033', realceTinta: '#ffffff',
       ok: '#1f7a46',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
@@ -188,8 +188,8 @@ export const PERSONAGENS = [
       { rotulo: 'Caixa d’água', pergunta: 'Qual tamanho de caixa d’água para uma casa com 4 pessoas?' },
     ],
     paleta: {
-      fundo1: '#f5faf9', fundo2: '#dfeeee',
-      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      fundo1: '#d9ebe8', fundo2: '#b9d8d3',
+      tinta: '#182033', tintaSuave: '#3b465f', cartao: '#ffffff',
       acao: '#a63d14', acaoTinta: '#ffffff', acaoSombra: '#7a2f11', realce: '#182033', realceTinta: '#ffffff',
       ok: '#1f7a46',
       fonte: '"Atkinson Hyperlegible", system-ui, sans-serif',
@@ -231,8 +231,8 @@ export const PERSONAGENS = [
       { rotulo: 'Ímãs', pergunta: 'Por que o ímã gruda na geladeira?' },
     ],
     paleta: {
-      fundo1: '#f7f8fd', fundo2: '#e5e9f6',
-      tinta: '#182033', tintaSuave: '#46506a', cartao: '#ffffff',
+      fundo1: '#dfe2f3', fundo2: '#c4cae8',
+      tinta: '#182033', tintaSuave: '#3b465f', cartao: '#ffffff',
       acao: '#b83030', acaoTinta: '#ffffff', acaoSombra: '#8e2424', realce: '#182033', realceTinta: '#ffffff',
       ok: '#1f7a46',
       fonte: '"Baloo 2", "Trebuchet MS", system-ui, sans-serif',

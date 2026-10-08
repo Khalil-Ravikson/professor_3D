@@ -19,8 +19,9 @@
   /* Valores padrão; a paleta do personagem sobrescreve em :root (ui.js). */
   :root {
     /* Fase 5: azul profundo, um acento. O tema de cada personagem sobrescreve estes valores (ui.js). */
-    --fundo-1: #f7f9fd; --fundo-2: #e4eaf5;
-    --tinta: #182033; --tinta-suave: #46506a; --cartao: #ffffff;
+    --fundo-1: #dbe4f2; --fundo-2: #bccce4;
+    --tinta: #182033; --tinta-suave: #3b465f; --cartao: #ffffff;
+    --contorno: #3b465f; /* contorno dos controles brancos: o branco sozinho dava 1,2:1 contra o fundo claro e a engrenagem sumia (WCAG 1.4.11 pede 3:1) */
     --acao: #c81e45; --acao-tinta: #ffffff; --acao-sombra: #8f1230;
     --realce: #182033; --realce-tinta: #ffffff;
     --ok: #1f7a46;
@@ -712,6 +713,8 @@
     .pb-faixa { max-height: calc(100% - 190px); }
   }
   @media (prefers-reduced-motion: reduce) { .pb-mini, .pb-painel { transition: none; } }
+  /* Controles brancos sobre o fundo claro: contorno de 2 px, para a engrenagem, a câmera e os chips não sumirem (3:1 ou mais contra o fundo). */
+  .gear, .cam, .corpo-btn, .viz-entrar, .selo-voz, .volume, .stop, .chip, .barra-btn, .estado-chip, .usar-voz, .viz-nome { box-shadow: 0 0 0 2px var(--contorno); }
 </style>
 <script type="importmap">
 {
